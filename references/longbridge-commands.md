@@ -26,11 +26,11 @@ BTCUSD.HAS   加密货币
 
 ```bash
 # 登录 (设备授权流 / 浏览器 OAuth)
-longbridge auth login
-longbridge auth login --auth-code      # 浏览器 OAuth 流程
+longbridge login
+longbridge login --auth-code           # 浏览器 OAuth 流程
 
 # 登出
-longbridge auth logout
+longbridge logout
 
 # 认证状态 (token 有效性、账户信息、行情权限)
 longbridge auth status
