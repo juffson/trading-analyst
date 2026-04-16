@@ -45,19 +45,54 @@ longbridge quote <SYMBOL>
 longbridge kline <SYMBOL> --period day --count 60 --format json
 longbridge kline <SYMBOL> --period week --count 30 --format json
 
-# 基本面
-longbridge calc-index <SYMBOL>          # PE/PB/换手率
-longbridge institution-rating <SYMBOL>  # 机构评级
-longbridge forecast-eps <SYMBOL>        # EPS预测
+# 基本面指标
+longbridge calc-index <SYMBOL>          # PE/PB/换手率/总市值
+longbridge institution-rating <SYMBOL>  # 机构评级/目标价/行业排名
+longbridge forecast-eps <SYMBOL>        # EPS预测 (可能无数据)
+longbridge static <SYMBOL>              # 股本/EPS/BPS/股息/最小交易单位
 
 # 资金流
-longbridge capital <SYMBOL>             # 当日资金分布
-longbridge capital <SYMBOL> --flow      # 分时资金流
+longbridge capital <SYMBOL>             # 当日资金分布 (大单/中单/小单)
+longbridge capital <SYMBOL> --flow      # 分时累计净流入曲线
 ```
 
 注意: A 股用 `.SH`/`.SZ` 后缀，港股用 `.HK`，美股用 `.US`。如果不确定代码，用 `longbridge static <SYMBOL>` 验证。
 
-**第二步: 技术指标计算**
+**第二步: 基本面分析**
+
+综合 longbridge 数据和网络资讯，输出以下内容:
+
+1. **估值指标**: PE TTM / PB / 市值，与行业均值和历史分位数对比
+2. **盈利能力**: EPS TTM / BPS / 股息率，EPS 预测趋势 (上调/下调)
+3. **机构观点**: 评级分布 (强买/买/持有/卖)、目标价区间、最近更新时间
+4. **行业排名**: 在所属行业中的排名位置
+5. **股本结构**: 总股本、流通股本、是否全流通
+
+如果 `institution-rating` 的目标价明显偏离现价 (>30%)，需标注数据可能过时或覆盖不足。
+
+**第三步: 资讯面采集**
+
+用 WebSearch 获取近期资讯，搜索以下维度:
+
+```
+搜索关键词示例:
+- "<公司名> <股票代码> 2026"         — 近期新闻
+- "<公司名> 业绩 季报 2026"          — 业绩公告/预告
+- "<所属板块> 行情 2026年4月"        — 板块动态
+- "<公司名> 扩产 产能 新项目"        — 产能/项目进展
+- "<行业> 涨价 供需 景气度"          — 行业供需变化
+```
+
+输出资讯摘要:
+1. **涨跌驱动**: 近期涨跌的核心催化因素 (政策/业绩/板块/事件)
+2. **行业动态**: 所属板块整体趋势、龙头表现、产业链上下游变化
+3. **公司事件**: 业绩公告、扩产计划、大股东动向、机构调研
+4. **风险事件**: 减持公告、商誉减值、诉讼、监管风险
+5. **日历事件**: 即将到来的财报披露日、解禁日、股东大会等
+
+资讯必须标注来源链接。HTML 报告底部的 Sources 区域列出所有引用的 URL。
+
+**第四步: 技术指标计算**
 
 用 Python 计算以下指标（参考 `references/technical-analysis.md` 中的计算方法）:
 
@@ -73,19 +108,22 @@ longbridge capital <SYMBOL> --flow      # 分时资金流
 
 使用 `scripts/calc_indicators.py` 脚本进行计算，传入 JSON 格式的 K 线数据。
 
-**第三步: 输出分析报告**
+**第五步: 输出分析报告**
 
 报告结构:
 1. 当前价格概况（现价、成本、盈亏、距回本%）
-2. 均线系统状态
-3. 各技术指标数值和信号
-4. 斐波那契关键价位
-5. 资金面（大单/中单/小单净额）
-6. 周线级别趋势判断
-7. 综合评分和多空矛盾分析
-8. 关键价位图（用 ASCII 或文字表格展示支撑/阻力层级）
+2. **板块驱动 & 资讯面**（涨跌催化、行业动态、公司事件、风险提示）
+3. **基本面数据**（PE/PB/EPS/市值、机构评级、估值合理性判断）
+4. 均线系统状态
+5. 各技术指标数值和信号
+6. 斐波那契关键价位
+7. 资金面（大单/中单/小单净额）
+8. 周线级别趋势判断
+9. 综合评分和多空矛盾分析
+10. 关键价位图（用 ASCII 或文字表格展示支撑/阻力层级）
 
 给出具体价位时，说明每个价位的技术含义（如"MA20 + Fib38.2%"），让用户理解价位背后的逻辑，而不只是一个数字。
+基本面判断需结合估值水平给出定性结论（低估/合理/偏高/高估），作为仓位管理的参考依据。
 
 ### 模式 3: 分时复盘
 
@@ -136,8 +174,11 @@ longbridge kline <SYMBOL> --period 1m --count 400 --format json
 获取从上次分析到现在的行情变化:
 ```bash
 longbridge quote <SYMBOL>
-longbridge kline <SYMBOL> --period day --count <从上次到现在的天数>
+longbridge kline <SYMBOL> --period day --count <从上次到现在的天数> --format json
+longbridge kline <SYMBOL> --period week --count 30 --format json
+longbridge calc-index <SYMBOL>
 longbridge capital <SYMBOL>
+longbridge capital <SYMBOL> --flow
 ```
 
 如果用户有新的操作，查询订单:
@@ -146,7 +187,16 @@ longbridge order --history --start <上次日期>
 longbridge order executions --history --start <上次日期>
 ```
 
-**第三步: 计划 vs 实际对比**
+**第三步: 资讯面更新**
+
+用 WebSearch 搜索自上次分析以来的新信息:
+- 公司公告 (业绩预告/快报、股东减持、重大合同)
+- 板块动态 (行业政策、龙头走势、上下游变化)
+- 市场事件 (影响该标的的宏观/板块级催化)
+
+标注哪些是新增信息 (上次分析后发生的)，哪些是已知信息的延续。
+
+**第四步: 计划 vs 实际对比**
 
 | 对比项 | 计划 | 实际 | 评价 |
 |--------|------|------|------|
@@ -155,15 +205,16 @@ longbridge order executions --history --start <上次日期>
 | 做T执行 | 计划的操作 | 实际操作 | 执行纪律是否到位 |
 | 成本变化 | 预期降成本 | 实际降成本 | 做T效率评估 |
 
-**第四步: 更新计划**
+**第五步: 更新计划**
 
-基于最新行情重新计算技术指标，更新:
+基于最新行情重新计算技术指标，结合基本面和资讯面变化，更新:
 - 关键价位（均线会移动，斐波那契区间可能改变）
 - 情景概率（某些情景已被验证或排除）
 - 操作建议（根据新的支撑阻力调整做T区间）
+- 估值判断（业绩预告/季报后更新 PE 预期）
 - 待跟进事项
 
-**第五步: 记录复盘**
+**第六步: 记录复盘**
 
 将复盘结果追加到项目目录，格式参考输出部分。
 
@@ -226,4 +277,59 @@ Session ID 从 `~/.claude/projects/` 对应项目目录中找到最新的 `.json
 - 计算技术指标时用 Python，避免手算误差
 - 所有价位建议都要说明技术依据，不给没有逻辑支撑的数字
 - 做T建议按 A 股 100 股整数倍，港美股按实际最小单位
-- 分析是参考不是投资建议，HTML 报告底部加免责声明
+- 基本面数据用 longbridge 获取，资讯面用 WebSearch 补充，两者结合判断
+- `institution-rating` 目标价可能过时或覆盖不足，偏离现价 >30% 时需标注
+- `forecast-eps` 对部分 A 股标的无数据，属正常情况
+- 资讯搜索注意使用当前年份，避免获取过期信息
+- 分析是参考不是投资建议，HTML 报告底部加免责声明和 Sources 链接
+
+## Longbridge CLI 命令速查
+
+### 认证与配置
+
+```bash
+longbridge login                        # 登录 (交互式)
+longbridge config                       # 查看/修改配置
+```
+
+### 行情数据
+
+```bash
+longbridge quote <SYMBOL>               # 实时报价 (含盘前盘后)
+longbridge static <SYMBOL>              # 静态信息 (股本/EPS/BPS/股息/最小交易单位)
+longbridge kline <SYMBOL> --period <P> --count <N> [--format json]
+                                        # K线, period: 1m/5m/15m/30m/1h/day/week/month/year
+```
+
+### 基本面
+
+```bash
+longbridge calc-index <SYMBOL>          # PE TTM / PB / 换手率 / 总市值
+longbridge institution-rating <SYMBOL>  # 机构评级 / 目标价 / 行业排名
+longbridge forecast-eps <SYMBOL>        # EPS 预测 (部分标的无数据)
+```
+
+### 资金流
+
+```bash
+longbridge capital <SYMBOL>             # 当日资金分布 (大单/中单/小单 流入流出)
+longbridge capital <SYMBOL> --flow      # 分时累计净流入曲线
+```
+
+### 持仓与订单
+
+```bash
+longbridge positions [--format json]    # 当前持仓
+longbridge portfolio                    # 组合概览
+longbridge order                        # 当日委托
+longbridge order --history --start <YYYY-MM-DD>   # 历史委托
+longbridge order executions [--history --start <YYYY-MM-DD>]  # 成交记录
+```
+
+### 资讯 (WebSearch 补充)
+
+longbridge CLI 不提供新闻接口，使用 WebSearch 工具搜索:
+- 公司新闻: `"<公司名> <代码> <年份>"`
+- 板块动态: `"<行业> 行情 <年月>"`
+- 业绩公告: `"<公司名> 业绩 季报 <年份>"`
+- 行业趋势: `"<行业> 涨价 供需 景气度 <年份>"`
