@@ -1,0 +1,60 @@
+{
+  "skill_name": "trading-analyst",
+  "evals": [
+    {
+      "id": 1,
+      "name": "aapl-technical-and-t-plan",
+      "prompt": "帮我分析 AAPL.US 的技术面并给个做T计划。假设我持有 100 股，成本价 $250。",
+      "expected_output": "先用 longbridge CLI 拉 quote / calc-index / kline / capital 数据，计算 MA/MACD/RSI/KDJ/布林带/斐波那契等指标，产出持仓概况 + 技术指标结果 + 关键价位操作表 + 做T明细（正T/倒T）+ 多情景预估 + 操作纪律。优先输出为 HTML 文件。完成后主动询问用户是否把计划作为复盘基线存起来。",
+      "files": [],
+      "expectations": [
+        "调用了 longbridge quote AAPL.US / calc-index / kline 等命令获取实时数据",
+        "输出包含当前股价、成本、浮盈浮亏的持仓概况",
+        "计算并展示了至少 4 个技术指标（MA、MACD、RSI、布林带之类）",
+        "给出了具体的支撑/阻力价位（带技术含义说明，不是凭空数字）",
+        "制定了做T计划，包含正T和倒T的触发价位和股数",
+        "至少给出 3 种情景预估（乐观/中性/悲观），带概率估计",
+        "所有价位建议都说明了技术依据",
+        "产出 HTML 文件到输出目录",
+        "报告输出后主动询问用户是否把计划存起来作为复盘基线（而非自动落盘）"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "aapl-plan-save-to-user-dir",
+      "prompt": "分析 AAPL.US 的技术面做个做 T 计划，我持有 100 股、成本 $250。做完后把计划作为复盘基线存到我指定的目录（见输出路径），不用先问我——我已经决定要存了。",
+      "expected_output": "做完完整的技术分析和交易计划后，直接（不再询问）调用 scripts/plan_io.py save-plan 把 Plan JSON 存到用户指定的目录，产出 plan_<date>.json + plan_<date>.html。JSON 结构要符合 references/plan-schema.md 的 schema，必填字段齐全且可被 load-latest-plan 加载。",
+      "files": [],
+      "expectations": [
+        "调用了 longbridge CLI 获取 AAPL.US 实时数据",
+        "输出目录下产出了 plan_<YYYY-MM-DD>.json 文件（不是随便的 .json 名字）",
+        "plan_<date>.json 能被 python3 scripts/plan_io.py load-latest-plan --dir <输出目录> 成功加载，返回 ok=true 且 found=true",
+        "plan JSON 包含 symbol / plan_date / snapshot / price_levels / t_plans / scenarios 等所有必填字段",
+        "plan JSON 的 scenarios 至少 3 条，概率和接近 1.0（±0.05）",
+        "plan JSON 的 t_plans 至少 1 条，包含 direction / trigger_price / shares / exit_trigger_price / exit_condition",
+        "同时产出了对应的 plan_<date>.html 文件（便于用户阅读）",
+        "skill 没有重复问用户「要不要存」——用户已经在请求里明确要存了",
+        "plan JSON 的 price_levels 至少有 2 个（一个 resistance 一个 support），每个都有 meaning 字段说明技术含义"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "aapl-review-from-prior-plan",
+      "prompt": "帮我基于之前的计划复盘一下 AAPL.US。计划存在 evals/fixtures/AAPL.US/ 目录下（相对于 skill 根目录的相对路径，skill 需要转成绝对路径）。我现在持仓 90 股（做 T 减了 10 股），成本降到 $247.50。给我一份复盘报告，说清楚之前的情景预估命中了哪个、哪些价位被触及、哪些做 T 计划执行了。最后把复盘也存到同一个目录。",
+      "expected_output": "用 scripts/plan_io.py load-latest-plan 加载 fixture 里的 plan_2026-04-05.json，拉 longbridge 最新行情，用 diff-snapshot 做自动对比，生成一份复盘报告：情景命中判定、价位是否触及/守住、做T计划执行情况、成本实际变化。最终用 save-review 把 review JSON + HTML 存到同一目录，updated_plan_path 如果更新计划就指向新文件。",
+      "files": [],
+      "expectations": [
+        "调用了 python3 scripts/plan_io.py load-latest-plan --dir <fixture 绝对路径> 加载 plan_2026-04-05.json",
+        "调用了 longbridge quote AAPL.US 和/或 kline 拉取从 2026-04-05 到现在的最新行情",
+        "调用了 diff-snapshot 做结构化对比（或在逻辑上等价地复用 plan_io.py 的 diff 能力）",
+        "复盘报告里明确说明了哪个情景（乐观/中性/悲观）与实际走势最匹配",
+        "复盘报告里对 fixture 的每个 price_level（$198 / $190 / $178 / $170）都给出了是否触及的判定",
+        "复盘报告里对 fixture 的 t_plans 给出了执行情况（已执行 / 未触发 / 部分执行），不是泛泛而谈",
+        "复盘报告里对比了成本变化（$250 → $247.50），和计划的 normal_monthly_pct=1.0% 做了对照",
+        "用 python3 scripts/plan_io.py save-review 存了 review_<date>.json + .html 到同一目录",
+        "review JSON 里 prior_plan_path 指向 fixture 的绝对路径（不是相对路径）",
+        "review JSON 里 scenario_verdict.actual_scenario_match 是 fixture 里列过的情景名之一（乐观/中性/悲观）"
+      ]
+    }
+  ]
+}

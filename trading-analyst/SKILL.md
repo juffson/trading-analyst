@@ -162,16 +162,48 @@ longbridge kline <SYMBOL> --period 1m --count 400 --format json
 7. **操作日历**: 未来1个月每周的关注点和操作计划
 8. **操作纪律**: 红线规则（止损线、单日做T上限、底仓不动原则等）
 
+**最后一步（必做）: 处理落盘**
+
+两种情况：
+
+**情况 A：用户在请求里已经说了要存 + 给了目录**
+（比如"做个计划存到 `/tmp/trading/AAPL/`"）
+
+直接执行，不用再问：
+1. 按 `references/plan-schema.md` 的 Plan JSON schema 组织结构化数据
+2. `echo '<json>' | python3 scripts/plan_io.py save-plan --dir <用户给的目录>`
+3. 反馈存盘路径、校验结果；如有 `validation_errors` 必须报给用户
+
+**情况 B：用户没提存储（默认）**
+
+HTML 报告输出后**主动问一句**：
+
+> 「要把这份计划作为后续复盘的基线存起来吗？要存的话告诉我目录（绝对路径），不存就留 HTML 就行。」
+
+- 用户说不存 / 跳过：仅保留 HTML，不写 JSON
+- 用户给出目录：走情况 A 的流程
+
+**不要自作主张创建目录或选默认路径** —— 路径必须来自用户。用户不给就不存。
+
 ### 模式 5: 跟进复盘
 
 用户回来同步最新情况、检验之前计划的执行效果时使用。这是持续改进的关键环节。
 
-**第一步: 回顾之前的计划**
+**第一步: 确定计划文件位置**
 
-读取 memory 文件和项目目录下的历史 session/plan 文件，了解:
-- 上次制定的关键价位和操作建议
-- 情景预估及各自概率
-- 待跟进事项
+- 如果用户一开始就说「复盘 AAPL，计划在 ~/xxx」，直接用那个目录
+- 如果本 session 之前已经帮用户存过该标的的计划，复用同一目录（你知道路径因为当时用户告诉过你）
+- 否则主动问：「上次的 plan 存在哪个目录？」
+
+用户拒绝指定 / 根本没存过计划：退到"无基线复盘"模式，直接基于最新行情做分析，告知用户「没找到历史计划，这次复盘没有比对基线」。
+
+**加载计划**：
+
+```bash
+python3 scripts/plan_io.py load-latest-plan --dir <用户给的目录>
+```
+
+输出里 `found: false` 表示目录下没 `plan_*.json`；`found: true` 就从 `plan` 字段拿结构化数据。
 
 **第二步: 拉取最新数据**
 
@@ -202,11 +234,25 @@ longbridge order executions --history --start <上次日期>
 
 **第四步: 计划 vs 实际对比**
 
+把上一步加载的 plan 和当前行情传给 diff-snapshot 得到结构化对比：
+
+```bash
+echo '{"plan": <prior_plan>, "current_snapshot": {"price": ..., "high_since": ..., "low_since": ..., "cost_basis": ..., "shares": ..., "as_of": "YYYY-MM-DD"}}' \
+  | python3 scripts/plan_io.py diff-snapshot
+```
+
+输出里包含：
+- `price_level_checks`: 每个价位 hit / held 的自动判定
+- `scenario_candidates`: 当前价在哪个情景的 target_range 内
+- `cost_change`: 成本实际变化 vs 计划预期
+
+以这个自动 diff 为骨架，再叠加人工判断（对 T 执行情况、纪律破例、news_delta），填一张完整对比表：
+
 | 对比项 | 计划 | 实际 | 评价 |
 |--------|------|------|------|
 | 情景走向 | 哪个情景发生了 | 实际走势 | 预判是否准确 |
 | 关键价位 | 支撑/阻力是否有效 | 实际触及情况 | 价位是否需要调整 |
-| 做T执行 | 计划的操作 | 实际操作 | 执行纪律是否到位 |
+| 做T执行 | 计划的操作 | 实际操作（longbridge order --history 查） | 执行纪律是否到位 |
 | 成本变化 | 预期降成本 | 实际降成本 | 做T效率评估 |
 
 **第五步: 更新计划**
@@ -218,9 +264,19 @@ longbridge order executions --history --start <上次日期>
 - 估值判断（业绩预告/季报后更新 PE 预期）
 - 待跟进事项
 
-**第六步: 记录复盘**
+**第六步: 记录复盘（需用户确认）**
 
-将复盘结果追加到项目目录，格式参考输出部分。
+和模式 4 一样，复盘报告的 HTML 出完后**主动问一句**：
+
+> 「要把这份复盘存起来吗？存的话用同一个目录 `<已知路径>`？」
+
+用户同意：
+1. 按 `references/plan-schema.md` 的 Review JSON schema 整理数据
+2. `prior_plan_path` 必须填上一步 `load-latest-plan` 返回的绝对路径
+3. 如果本次复盘同时更新了计划：先 `save-plan` 新版 plan，然后把返回的 json_path 填到 review 的 `updated_plan_path` 字段
+4. 最后 `scripts/plan_io.py save-review --dir <目录>`
+
+用户拒绝：仅保留 HTML，不写 JSON。
 
 ### 模式 6: 当日操作记录
 
@@ -230,6 +286,47 @@ longbridge order executions --history --start <上次日期>
 2. 计算操作后的综合成本变化
 3. 评估操作质量（买卖时机、价位合理性）
 4. 更新持仓快照 memory
+5. 如果该标的有历史 plan（本 session 内已知目录 / 用户告知）：
+   - `load-latest-plan` 拿当时的 t_plans 触发价
+   - 对每笔成交，判断是否命中某条 t_plan（触发价 ± ATR 范围内算命中）
+   - 在记录里标注「计划内执行」还是「临时操作」，便于复盘时评估纪律
+
+> **注意**：模式 6 本身不自动落盘。如果用户想把当日操作归档到复盘里，走模式 5 的流程（询问后 save-review）。
+
+## 计划与复盘的本地存储（opt-in）
+
+为了让复盘能可靠地加载"当时的计划"，模式 4 / 5 支持把计划和复盘结构化存到本地 JSON。**完全由用户决定是否存、存到哪**。
+
+### 核心规则
+
+1. **Opt-in**：不存是默认，skill 不自动落盘。产出 HTML 报告后**主动问一句**「要存吗？存到哪？」，用户同意并给路径才存。
+2. **路径由用户指定**：不猜默认路径，不创建 `~/Desktop/daily-work/...` 这类推测目录。用户说 `/X` 就存 `/X`。
+3. **Session 内复用路径**：同一对话里，用户已经为某标的指定过目录后，后续操作（比如"复盘一下"）直接复用，不再追问。跨 session 不记忆（不写 memory），每次新对话重新问。
+4. **JSON + HTML 双份**：JSON 是给 skill 读回来的结构化数据，HTML 是给用户看的。两份文件同目录同名，`.json` 和 `.html` 后缀。
+
+### 文件规范
+
+调用 `scripts/plan_io.py`：
+
+```bash
+# 存计划（stdin 传 plan JSON）
+echo '<plan_json>' | python3 scripts/plan_io.py save-plan --dir <user_dir>
+# → <user_dir>/plan_<YYYY-MM-DD>.json + .html
+
+# 加载最新计划
+python3 scripts/plan_io.py load-latest-plan --dir <user_dir>
+
+# 存复盘
+echo '<review_json>' | python3 scripts/plan_io.py save-review --dir <user_dir>
+# → <user_dir>/review_<YYYY-MM-DD>.json + .html
+
+# 计划 vs 当前行情 diff
+echo '{"plan": ..., "current_snapshot": ...}' | python3 scripts/plan_io.py diff-snapshot
+```
+
+JSON 结构详见 `references/plan-schema.md`。**一定要完整填必填字段**（`symbol` / `plan_date` / `snapshot` / `price_levels` / `t_plans` / `scenarios`），缺字段会导致下次复盘 diff 不准。
+
+同一天多次存同一标的会覆盖——返回的 `overwritten: true` 要告诉用户一声。
 
 ## 输出文件
 

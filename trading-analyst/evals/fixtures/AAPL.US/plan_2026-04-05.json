@@ -1,0 +1,128 @@
+{
+  "version": "1",
+  "symbol": "AAPL.US",
+  "plan_date": "2026-04-05",
+  "created_at": "2026-04-05T10:30:00+08:00",
+  "market": "US",
+  "snapshot": {
+    "price": 182.40,
+    "shares": 100,
+    "cost_basis": 250.00,
+    "market_value": 18240.00,
+    "unrealized_pnl": -6760.00,
+    "unrealized_pnl_pct": -27.04
+  },
+  "position_split": {
+    "base_shares": 70,
+    "active_shares": 30,
+    "rationale": "被套较深，底仓锁 70%，活动仓 30 股用于做 T 降成本"
+  },
+  "price_levels": [
+    {
+      "price": 198.0,
+      "type": "resistance",
+      "meaning": "MA60 + 前高压力",
+      "action": "卖出 10 股（倒 T，压力位减仓）"
+    },
+    {
+      "price": 190.0,
+      "type": "resistance",
+      "meaning": "MA20",
+      "action": "观察，突破后再减 10 股"
+    },
+    {
+      "price": 178.0,
+      "type": "support",
+      "meaning": "MA5 + Fib 38.2%",
+      "action": "买回 10 股（正 T）"
+    },
+    {
+      "price": 170.0,
+      "type": "support",
+      "meaning": "前低 + 布林带下轨",
+      "action": "买回 10 股（加仓正 T）；跌破启动止损"
+    }
+  ],
+  "t_plans": [
+    {
+      "direction": "reverse_T",
+      "trigger_price": 198.0,
+      "trigger_condition": "触及 MA60 未突破",
+      "shares": 10,
+      "exit_trigger_price": 188.0,
+      "exit_condition": "回落至 MA20 附近买回",
+      "logic": "压力位减仓降成本"
+    },
+    {
+      "direction": "forward_T",
+      "trigger_price": 178.0,
+      "trigger_condition": "回踩 MA5 / Fib38.2% 企稳",
+      "shares": 10,
+      "exit_trigger_price": 188.0,
+      "exit_condition": "反弹至 MA20 附近卖出",
+      "logic": "支撑位低吸高抛"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "乐观",
+      "probability": 0.25,
+      "trigger": "Q2 财报超预期 + AI 新品发布",
+      "path": "突破 MA60 后测试 $210 前高",
+      "target_range": [200, 215],
+      "recommended_strategy": "减仓 30%，保留底仓"
+    },
+    {
+      "name": "中性",
+      "probability": 0.50,
+      "trigger": "业绩符合预期，大盘震荡",
+      "path": "在 $175-$195 区间震荡",
+      "target_range": [175, 195],
+      "recommended_strategy": "正常做 T，按价位表执行"
+    },
+    {
+      "name": "悲观",
+      "probability": 0.25,
+      "trigger": "大盘回调 + AI 竞争加剧利空",
+      "path": "跌破 $170 前低，下探 $160",
+      "target_range": [160, 172],
+      "recommended_strategy": "暂停做 T，保留现金，触及 $165 止损减仓"
+    }
+  ],
+  "cost_reduction_estimate": {
+    "conservative_monthly_pct": 0.4,
+    "normal_monthly_pct": 1.0,
+    "ideal_monthly_pct": 1.8,
+    "notes": "基于 ATR ≈ $4.5 和每周 1-2 次做 T 频率"
+  },
+  "calendar": [
+    {"week": "2026-W15", "focus": "关注大盘和板块情绪，等回踩支撑"},
+    {"week": "2026-W16", "focus": "Q2 财报披露窗口（预计 4月底），提前评估仓位"},
+    {"week": "2026-W17", "focus": "财报后波动加大，按价位表谨慎执行"},
+    {"week": "2026-W18", "focus": "WWDC 前瞻热度可能推升，关注 AI 新品"}
+  ],
+  "discipline": [
+    "底仓 70 股不动",
+    "单日做 T 不超过 20 股",
+    "跌破 $165 触发止损，减 20 股",
+    "单笔做 T 最多 10 股，严格按触发价执行",
+    "财报前后 2 天不做 T"
+  ],
+  "technical_summary": {
+    "ma_alignment": "空头排列 (MA5<MA20<MA60)",
+    "macd": "DIF < DEA 但柱状图在收缩",
+    "rsi14": 42,
+    "composite_score": "3 多 / 5 空"
+  },
+  "fundamentals_summary": {
+    "pe_ttm": 27.8,
+    "pb": 41.5,
+    "institution_rating": "中性偏买（强买 6 / 买 14 / 持有 7 / 卖 0）",
+    "valuation_verdict": "合理偏高"
+  },
+  "news_summary": "AI 领域竞争激烈，Gemini 和 OpenAI 新品对苹果生态有潜在分流压力；WWDC 2026 预期有大模型发布反制。近 1 月股价跟随大盘回调 8%。",
+  "data_sources": {
+    "longbridge_snapshot_time": "2026-04-05T10:30:00+08:00",
+    "news_urls": []
+  }
+}
