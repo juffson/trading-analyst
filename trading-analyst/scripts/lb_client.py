@@ -373,21 +373,54 @@ def _get_api_adjust(adjust_str):
         fail("longport 未安装")
 
 
-def _api_ctx():
-    """返回 (quote_ctx, trade_ctx)，按需懒初始化。"""
+def _api_config():
     try:
-        from longport.openapi import QuoteContext, TradeContext, Config
-        config = Config.from_env()
-        return QuoteContext(config), TradeContext(config)
+        from longport.openapi import Config
+        return Config.from_env()
     except ImportError:
         fail("longport 未安装，请 pip install longport")
     except Exception as e:
-        fail(f"OpenAPI 初始化失败: {e}",
+        fail(f"OpenAPI 配置加载失败: {e}",
              hint="检查 LONGPORT_APP_KEY / LONGPORT_APP_SECRET / LONGPORT_ACCESS_TOKEN 是否正确")
 
 
+def _quote_ctx():
+    """行情 context，不依赖交易权限。"""
+    try:
+        from longport.openapi import QuoteContext
+        return QuoteContext(_api_config())
+    except Exception as e:
+        fail(f"QuoteContext 初始化失败: {e}")
+
+
+def _trade_ctx():
+    """交易 context，需要 token 具备交易权限。"""
+    try:
+        from longport.openapi import TradeContext
+        return TradeContext(_api_config())
+    except Exception as e:
+        fail(f"TradeContext 初始化失败: {e}",
+             hint="请确认 token 已开启交易权限（在 https://open.longportapp.com 申请 Trade 权限）")
+
+
+def _check_trade_permission():
+    """静默检测交易权限，返回 (ok: bool, error: str | None)。"""
+    try:
+        from longport.openapi import TradeContext
+        ctx = TradeContext(_api_config())
+        ctx.today_orders()   # 用只读操作探测权限
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+# 保留旧名以兼容内部调用，返回 (quote_ctx, trade_ctx) 元组
+def _api_ctx():
+    return _quote_ctx(), _trade_ctx()
+
+
 def api_quote(symbols):
-    qctx, _ = _api_ctx()
+    qctx = _quote_ctx()
     resp = qctx.quote(symbols)
     result = []
     for r in (resp if isinstance(resp, list) else [resp]):
@@ -410,7 +443,7 @@ def api_quote(symbols):
 
 
 def api_kline(symbol, period, count, adjust):
-    qctx, _ = _api_ctx()
+    qctx = _quote_ctx()
     p = _get_api_period(period)
     adj = _get_api_adjust(adjust)
     resp = qctx.history_candlesticks_by_offset(symbol, p, adj, False, count)
@@ -432,7 +465,7 @@ def api_calc_index(symbols):
     except (ImportError, AttributeError):
         calc_fields = [1, 2, 3, 4]
 
-    qctx, _ = _api_ctx()
+    qctx = _quote_ctx()
     resp = qctx.calc_indexes(symbols, calc_fields)
     rows = resp if isinstance(resp, list) else [resp]
     result = []
@@ -448,7 +481,7 @@ def api_calc_index(symbols):
 
 
 def api_capital(symbol, flow=False):
-    qctx, _ = _api_ctx()
+    qctx = _quote_ctx()
     if flow:
         resp = qctx.capital_flow(symbol)
         rows = resp if isinstance(resp, list) else [resp]
@@ -470,7 +503,7 @@ def api_capital(symbol, flow=False):
 
 
 def api_static(symbols):
-    qctx, _ = _api_ctx()
+    qctx = _quote_ctx()
     resp = qctx.static_info(symbols)
     rows = resp if isinstance(resp, list) else [resp]
     return [_norm_static({
@@ -489,7 +522,7 @@ def api_static(symbols):
 
 
 def api_positions():
-    _, tctx = _api_ctx()
+    tctx = _trade_ctx()
     resp = tctx.stock_positions()
     positions = []
     channels = resp.channels if hasattr(resp, "channels") else (resp if isinstance(resp, list) else [resp])
@@ -508,7 +541,7 @@ def api_positions():
 
 
 def api_orders(history=False, start=None, symbol=None):
-    _, tctx = _api_ctx()
+    tctx = _trade_ctx()
     kwargs = {}
     if symbol:
         kwargs["symbol"] = symbol
@@ -541,7 +574,7 @@ def api_orders(history=False, start=None, symbol=None):
 
 
 def api_executions(history=False, start=None, symbol=None):
-    _, tctx = _api_ctx()
+    tctx = _trade_ctx()
     kwargs = {}
     if symbol:
         kwargs["symbol"] = symbol
@@ -632,7 +665,7 @@ def api_order_trade(side, symbol, qty, price, order_type, remark, dry_run):
     try:
         from longport.openapi import OrderType, OrderSide, TimeInForceType
         from decimal import Decimal
-        _, tctx = _api_ctx()
+        tctx = _trade_ctx()
 
         ot_map = {
             "LO": OrderType.LO, "MO": OrderType.MO,
@@ -660,7 +693,7 @@ def api_order_cancel(order_id, dry_run):
     if dry_run:
         return _build_cancel_preview(order_id)
     try:
-        _, tctx = _api_ctx()
+        tctx = _trade_ctx()
         tctx.cancel_order(order_id)
         return {"cancelled": True, "order_id": order_id}
     except Exception as e:
@@ -711,12 +744,23 @@ def main():
 
     # ── detect ───────────────────────────────────────────────────────────────
     if subcmd == "detect":
-        out({
+        result = {
             "active_mode": mode,
             "cli_available": _has_cli(),
             "api_available": _has_api(),
             "env_override": os.environ.get("LONGBRIDGE_MODE"),
-        })
+        }
+        if _has_api():
+            trade_ok, trade_err = _check_trade_permission()
+            result["api_quote_permission"] = True   # 若 _has_api() 通过则行情可用
+            result["api_trade_permission"] = trade_ok
+            if not trade_ok:
+                result["api_trade_permission_hint"] = (
+                    "交易权限未开启或 token 不包含 Trade 权限。"
+                    "请前往 https://open.longportapp.com 申请并重新生成 ACCESS_TOKEN。"
+                    f"错误详情: {trade_err}"
+                )
+        out(result)
 
     if mode is None:
         fail("找不到可用的数据源",

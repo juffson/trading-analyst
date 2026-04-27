@@ -26,8 +26,23 @@ export LONGPORT_ACCESS_TOKEN="your_access_token"
 
 ```bash
 python3 scripts/lb_client.py detect
-# 期望输出: {"active_mode": "api", "api_available": true, ...}
 ```
+
+`detect` 会分别报告行情权限和交易权限：
+
+```json
+{
+  "active_mode": "api",
+  "api_available": true,
+  "api_quote_permission": true,
+  "api_trade_permission": true
+}
+```
+
+如果 `api_trade_permission: false`，说明当前 token 只有行情权限。需要前往
+https://open.longportapp.com → 开发者中心 → 权限申请，勾选 **Trade** 权限并重新生成 ACCESS_TOKEN。
+
+> 行情权限（Quote）和交易权限（Trade）是独立申请的。`detect` 检测失败时会在 `api_trade_permission_hint` 字段给出详细提示。
 
 ---
 
