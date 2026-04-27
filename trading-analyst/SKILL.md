@@ -321,6 +321,56 @@ echo '{"plan": <prior_plan>, "current_snapshot": {"price": ..., "high_since": ..
 
 > **注意**：模式 6 本身不自动落盘。如果用户想把当日操作归档到复盘里，走模式 5 的流程（询问后 save-review）。
 
+### 模式 7: 执行下单
+
+用户决定执行具体买卖操作时使用。**下单前必须二次确认**，这是不可跳过的安全机制。
+
+**完整流程（严格两步，不得合并）：**
+
+**第一步：预览（dry-run）**
+
+根据用户意图构造订单参数，运行 dry-run 展示完整订单详情：
+
+```bash
+# 买入
+python3 scripts/lb_client.py order-buy <SYMBOL> --qty <股数> --price <价格> \
+  [--order-type LO|MO] [--remark <备注>] --dry-run
+
+# 卖出
+python3 scripts/lb_client.py order-sell <SYMBOL> --qty <股数> --price <价格> \
+  [--order-type LO|MO] [--remark <备注>] --dry-run
+
+# 撤单
+python3 scripts/lb_client.py order-cancel <ORDER_ID> --dry-run
+```
+
+把 dry-run 返回的 `data` 字段展示给用户，然后**必须明确提问**：
+
+> 「以上订单信息确认无误吗？  
+> ✅ 回复「**确认下单**」→ 立即执行，无法撤回  
+> ❌ 任何其他回复 → 取消，不执行」
+
+**第二步：执行（仅在用户明确说"确认下单"后）**
+
+```bash
+# 把 --dry-run 换成 --confirm，其余参数完全相同
+python3 scripts/lb_client.py order-buy <SYMBOL> --qty <股数> --price <价格> \
+  [--order-type LO|MO] [--remark <备注>] --confirm
+```
+
+把成功结果（含 order_id）反馈给用户，并提示通过持仓查询确认到账：
+```bash
+python3 scripts/lb_client.py positions
+```
+
+**注意事项**
+
+- 订单类型默认 `LO`（限价单）；用户明确说"市价买入"才用 `MO`
+- A 股按 100 股整数倍；港美股按 1 股最小单位
+- 用户说"按计划做T"时，从当前对话中的 plan 里取触发价和股数，不要自行推算
+- 不要在用户没有明确确认时执行 `--confirm`，哪怕用户说"快点"或"直接做"
+- 如果用户说"撤销刚才的单"，先查 `python3 scripts/lb_client.py orders` 拿到 order_id，再走 dry-run → 确认 → cancel 流程
+
 ## 计划与复盘的本地存储（opt-in）
 
 为了让复盘能可靠地加载"当时的计划"，模式 4 / 5 支持把计划和复盘结构化存到本地 JSON。**完全由用户决定是否存、存到哪**。
@@ -456,6 +506,22 @@ python3 scripts/lb_client.py positions                   # 当前持仓（港美
 longbridge portfolio                                      # 组合概览（CLI only）
 python3 scripts/lb_client.py orders [--history --start <YYYY-MM-DD>]
 python3 scripts/lb_client.py executions [--history --start <YYYY-MM-DD>]
+```
+
+### 下单（先 dry-run 预览，用户确认后换 --confirm 执行）
+
+```bash
+# 买入
+python3 scripts/lb_client.py order-buy <SYMBOL> --qty <n> --price <p> --dry-run
+python3 scripts/lb_client.py order-buy <SYMBOL> --qty <n> --price <p> --confirm
+
+# 卖出
+python3 scripts/lb_client.py order-sell <SYMBOL> --qty <n> --price <p> --dry-run
+python3 scripts/lb_client.py order-sell <SYMBOL> --qty <n> --price <p> --confirm
+
+# 撤单
+python3 scripts/lb_client.py order-cancel <ORDER_ID> --dry-run
+python3 scripts/lb_client.py order-cancel <ORDER_ID> --confirm
 ```
 
 ### 技术指标计算

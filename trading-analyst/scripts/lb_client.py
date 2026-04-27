@@ -24,6 +24,11 @@ lb_client.py — Longbridge 统一数据客户端
   orders    [--history --start YYYY-MM-DD] [--symbol <s>]  订单列表
   executions [--history --start YYYY-MM-DD] [--symbol <s>] 成交记录
 
+  ⚠️  下单命令（必须加 --dry-run 预览或 --confirm 真实执行，二选一）
+  order-buy  <symbol> --qty <n> --price <p> [--order-type LO|MO] [--remark <s>] --dry-run|--confirm
+  order-sell <symbol> --qty <n> --price <p> [--order-type LO|MO] [--remark <s>] --dry-run|--confirm
+  order-cancel <order-id> --dry-run|--confirm
+
 CLI-only 命令（API 模式下需要 CLI 兜底，否则返回 ok=false）
   institution-rating <symbol>
   forecast-eps <symbol>
@@ -40,6 +45,11 @@ CLI-only 命令（API 模式下需要 CLI 兜底，否则返回 ok=false）
   python3 lb_client.py positions
   python3 lb_client.py orders --history --start 2026-01-01
   python3 lb_client.py executions --history --start 2026-01-01
+  # 下单（先 dry-run 预览，确认后换 --confirm 执行）
+  python3 lb_client.py order-buy AAPL.US --qty 10 --price 185.00 --dry-run
+  python3 lb_client.py order-buy AAPL.US --qty 10 --price 185.00 --confirm
+  python3 lb_client.py order-sell AAPL.US --qty 10 --price 192.00 --dry-run
+  python3 lb_client.py order-cancel 123456789 --dry-run
   LONGBRIDGE_MODE=cli python3 lb_client.py quote AAPL.US   # 强制 CLI
   LONGBRIDGE_MODE=api python3 lb_client.py quote AAPL.US   # 强制 API
 """
@@ -558,6 +568,105 @@ def api_executions(history=False, start=None, symbol=None):
     }) for r in rows]
 
 
+# ─── 下单功能 ─────────────────────────────────────────────────────────────────
+#
+# 安全机制：所有下单命令强制要求 --dry-run（预览）或 --confirm（真实执行）。
+# 不带任何标志直接调用会报错，防止意外触发。
+# --dry-run 返回将要执行的操作详情但不实际提交。
+# --confirm 真实执行，不可撤销（取消单除外）。
+
+ORDER_TYPES = {"LO", "MO", "ELO", "ALO"}  # 限价/市价/增强限价/竞价限价
+
+
+def _build_order_preview(side, symbol, qty, price, order_type, remark):
+    """构造下单预览字典，用于 dry-run 和确认信息展示。"""
+    est_amount = round(qty * price, 2) if price else None
+    return {
+        "action": "order-buy" if side == "buy" else "order-sell",
+        "side": side.upper(),
+        "symbol": symbol,
+        "quantity": qty,
+        "price": price,
+        "order_type": order_type,
+        "estimated_amount": est_amount,
+        "remark": remark,
+        "warning": "此操作将使用真实资金，请确认后执行。",
+    }
+
+
+def _build_cancel_preview(order_id):
+    return {
+        "action": "order-cancel",
+        "order_id": order_id,
+        "warning": "撤单后将无法恢复，请确认。",
+    }
+
+
+# ── CLI 下单实现 ───────────────────────────────────────────────────────────────
+
+def cli_order_trade(side, symbol, qty, price, order_type, remark, dry_run):
+    if dry_run:
+        return _build_order_preview(side, symbol, qty, price, order_type, remark)
+    args = ["order", side, symbol, str(qty),
+            "--price", str(price),
+            "--order-type", order_type,
+            "--yes"]
+    if remark:
+        args += ["--remark", remark]
+    data = cli_run(args)
+    return {"submitted": True, "response": data}
+
+
+def cli_order_cancel(order_id, dry_run):
+    if dry_run:
+        return _build_cancel_preview(order_id)
+    data = cli_run(["order", "cancel", order_id, "--yes"])
+    return {"cancelled": True, "response": data}
+
+
+# ── API 下单实现 ───────────────────────────────────────────────────────────────
+
+def api_order_trade(side, symbol, qty, price, order_type, remark, dry_run):
+    if dry_run:
+        return _build_order_preview(side, symbol, qty, price, order_type, remark)
+    try:
+        from longport.openapi import OrderType, OrderSide, TimeInForceType
+        from decimal import Decimal
+        _, tctx = _api_ctx()
+
+        ot_map = {
+            "LO": OrderType.LO, "MO": OrderType.MO,
+            "ELO": OrderType.ELO, "ALO": OrderType.ALO,
+        }
+        os_map = {"buy": OrderSide.Buy, "sell": OrderSide.Sell}
+
+        resp = tctx.submit_order(
+            symbol=symbol,
+            order_type=ot_map.get(order_type, OrderType.LO),
+            side=os_map[side],
+            submitted_quantity=qty,
+            time_in_force=TimeInForceType.Day,
+            submitted_price=Decimal(str(price)),
+            remark=remark or "",
+        )
+        return {"submitted": True, "order_id": str(resp.order_id)}
+    except ImportError:
+        fail("longport 未安装，请 pip install longport")
+    except Exception as e:
+        fail(f"下单失败: {e}")
+
+
+def api_order_cancel(order_id, dry_run):
+    if dry_run:
+        return _build_cancel_preview(order_id)
+    try:
+        _, tctx = _api_ctx()
+        tctx.cancel_order(order_id)
+        return {"cancelled": True, "order_id": order_id}
+    except Exception as e:
+        fail(f"撤单失败: {e}")
+
+
 # ─── CLI-only fallback ────────────────────────────────────────────────────────
 
 def cli_only_fallback(subcmd, args_extra):
@@ -584,6 +693,17 @@ def main():
     parser.add_argument("--history", action="store_true", help="历史数据（orders/executions 专用）")
     parser.add_argument("--start", help="历史起始日期 YYYY-MM-DD")
     parser.add_argument("--symbol", help="按标的筛选（orders/executions 专用）")
+    # 下单专用参数
+    parser.add_argument("--qty", type=int, help="下单股数（order-buy/sell 专用）")
+    parser.add_argument("--price", type=float, help="下单价格（order-buy/sell 专用）")
+    parser.add_argument("--order-type", default="LO", choices=list(ORDER_TYPES),
+                        help="订单类型：LO 限价（默认）/ MO 市价 / ELO 增强限价 / ALO 竞价限价")
+    parser.add_argument("--remark", help="订单备注（可选）")
+    # 安全标志（二选一，缺一报错）
+    parser.add_argument("--dry-run", action="store_true",
+                        help="预览下单详情，不实际执行（order-buy/sell/cancel 专用）")
+    parser.add_argument("--confirm", action="store_true",
+                        help="真实执行下单，不可撤销（order-buy/sell/cancel 专用）")
 
     args = parser.parse_args()
     subcmd = args.subcmd.lower()
@@ -663,6 +783,42 @@ def main():
                   if mode == "api"
                   else cli_executions(args.history, args.start, args.symbol))
         out({"ok": True, "mode": mode, "data": result})
+
+    # ── order-buy / order-sell ───────────────────────────────────────────────
+    elif subcmd in ("order-buy", "order-sell"):
+        side = "buy" if subcmd == "order-buy" else "sell"
+        if not symbols:
+            fail(f"{subcmd} 需要标的代码，例如: lb_client.py {subcmd} AAPL.US --qty 10 --price 185.00 --dry-run")
+        symbol = symbols[0]
+        if not args.qty or args.qty <= 0:
+            fail("--qty 必须是正整数")
+        if not args.price or args.price <= 0:
+            fail("--price 必须是正数")
+        if not args.dry_run and not args.confirm:
+            fail(f"{subcmd} 需要明确指定 --dry-run（预览）或 --confirm（真实执行）",
+                 hint="先用 --dry-run 查看订单详情，确认无误后换 --confirm 执行")
+        if args.dry_run and args.confirm:
+            fail("--dry-run 和 --confirm 不能同时使用")
+
+        fn = api_order_trade if mode == "api" else cli_order_trade
+        result = fn(side, symbol, args.qty, args.price,
+                    args.order_type, args.remark, args.dry_run)
+        out({"ok": True, "mode": mode, "dry_run": args.dry_run, "data": result})
+
+    # ── order-cancel ─────────────────────────────────────────────────────────
+    elif subcmd == "order-cancel":
+        if not symbols:
+            fail("order-cancel 需要 order_id，例如: lb_client.py order-cancel 1234567890 --dry-run")
+        order_id = symbols[0]
+        if not args.dry_run and not args.confirm:
+            fail("order-cancel 需要明确指定 --dry-run（预览）或 --confirm（真实撤单）",
+                 hint="先用 --dry-run 查看将要撤销的订单，确认后换 --confirm 执行")
+        if args.dry_run and args.confirm:
+            fail("--dry-run 和 --confirm 不能同时使用")
+
+        fn = api_order_cancel if mode == "api" else cli_order_cancel
+        result = fn(order_id, args.dry_run)
+        out({"ok": True, "mode": mode, "dry_run": args.dry_run, "data": result})
 
     # ── CLI-only 命令（institution-rating / forecast-eps / news 等） ──────────
     elif subcmd in ("institution-rating", "forecast-eps", "news",
