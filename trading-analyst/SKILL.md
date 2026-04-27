@@ -13,6 +13,27 @@ description: |
 
 > **与 `company-deep-dive` 的分工**：本 skill 处理**持有期的短中线操作**（技术面、做T、持仓管理、复盘）。如果用户问的是"XX 值不值得买"/"DCF 估值"/"护城河"/"深度研究"等**买入前**的基本面判断，交给 `company-deep-dive` skill。
 
+## 数据源选择
+
+本 skill 通过统一客户端 `scripts/lb_client.py` 获取数据，支持两种模式：
+
+| 模式 | 前提条件 | 特点 |
+|------|---------|------|
+| **CLI 模式**（默认） | 安装了 `longbridge` CLI 并已登录 | 命令全面，institution-rating / forecast-eps / news 均可用 |
+| **API 模式** | `pip install longport` + 配置 `LONGPORT_APP_KEY` / `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` | 不依赖 CLI，institution-rating/forecast-eps/news 需要 CLI 兜底 |
+
+**session 开始时检测并告知用户**：
+
+```bash
+python3 scripts/lb_client.py detect
+```
+
+- 如果 `active_mode: "api"` → 告知用户"当前使用 OpenAPI 模式"
+- 如果 `active_mode: "cli"` → 告知用户"当前使用 CLI 模式"
+- 如果两者都检测到 → 问用户偏好哪种（默认优先 API）；用户可回答"用 CLI"/"用 API"，或设置 `LONGBRIDGE_MODE=cli/api`
+
+**无论哪种模式，数据拉取命令格式完全相同**，skill 无需分支处理，直接用 `python3 scripts/lb_client.py <subcmd>` 即可。完整 API 参考见 `references/longbridge-api.md`。
+
 ## 核心工作流
 
 根据用户请求，进入对应的工作模式。一次对话中可能经历多个模式。
@@ -23,8 +44,8 @@ description: |
 
 1. **拉取数据**
    ```bash
-   longbridge positions --format json
-   longbridge portfolio
+   python3 scripts/lb_client.py positions
+   longbridge portfolio    # portfolio 暂无 API 等效，仅 CLI 可用
    ```
 
 2. **输出持仓总览**: 总资产、市值、现金、盈亏、风险等级
@@ -43,21 +64,28 @@ description: |
 
 ```bash
 # 实时报价（含盘前盘后）
-longbridge quote <SYMBOL>
+python3 scripts/lb_client.py quote <SYMBOL>
 
 # K线数据
-longbridge kline <SYMBOL> --period day --count 60 --format json
-longbridge kline <SYMBOL> --period week --count 30 --format json
+python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60
+python3 scripts/lb_client.py kline <SYMBOL> --period week --count 30
 
 # 基本面指标
-longbridge calc-index <SYMBOL>          # PE/PB/换手率/总市值
-longbridge institution-rating <SYMBOL>  # 机构评级/目标价/行业排名
-longbridge forecast-eps <SYMBOL>        # EPS预测 (可能无数据)
-longbridge static <SYMBOL>              # 股本/EPS/BPS/股息/最小交易单位
+python3 scripts/lb_client.py calc-index <SYMBOL>         # PE/PB/换手率/总市值
+python3 scripts/lb_client.py institution-rating <SYMBOL> # 机构评级（CLI兜底）
+python3 scripts/lb_client.py forecast-eps <SYMBOL>       # EPS预测（CLI兜底）
+python3 scripts/lb_client.py static <SYMBOL>             # 股本/EPS/BPS/股息
 
 # 资金流
-longbridge capital <SYMBOL>             # 当日资金分布 (大单/中单/小单)
-longbridge capital <SYMBOL> --flow      # 分时累计净流入曲线
+python3 scripts/lb_client.py capital <SYMBOL>            # 当日资金分布
+python3 scripts/lb_client.py capital <SYMBOL> --flow     # 分时累计净流入
+```
+
+K线数据传入 calc_indicators.py 时需提取 `.data` 字段：
+```bash
+python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d['data']))" \
+  | python3 scripts/calc_indicators.py
 ```
 
 注意: A 股用 `.SH`/`.SZ` 后缀，港股用 `.HK`，美股用 `.US`。如果不确定代码，用 `longbridge static <SYMBOL>` 验证。
@@ -134,7 +162,7 @@ longbridge capital <SYMBOL> --flow      # 分时累计净流入曲线
 用户想看某一天的盘中走势时使用。
 
 ```bash
-longbridge kline <SYMBOL> --period 1m --count 400 --format json
+python3 scripts/lb_client.py kline <SYMBOL> --period 1m --count 400
 ```
 
 用 Python 处理分时数据:
@@ -209,18 +237,18 @@ python3 scripts/plan_io.py load-latest-plan --dir <用户给的目录>
 
 获取从上次分析到现在的行情变化:
 ```bash
-longbridge quote <SYMBOL>
-longbridge kline <SYMBOL> --period day --count <从上次到现在的天数> --format json
-longbridge kline <SYMBOL> --period week --count 30 --format json
-longbridge calc-index <SYMBOL>
-longbridge capital <SYMBOL>
-longbridge capital <SYMBOL> --flow
+python3 scripts/lb_client.py quote <SYMBOL>
+python3 scripts/lb_client.py kline <SYMBOL> --period day --count <从上次到现在的天数>
+python3 scripts/lb_client.py kline <SYMBOL> --period week --count 30
+python3 scripts/lb_client.py calc-index <SYMBOL>
+python3 scripts/lb_client.py capital <SYMBOL>
+python3 scripts/lb_client.py capital <SYMBOL> --flow
 ```
 
 如果用户有新的操作，查询订单:
 ```bash
-longbridge order --history --start <上次日期>
-longbridge order executions --history --start <上次日期>
+python3 scripts/lb_client.py orders --history --start <上次日期>
+python3 scripts/lb_client.py executions --history --start <上次日期>
 ```
 
 **第三步: 资讯面更新**
@@ -385,53 +413,66 @@ Session ID 从 `~/.claude/projects/` 对应项目目录中找到最新的 `.json
 - 资讯搜索注意使用当前年份，避免获取过期信息
 - 分析是参考不是投资建议，HTML 报告底部加免责声明和 Sources 链接
 
-## Longbridge CLI 命令速查
+## 数据命令速查
 
-### 认证与配置
+所有数据通过 `scripts/lb_client.py` 统一调用，自动适配当前模式（CLI / API）。
+
+### 模式管理
 
 ```bash
-longbridge login                        # 登录 (交互式)
-longbridge config                       # 查看/修改配置
+python3 scripts/lb_client.py detect           # 查看当前模式和可用性
+LONGBRIDGE_MODE=api python3 scripts/lb_client.py detect  # 强制 API 模式
+LONGBRIDGE_MODE=cli python3 scripts/lb_client.py detect  # 强制 CLI 模式
 ```
 
 ### 行情数据
 
 ```bash
-longbridge quote <SYMBOL>               # 实时报价 (含盘前盘后)
-longbridge static <SYMBOL>              # 静态信息 (股本/EPS/BPS/股息/最小交易单位)
-longbridge kline <SYMBOL> --period <P> --count <N> [--format json]
-                                        # K线, period: 1m/5m/15m/30m/1h/day/week/month/year
+python3 scripts/lb_client.py quote <SYMBOL>   # 实时报价（含盘前盘后）
+python3 scripts/lb_client.py static <SYMBOL>  # 股本/EPS/BPS/股息
+python3 scripts/lb_client.py kline <SYMBOL> --period <P> --count <N>
+                                              # period: 1m/5m/15m/30m/1h/day/week/month
 ```
 
 ### 基本面
 
 ```bash
-longbridge calc-index <SYMBOL>          # PE TTM / PB / 换手率 / 总市值
-longbridge institution-rating <SYMBOL>  # 机构评级 / 目标价 / 行业排名
-longbridge forecast-eps <SYMBOL>        # EPS 预测 (部分标的无数据)
+python3 scripts/lb_client.py calc-index <SYMBOL>         # PE TTM / PB / 换手率 / 总市值
+python3 scripts/lb_client.py institution-rating <SYMBOL> # 机构评级（CLI 兜底）
+python3 scripts/lb_client.py forecast-eps <SYMBOL>       # EPS 预测（CLI 兜底）
 ```
 
 ### 资金流
 
 ```bash
-longbridge capital <SYMBOL>             # 当日资金分布 (大单/中单/小单 流入流出)
-longbridge capital <SYMBOL> --flow      # 分时累计净流入曲线
+python3 scripts/lb_client.py capital <SYMBOL>            # 当日资金分布
+python3 scripts/lb_client.py capital <SYMBOL> --flow     # 分时净流入
 ```
 
 ### 持仓与订单
 
 ```bash
-longbridge positions [--format json]    # 当前持仓
-longbridge portfolio                    # 组合概览
-longbridge order                        # 当日委托
-longbridge order --history --start <YYYY-MM-DD>   # 历史委托
-longbridge order executions [--history --start <YYYY-MM-DD>]  # 成交记录
+python3 scripts/lb_client.py positions                   # 当前持仓（港美股）
+longbridge portfolio                                      # 组合概览（CLI only）
+python3 scripts/lb_client.py orders [--history --start <YYYY-MM-DD>]
+python3 scripts/lb_client.py executions [--history --start <YYYY-MM-DD>]
 ```
 
-### 资讯 (WebSearch 补充)
+### 技术指标计算
 
-longbridge CLI 不提供新闻接口，使用 WebSearch 工具搜索:
+```bash
+# 提取 kline 的 data 字段，传给 calc_indicators.py
+python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d['data']))" \
+  | python3 scripts/calc_indicators.py
+```
+
+### 资讯（WebSearch 补充）
+
+两种模式都不提供新闻接口，统一使用 WebSearch：
 - 公司新闻: `"<公司名> <代码> <年份>"`
 - 板块动态: `"<行业> 行情 <年月>"`
 - 业绩公告: `"<公司名> 业绩 季报 <年份>"`
-- 行业趋势: `"<行业> 涨价 供需 景气度 <年份>"`
+
+> **完整 CLI 命令参考**（包括期权/窝轮/盯盘/watchlist 等进阶命令）见 `references/longbridge-commands.md`。
+> **OpenAPI 配置与字段说明**见 `references/longbridge-api.md`。
