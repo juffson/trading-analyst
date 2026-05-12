@@ -13,6 +13,29 @@ description: "买入前的公司深度价值分析，输出 HTML 决策仪表盘
 
 ---
 
+## 数据源选择
+
+本 skill 通过统一客户端 `scripts/lb_client.py` 获取行情和基本面数据，支持两种模式：
+
+| 模式 | 前提条件 | 特点 |
+|------|---------|------|
+| **CLI 模式**（默认） | 安装了 `longbridge` CLI 并已登录 | 命令全面，institution-rating / forecast-eps 均可用 |
+| **API 模式** | `pip install longport` + 配置 `LONGPORT_APP_KEY` / `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` | 不依赖 CLI，institution-rating/forecast-eps 需要 CLI 兜底 |
+
+**session 开始时检测并告知用户**（先确定 skill 根目录，记为 `SKILL_DIR`）：
+
+```bash
+python3 $SKILL_DIR/scripts/lb_client.py detect
+```
+
+- `active_mode: "api"` → 告知用户「当前使用 OpenAPI 模式」
+- `active_mode: "cli"` → 告知用户「当前使用 CLI 模式」
+- 两者都可用时默认优先 API；用户可设置 `LONGBRIDGE_MODE=cli` 强制 CLI
+
+`SKILL_DIR` 的确认方式：当前 skill 安装路径，通常为 `~/.claude/skills/company-deep-dive`，也可能是工作目录下的 `company-deep-dive/`。**在调用任何 lb_client 命令或构造子 agent prompt 之前，先用 `find` 或已知路径定位到 `lb_client.py` 的绝对路径**，记为 `LB_CLIENT`，后续统一用 `python3 $LB_CLIENT <subcmd>` 调用。
+
+---
+
 ## 三条硬性铁律（务必先读）
 
 这个 skill 有三个反复出错的点，先讲清楚：
@@ -146,16 +169,16 @@ Agent(
 
 **数据源优先级**（详见 `references/data_sources.md`）：
 
-1. **第一优先：longbridge CLI**——能命中就不要去爬网页，速度快、数据结构化、免验证码
-   - `longbridge quote <SYMBOL>`：实时行情（价、涨跌、成交量、盘前盘后）
-   - `longbridge calc-index <SYMBOL>`：PE TTM、PB、换手率、总市值
-   - `longbridge static <SYMBOL>`：股本、EPS、BPS、股息、最小交易单位
-   - `longbridge institution-rating <SYMBOL>`：机构评级、目标价、行业排名
-   - `longbridge forecast-eps <SYMBOL>`：EPS 预测（部分 A 股可能无数据）
-   - `longbridge kline <SYMBOL> --period day --count 60 --format json`：K 线（可用于计算 52 周高低）
-   - `longbridge capital <SYMBOL>`：资金分布（大单/中单/小单净额）
-   - ⚠️ **A 股持仓不可查**（`longbridge positions` 只返回港美股账户），但行情/基本面/资金流都正常可用
-2. **第二优先：爬取官方披露**（longbridge 不覆盖的才用，主要是 5 年历史三表和定性信息）
+1. **第一优先：`python3 $LB_CLIENT`**——自动适配 CLI / OpenAPI 两种模式，能命中就不去爬网页
+   - `python3 $LB_CLIENT quote <SYMBOL>`：实时行情（价、涨跌、成交量、盘前盘后）
+   - `python3 $LB_CLIENT calc-index <SYMBOL>`：PE TTM、PB、换手率、总市值
+   - `python3 $LB_CLIENT static <SYMBOL>`：股本、EPS、BPS、股息、最小交易单位
+   - `python3 $LB_CLIENT institution-rating <SYMBOL>`：机构评级、目标价（CLI 兜底）
+   - `python3 $LB_CLIENT forecast-eps <SYMBOL>`：EPS 预测，部分 A 股可能无数据（CLI 兜底）
+   - `python3 $LB_CLIENT kline <SYMBOL> --period day --count 260`：K 线（可用于计算 52 周高低）
+   - `python3 $LB_CLIENT capital <SYMBOL>`：资金分布（大单/中单/小单净额）
+   - ⚠️ **A 股持仓不可查**（`positions` 只返回港美股账户），但行情/基本面/资金流都正常可用
+2. **第二优先：爬取官方披露**（lb_client 不覆盖的才用，主要是 5 年历史三表和定性信息）
    - A股：巨潮资讯网（官方）> 东方财富 > 新浪财经 > 雪球
    - 港股：港交所 HKEXnews > 富途 > 新浪港股 > 雪球
    - 美股：SEC EDGAR（10-K/10-Q）> Yahoo Finance > Macrotrends > Stockanalysis.com
