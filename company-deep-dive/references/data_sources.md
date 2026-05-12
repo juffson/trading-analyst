@@ -1,22 +1,23 @@
 # 数据源优先级与 URL 模板
 
-## 第一优先：longbridge CLI（所有市场通用）
+## 第一优先：lb_client.py 统一客户端（所有市场通用）
 
-能命中 longbridge 就不要去爬网页——速度快、数据结构化、免登录、无验证码风险。
+能命中 lb_client 就不要去爬网页——自动适配 CLI / OpenAPI 双模式，数据结构化、免登录、无验证码风险。
+命令格式：`python3 $LB_CLIENT <subcmd> <SYMBOL>`（`$LB_CLIENT` 为 lb_client.py 的绝对路径）。
 
-| longbridge 命令 | 用途 | 字段示例 |
-|------|------|----------|
-| `longbridge quote <SYMBOL>` | 实时行情 | 现价、涨跌幅、成交量、成交额、盘前/盘后 |
-| `longbridge calc-index <SYMBOL>` | 核心估值指标 | PE TTM、PB、换手率、总市值 |
-| `longbridge static <SYMBOL>` | 静态信息 | 股本、EPS、BPS、股息、最小交易单位 |
-| `longbridge institution-rating <SYMBOL>` | 机构评级 | 评级分布、目标价、行业排名 |
-| `longbridge forecast-eps <SYMBOL>` | EPS 预测 | 未来 1-3 年一致预期（部分 A 股无数据） |
-| `longbridge kline <SYMBOL> --period day --count 60 --format json` | K 线 | 日/周/月 OHLCV（可算 52 周高低、波动率） |
-| `longbridge capital <SYMBOL>` | 资金流 | 大/中/小单净流入 |
-| `longbridge capital <SYMBOL> --flow` | 分时资金 | 累计净流入曲线 |
+| 子命令 | 用途 | 关键输出字段 |
+|--------|------|-------------|
+| `quote <SYMBOL>` | 实时行情 | `last_done` 现价、`volume` 成交量、`turnover` 成交额 |
+| `calc-index <SYMBOL>` | 核心估值指标 | `pe_ttm`、`pb`、`turnover_rate`、`total_market_value` |
+| `static <SYMBOL>` | 静态信息 | `total_shares`、`eps`、`eps_ttm`、`bps`、`dividend_yield` |
+| `institution-rating <SYMBOL>` | 机构评级（CLI 兜底） | 评级分布、目标价区间、行业排名 |
+| `forecast-eps <SYMBOL>` | EPS 预测（CLI 兜底） | 未来 1-3 年一致预期（部分 A 股无数据） |
+| `kline <SYMBOL> --period day --count 260` | K 线 | OHLCV（可算 52 周高低、波动率） |
+| `capital <SYMBOL>` | 资金流 | 大/中/小单净流入 |
+| `capital <SYMBOL> --flow` | 分时资金 | 累计净流入曲线 |
 
 **使用原则**：
-- 统一加 `--format json` 便于 Python 读取
+- lb_client 输出均为 JSON，无需加 `--format json`
 - A 股代码：`600xxx.SH`（沪）、`000xxx.SZ`（深）、`688xxx.SH`（科创板）、`300xxx.SZ`（创业板）
 - 港股：`<5位代码>.HK`（如 `00700.HK`）
 - 美股：`<ticker>.US`（如 `AAPL.US`）
@@ -49,6 +50,51 @@ A 股代码规则：
 - 沪市科创板：68 开头（如 688981 中芯国际）
 - 深市主板：00 开头（如 000858 五粮液）
 - 深市创业板：30 开头（如 300750 宁德时代）
+
+### 东方财富财务接口字段速查（经过实测验证，A 股适用）
+
+接口基础 URL：`https://datacenter.eastmoney.com/securities/api/data/v1/get`
+公共参数：`source=HSF10&client=PC&filter=(SECURITY_CODE%3D%22{6位代码}%22)`
+
+#### 利润表 `reportName=RPT_LICO_FN_CPD`
+
+> ⚠️ 日期字段名为 `REPORTDATE`（无下划线），与其他两张表不同
+
+| 字段名 | 含义 |
+|--------|------|
+| `REPORTDATE` | 报告期（格式 `YYYY-MM-DD HH:MM:SS`） |
+| `TOTAL_OPERATE_INCOME` | 营业总收入 |
+| `PARENT_NETPROFIT` | 归母净利润 |
+| `BASIC_EPS` | 基本每股收益 |
+
+排序：`sortColumns=REPORTDATE&sortTypes=-1`（最新在前）
+
+#### 资产负债表 `reportName=RPT_DMSK_FN_BALANCE`
+
+| 字段名 | 含义 |
+|--------|------|
+| `REPORT_DATE` | 报告期 |
+| `TOTAL_ASSETS` | 总资产 |
+| `TOTAL_LIABILITIES` | 总负债 |
+| `MONETARYFUNDS` | 货币资金（现金等价物） |
+
+排序：`sortColumns=REPORT_DATE&sortTypes=-1`
+
+#### 现金流量表 `reportName=RPT_DMSK_FN_CASHFLOW`
+
+| 字段名 | 含义 |
+|--------|------|
+| `REPORT_DATE` | 报告期 |
+| `NETCASH_OPERATE` | 经营活动现金净流量 |
+| `NETCASH_INVEST` | 投资活动现金净流量 |
+| `NETCASH_FINANCE` | 筹资活动现金净流量 |
+| `CONSTRUCT_LONG_ASSET` | CAPEX（购建长期资产支出） |
+
+排序：`sortColumns=REPORT_DATE&sortTypes=-1`
+
+**已验证无效的字段名**（不要用）：`OPERATE_PROFIT`、`NETPROFIT`、`TOT_SHAREHOLDERS_EQY`、`MONETARY_CAP`、`PURCHASE_FIXED_ASSETS`、`NET_CASH_FLOWS_OPER_ACT`
+
+---
 
 ## 港股
 
