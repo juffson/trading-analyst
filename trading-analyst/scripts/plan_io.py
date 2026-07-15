@@ -91,6 +91,66 @@ def validate_plan(plan):
                 if k not in lvl:
                     errors.append(f"price_levels[{i}] 缺少 {k}")
 
+    trade_view = plan.get("trade_view")
+    if trade_view is not None:
+        if not isinstance(trade_view, dict):
+            errors.append("trade_view 必须是 object")
+        else:
+            outlooks = {"Strong Bullish", "Bullish", "Neutral", "Bearish", "Strong Bearish"}
+            if trade_view.get("outlook") not in outlooks:
+                errors.append("trade_view.outlook 必须是五级英文枚举之一")
+            for key in ("strategy_fit_score", "confidence"):
+                value = trade_view.get(key)
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100:
+                    errors.append(f"trade_view.{key} 必须是 0-100 的数值")
+            if not isinstance(trade_view.get("should_execute"), bool):
+                errors.append("trade_view.should_execute 必须是 boolean")
+            score = trade_view.get("strategy_fit_score")
+            if isinstance(score, (int, float)) and not isinstance(score, bool):
+                if score < 80 and trade_view.get("should_execute") is True:
+                    errors.append("strategy_fit_score < 80 时 should_execute 必须为 false")
+
+    strategy_fit = plan.get("strategy_fit")
+    if strategy_fit is not None:
+        if not isinstance(strategy_fit, dict):
+            errors.append("strategy_fit 必须是 object")
+        else:
+            total = strategy_fit.get("total_score")
+            dimensions = strategy_fit.get("dimensions")
+            if isinstance(total, bool) or not isinstance(total, (int, float)) or not 0 <= total <= 100:
+                errors.append("strategy_fit.total_score 必须是 0-100 的数值")
+            if not isinstance(dimensions, list) or len(dimensions) != 6:
+                errors.append("strategy_fit.dimensions 必须恰好包含 6 个评分维度")
+            else:
+                dimension_total = 0
+                dimension_max_total = 0
+                valid_dimensions = True
+                for i, dimension in enumerate(dimensions):
+                    score = dimension.get("score") if isinstance(dimension, dict) else None
+                    max_score = dimension.get("max_score") if isinstance(dimension, dict) else None
+                    if (isinstance(score, bool) or isinstance(max_score, bool)
+                            or not isinstance(score, (int, float))
+                            or not isinstance(max_score, (int, float))
+                            or max_score <= 0 or not 0 <= score <= max_score):
+                        errors.append(f"strategy_fit.dimensions[{i}] 的 score/max_score 无效")
+                        valid_dimensions = False
+                    else:
+                        dimension_total += score
+                        dimension_max_total += max_score
+                if valid_dimensions and isinstance(total, (int, float)) and abs(dimension_total - total) > 0.01:
+                    errors.append("strategy_fit.total_score 必须等于六维得分之和")
+                if valid_dimensions and abs(dimension_max_total - 100) > 0.01:
+                    errors.append("strategy_fit 六维 max_score 之和必须为 100")
+
+            card_score = trade_view.get("strategy_fit_score") if isinstance(trade_view, dict) else None
+            if (isinstance(total, (int, float)) and not isinstance(total, bool)
+                    and isinstance(card_score, (int, float)) and not isinstance(card_score, bool)
+                    and abs(total - card_score) > 0.01):
+                errors.append("trade_view.strategy_fit_score 与 strategy_fit.total_score 不一致")
+            if (strategy_fit.get("hard_gates_passed") is False
+                    and isinstance(trade_view, dict) and trade_view.get("should_execute") is True):
+                errors.append("hard_gates_passed=false 时 should_execute 必须为 false")
+
     return errors
 
 
@@ -159,6 +219,33 @@ def render_plan_html(plan):
 <dt>浮盈亏</dt><dd class="{pnl_class}">{esc(snap.get('unrealized_pnl'))} ({esc(pnl_pct)}%)</dd>
 </dl></div>"""]
 
+    card = plan.get("trade_view") or {}
+    if card:
+        execute = "可执行" if card.get("should_execute") else "暂不执行"
+        parts.append(f"""<div class="card"><h2>Trade View</h2><dl class="kv">
+<dt>结论</dt><dd><strong>{esc(card.get('outlook_desc') or card.get('outlook'))}</strong> · {esc(execute)}</dd>
+<dt>建议</dt><dd>{esc(card.get('recommendation'))}</dd>
+<dt>策略契合分</dt><dd>{esc(card.get('strategy_fit_score'))} / 100</dd>
+<dt>置信度</dt><dd>{esc(card.get('confidence'))} / 100</dd>
+<dt>主驱动</dt><dd>{esc(card.get('key_driver'))}</dd>
+<dt>价格锚</dt><dd>{esc(card.get('analysis_price'))}</dd>
+<dt>三情景价格</dt><dd>{esc(card.get('conservative_price'))} / {esc(card.get('benchmark_price'))} / {esc(card.get('optimistic_price'))}</dd>
+<dt>失效条件</dt><dd>{esc(card.get('invalidation'))}</dd>
+<dt>暂不执行原因</dt><dd>{esc(card.get('skip_reason'))}</dd>
+</dl></div>""")
+
+    strategy_fit = plan.get("strategy_fit") or {}
+    if strategy_fit.get("dimensions"):
+        rows = []
+        for dimension in strategy_fit["dimensions"]:
+            rows.append(f"<tr><td>{esc(dimension.get('name'))}</td>"
+                        f"<td>{esc(dimension.get('score'))} / {esc(dimension.get('max_score'))}</td>"
+                        f"<td>{esc(dimension.get('status'))}</td>"
+                        f"<td>{esc(dimension.get('reason'))}</td></tr>")
+        parts.append(f"""<div class="card"><h2>Strategy Fit</h2>
+<table><tr><th>维度</th><th>得分</th><th>状态</th><th>依据</th></tr>
+{''.join(rows)}</table></div>""")
+
     if plan.get("position_split"):
         ps = plan["position_split"]
         parts.append(f"""<div class="card"><h2>仓位划分</h2><dl class="kv">
@@ -226,6 +313,15 @@ def render_review_html(review):
 <title>复盘 {sym} {date}</title>{_HTML_STYLE}</head><body>
 <h1>复盘报告 · {sym}</h1>
 <div class="meta">review_date: {date} · 基于计划: {esc(review.get('prior_plan_path'))} · 间隔: {esc(review.get('days_elapsed'))} 天</div>"""]
+
+    change = review.get("trade_view_change") or {}
+    if change:
+        parts.append(f"""<div class="card"><h2>Trade View 变化</h2><dl class="kv">
+<dt>Outlook</dt><dd>{esc(change.get('prior_outlook'))} → {esc(change.get('current_outlook'))}</dd>
+<dt>策略契合分</dt><dd>{esc(change.get('prior_strategy_fit_score'))} → {esc(change.get('current_strategy_fit_score'))}</dd>
+<dt>执行状态</dt><dd>{esc(change.get('prior_should_execute'))} → {esc(change.get('current_should_execute'))}</dd>
+<dt>变化原因</dt><dd>{esc(change.get('change_reason'))}</dd>
+</dl></div>""")
 
     sv = review.get("scenario_verdict") or {}
     if sv:

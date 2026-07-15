@@ -29,6 +29,68 @@
     "unrealized_pnl_pct": -25.11
   },
 
+  "trade_view": {
+    "as_of": "2026-04-23T10:30:00+08:00",
+    "analysis_quality": "pass",
+    "should_execute": false,
+    "skip_reason": "策略契合分低于 80，等待放量站回 MA20",
+    "outlook": "Neutral",
+    "outlook_desc": "中性",
+    "recommendation": "保留底仓，只在区间内用活动仓做 T",
+    "strategy_fit_score": 70,
+    "confidence": 78,
+    "key_driver": "Q2 营收指引下修",
+    "analysis_price": 187.23,
+    "conservative_price": 175.0,
+    "benchmark_price": 195.0,
+    "optimistic_price": 210.0,
+    "forecast_horizon_days": 30,
+    "invalidation": "放量站稳 195 且盈利预期上修"
+  },
+
+  "driver_analysis": {
+    "long_votes": 1,
+    "short_votes": 2,
+    "neutral_votes": 1,
+    "conflict_summary": "基本面偏空，但短线 RSI 超卖形成反弹条件",
+    "factors": [
+      {
+        "name": "盈利预期下修",
+        "type": "fundamental",
+        "sub_type": "earnings_guidance",
+        "occur_time": "2026-04-22T20:00:00Z",
+        "data_status": "completed",
+        "direction": "short",
+        "direction_reasoning": "未来两个季度一致预期同步下调",
+        "driver_strength": null,
+        "strength_basis": "no anomaly or provider strength available",
+        "confidence": 82,
+        "relevance_score": 0.92,
+        "driving_cause": "估值中枢和目标价承压",
+        "evidence_sources": [{"name": "公司公告", "url": "https://..."}]
+      }
+    ]
+  },
+
+  "strategy_fit": {
+    "total_score": 70,
+    "hard_gates_passed": true,
+    "dimensions": [
+      {"name": "trend_relative_strength", "score": 12, "max_score": 25, "status": "down", "reason": "日线空头排列"},
+      {"name": "technical_confirmation", "score": 15, "max_score": 20, "status": "line", "reason": "RSI 超卖但 MACD 未金叉"},
+      {"name": "volume_capital", "score": 8, "max_score": 15, "status": "line", "reason": "反弹未放量"},
+      {"name": "driver_quality", "score": 10, "max_score": 15, "status": "down", "reason": "驱动可靠但方向偏空"},
+      {"name": "fundamentals_valuation", "score": 10, "max_score": 10, "status": "line", "reason": "估值回落但仍不便宜"},
+      {"name": "risk_reward_execution", "score": 15, "max_score": 15, "status": "up", "reason": "止损与仓位约束明确"}
+    ],
+    "execution_rules": {
+      "entry": {"status": "wait", "action": "175-180 分批接活动仓", "reason": "接近前低支撑"},
+      "hold": {"status": "active", "action": "底仓 70 股不动", "reason": "避免反弹踏空"},
+      "exit": {"status": "conditional", "action": "192.5 附近减 10 股", "reason": "MA20 压力"},
+      "sizing": {"status": "limited", "action": "活动仓最多 30 股", "reason": "趋势尚未反转"}
+    }
+  },
+
   "position_split": {
     "base_shares": 70,
     "active_shares": 30,
@@ -135,6 +197,9 @@
 - `version`: 固定 `"1"`，以后 schema 变更时递增
 - `plan_date`: 只日期，不含时分。同一天多次做计划会覆盖
 - `snapshot`: 写入时的行情和持仓，复盘时用作起点
+- `trade_view`: 机器稳定的交易观点；`outlook` 只允许五级英文枚举，`strategy_fit_score` / `confidence` 必须是数值。低于 80 或硬门槛失败时 `should_execute=false`
+- `driver_analysis`: 保存多空票数、冲突与关键 Factor。`driver_strength` 没有客观依据时必须是 `null`
+- `strategy_fit`: 六维总分和 entry/hold/exit/sizing 规则。各维度 `0 <= score <= max_score`，总分应等于维度得分之和且范围为 0-100
 - `position_split`: A 股按手（100 股整数倍），港美股按实际最小单位
 - `price_levels`: 列所有关键价位，从高到低排序。`action` 写具体动作（买 X 股 / 卖 X 股 / 止损 / 观察）
 - `t_plans`: 每条 T 操作都要有触发价 + 触发条件 + 退出价 + 退出条件，缺一项复盘时就没法 diff
@@ -162,6 +227,16 @@
     "shares": 90,
     "cost_basis": 247.50,
     "unrealized_pnl_pct": -21.05
+  },
+
+  "trade_view_change": {
+    "prior_outlook": "Neutral",
+    "current_outlook": "Bullish",
+    "prior_strategy_fit_score": 70,
+    "current_strategy_fit_score": 83,
+    "prior_should_execute": false,
+    "current_should_execute": true,
+    "change_reason": "放量站回 MA20，催化由预期转为已确认数据"
   },
 
   "scenario_verdict": {
@@ -230,6 +305,7 @@
 ### 字段使用规则
 
 - `prior_plan_path`: 加载的计划文件**绝对路径**，方便回溯
+- `trade_view_change`: 对比五级 outlook、策略契合分和执行状态，解释交易观点为何变化；不能只对比价格
 - `scenario_verdict.actual_scenario_match`: 必须是 prior plan 里列出过的情景名之一
 - `price_level_checks`: 每个价位必须对应到 prior plan 的 `price_levels`
 - `t_plan_execution`: 对应到 prior plan 的 `t_plans`，执行情况从 `longbridge order --history` 拉取

@@ -11,6 +11,10 @@
         "连接器可用时调用 longbridge_quote / calc_indexes / candlesticks 等工具；不可用时才回退命令行",
         "输出包含当前股价、成本、浮盈浮亏的持仓概况",
         "计算并展示了至少 4 个技术指标（MA、MACD、RSI、布林带之类）",
+        "报告开头包含 Trade View：五级 outlook、中英文展示、strategy_fit_score、confidence、should_execute 和失效条件",
+        "driver_strength、confidence、relevance_score、strategy_fit_score 含义分离；缺少客观强度依据时 driver_strength 为 null",
+        "Strategy Fit 展示六项评分、证据和扣分原因，总分为数值型 0-100",
+        "给出保守/基准/乐观三个价格情景，并说明价格锚、预测周期和触发条件",
         "给出了具体的支撑/阻力价位（带技术含义说明，不是凭空数字）",
         "制定了做T计划，包含正T和倒T的触发价位和股数",
         "至少给出 3 种情景预估（乐观/中性/悲观），带概率估计",
@@ -29,7 +33,8 @@
         "优先通过 Longbridge connector/app 获取 AAPL.US 实时数据，必要时才回退 CLI/OpenAPI",
         "输出目录下产出了 plan_<YYYY-MM-DD>.json 文件（不是随便的 .json 名字）",
         "plan_<date>.json 能被 python3 scripts/plan_io.py load-latest-plan --dir <输出目录> 成功加载，返回 ok=true 且 found=true",
-        "plan JSON 包含 symbol / plan_date / snapshot / price_levels / t_plans / scenarios 等所有必填字段",
+        "plan JSON 包含 symbol / plan_date / snapshot / trade_view / driver_analysis / strategy_fit / price_levels / t_plans / scenarios",
+        "trade_view.strategy_fit_score 与 strategy_fit.total_score 一致，低于 80 时 should_execute=false",
         "plan JSON 的 scenarios 至少 3 条，概率和接近 1.0（±0.05）",
         "plan JSON 的 t_plans 至少 1 条，包含 direction / trigger_price / shares / exit_trigger_price / exit_condition",
         "同时产出了对应的 plan_<date>.html 文件（便于用户阅读）",
@@ -53,7 +58,25 @@
         "复盘报告里对比了成本变化（$250 → $247.50），和计划的 normal_monthly_pct=1.0% 做了对照",
         "用 python3 scripts/plan_io.py save-review 存了 review_<date>.json + .html 到同一目录",
         "review JSON 里 prior_plan_path 指向 fixture 的绝对路径（不是相对路径）",
-        "review JSON 里 scenario_verdict.actual_scenario_match 是 fixture 里列过的情景名之一（乐观/中性/悲观）"
+        "review JSON 里 scenario_verdict.actual_scenario_match 是 fixture 里列过的情景名之一（乐观/中性/悲观）",
+        "如果 prior plan 含 trade_view，复盘包含 trade_view_change，对比 outlook、strategy_fit_score 和 should_execute 并解释变化原因"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "driver-conflict-and-hard-gate",
+      "prompt": "分析一只刚出利好公告、但股价已经连续大涨且来源数据不完整的股票。请不要只给一个综合分，要说明催化强度、方向冲突、当前是否还能执行，以及什么条件下结论会改变。",
+      "expected_output": "把公告标准化为 Driver/Factor，区分 driver_strength、confidence、relevance_score 和 strategy_fit_score。用五级 outlook 表达方向，用 should_execute + hard gate 表达可执行性；即使观点看多，数据质量或风险收益门槛失败也要明确暂不执行。输出三情景价格、失效条件和 entry/hold/exit/sizing。",
+      "files": [],
+      "expectations": [
+        "催化包含 occur_time、data_status、direction、trigger_condition、driving_cause 和 evidence_sources",
+        "没有 z-score、阈值或 provider driver strength 时不臆造 driver_strength，而是输出 null",
+        "展示 long/short/neutral 票数与冲突原因，不把公告利好直接等同于买入",
+        "Strategy Fit 恰好六个维度且合计 100 分制，每项有 score/max_score、状态、证据或扣分理由",
+        "五级 outlook 与 should_execute 分离；硬门槛失败时 should_execute=false 且有 skip_reason",
+        "分析数据不完整时 analysis_quality 为 degraded 或 blocked，而不是伪装成 Neutral",
+        "保守/基准/乐观三情景都以 analysis_price 为锚，并给预测周期、触发和失效条件",
+        "Execution Rules 明确列出 entry、hold、exit、sizing 的动作和理由"
       ]
     }
   ]

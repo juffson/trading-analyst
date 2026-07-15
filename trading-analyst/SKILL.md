@@ -29,6 +29,17 @@ description: |
 
 连接器工具映射见 `references/longbridge-connector.md`；CLI/OpenAPI 回退见 `references/longbridge-api.md`。发生回退时简短告知用户原因。不要把连接器数据再次通过 CLI 重复拉取，除非需要核对异常值。
 
+## Driver → Trade View 结论层（模式 2 / 4 必做）
+
+个股分析和交易计划必须按 `references/driver-trade-view-framework.md` 先生成标准化 Trade View，再展开技术面和操作表。核心原则：
+
+1. 将关键资讯整理为 Driver/Factor：保留事件时间、状态、`long/short/neutral` 方向、触发条件、逐标的传导原因和来源。
+2. 分开输出 `driver_strength`、`confidence`、Factor `relevance_score` 和 `strategy_fit_score`，不可用一个综合分替代；缺少客观异常值或 provider strength 时，`driver_strength` 写 `null`。
+3. `strategy_fit_score` 必须是数值型 0-100，并展示六项得分和扣分理由。总分低于 80 或硬门槛失败时仍给完整分析，但 `should_execute=false`，同时写明 `skip_reason` 或待确认条件。
+4. `outlook` 使用稳定的五级英文枚举（Strong Bullish / Bullish / Neutral / Bearish / Strong Bearish），另给中文 `outlook_desc`。Outlook 表示方向，策略分表示可执行性，两者不可混用。
+5. 核心结论必须有 `analysis_price`、保守/基准/乐观三个场景价格、预测周期、失效条件，以及 entry / hold / exit / sizing 规则。
+6. 分析生命周期和投资结论分开：数据过期、缺失或未经核验时标记 `analysis_quality=degraded|blocked`，不能伪装成 Neutral。
+
 ## 核心工作流
 
 根据用户请求，进入对应的工作模式。一次对话中可能经历多个模式。
@@ -114,7 +125,7 @@ python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
 - "<行业> 涨价 供需 景气度"          — 行业供需变化
 ```
 
-输出资讯摘要:
+输出资讯摘要，并按 Driver/Factor 标准化主驱动:
 1. **涨跌驱动**: 近期涨跌的核心催化因素 (政策/业绩/板块/事件)
 2. **行业动态**: 所属板块整体趋势、龙头表现、产业链上下游变化
 3. **公司事件**: 业绩公告、扩产计划、大股东动向、机构调研
@@ -135,22 +146,22 @@ python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
 - **ATR**: 14日波动率，做T参考波幅
 - **斐波那契**: 基于近30日高低点的回撤位
 - **筹码分布**: 成交量加权价格密集区
-- **综合评分**: 多指标投票 (N多/M空)
+- **技术投票**: 多指标投票 (N多/M空)，作为 Strategy Fit 的证据之一，不直接充当最终分数
 
 使用 `scripts/calc_indicators.py` 脚本进行计算，传入 JSON 格式的 K 线数据。
 
 **第五步: 输出分析报告**
 
 报告结构:
-1. 当前价格概况（现价、成本、盈亏、距回本%）
-2. **板块驱动 & 资讯面**（涨跌催化、行业动态、公司事件、风险提示）
-3. **基本面数据**（PE/PB/EPS/市值、机构评级、估值合理性判断）
-4. 均线系统状态
-5. 各技术指标数值和信号
-6. 斐波那契关键价位
-7. 资金面（大单/中单/小单净额）
-8. 周线级别趋势判断
-9. 综合评分和多空矛盾分析
+1. **Trade View**（recommendation、五级 outlook、策略契合分、置信度、是否执行、三情景价格、失效条件）
+2. 当前价格概况（现价、成本、盈亏、距回本%）
+3. **Drivers & Evidence**（主驱动、driver strength、受益/受损传导、来源与时效）
+4. **Strategy Fit 明细**（六项得分、Top 3 驱动、多空票数、硬门槛和冲突）
+5. **板块驱动 & 资讯面**（行业动态、公司事件、风险提示）
+6. **基本面数据**（PE/PB/EPS/市值、机构评级、估值合理性判断）
+7. 均线系统、各技术指标、斐波那契关键价位和周线趋势
+8. 资金面（大单/中单/小单净额）
+9. **Execution Rules**（entry / hold / exit / sizing，每项写动作和理由）
 10. 关键价位图（用 ASCII 或文字表格展示支撑/阻力层级）
 
 给出具体价位时，说明每个价位的技术含义（如"MA20 + Fib38.2%"），让用户理解价位背后的逻辑，而不只是一个数字。
@@ -178,12 +189,13 @@ python3 scripts/lb_client.py kline <SYMBOL> --period 1m --count 400
 
 **交易计划必须包含以下内容:**
 
-1. **持仓概况**: 数量、成本、现价、浮亏
-2. **仓位划分**:
+1. **Trade View**: 五级方向、是否执行、策略契合分、置信度、主驱动、三情景目标、失效条件
+2. **持仓概况**: 数量、成本、现价、浮亏
+3. **仓位划分**:
    - 底仓（60-70%）: 锁仓不动
    - 活动仓（30-40%）: 做T使用，按100股整数倍分手
-3. **关键价位操作表**: 从上到下列出每个价位的技术含义和具体操作（买/卖多少股）
-4. **做T操作明细**:
+4. **关键价位操作表**: 从上到下列出每个价位的技术含义和具体操作（买/卖多少股）
+5. **做T操作明细**:
    - 正T（先买后卖）: 触发价位、数量、逻辑、卖出时机
    - 倒T（先卖后买）: 触发价位、数量、逻辑、买回时机
 
@@ -191,10 +203,10 @@ python3 scripts/lb_client.py kline <SYMBOL> --period 1m --count 400
    > - **倒T（先卖后买）**：只要有存量仓位即可操作，当天先卖出已有仓位，再低位买回。
    > - **正T（先买后卖）**：当天买入的新份额**不能卖**；只能卖出**今天之前已持有**的那部分仓位。若用户当日才建仓（零存量），正T不可操作，务必明确告知。
    > - 制定计划时，区分「存量股数」（T+0 可卖）和「今日买入股数」（T+1 才可卖），数量上严格对应。
-5. **情景预估**: 至少3种情景（乐观/中性/悲观），每种标注概率、触发条件、路径、对应策略
-6. **降成本测算**: 按保守/正常/理想三档估算月度做T收益和等效成本变化
-7. **操作日历**: 未来1个月每周的关注点和操作计划
-8. **操作纪律**: 红线规则（止损线、单日做T上限、底仓不动原则等）
+6. **情景预估**: 至少3种情景（乐观/中性/悲观），每种标注概率、触发条件、路径、对应策略
+7. **降成本测算**: 按保守/正常/理想三档估算月度做T收益和等效成本变化
+8. **操作日历**: 未来1个月每周的关注点和操作计划
+9. **操作纪律**: 红线规则（止损线、单日做T上限、底仓不动原则等）
 
 **最后一步（必做）: 处理落盘**
 
@@ -460,7 +472,7 @@ HTML 报告的设计原则:
 
 ## 注意事项
 
-- 始终用 `longbridge` CLI 获取实时数据，不要用记忆中的旧数据做分析
+- 始终通过 Longbridge connector/app 获取实时数据；连接器不可用时才回退 CLI/OpenAPI，不要用记忆中的旧数据做分析
 - A 股代码: 600xxx.SH (上交所), 000xxx.SZ (深交所)
 - **A 股持仓查询限制**: 仅持仓不可查，行情/基本面/资金流都正常。`longbridge positions` 只返回港美股，分析 A 股标的时让用户手动提供代码/数量/成本即可照常做分析和交易计划
 - K 线 period 参数: `1m` `5m` `15m` `30m` `1h` `day` `week` `month` `year`（不是 `daily`/`weekly`）
@@ -477,80 +489,4 @@ HTML 报告的设计原则:
 
 ## 数据命令速查
 
-以下是连接器不可用时的 CLI/OpenAPI 回退速查。Codex/ChatGPT 正常情况下优先使用 `references/longbridge-connector.md` 中的连接器工具。
-
-### 模式管理
-
-```bash
-python3 scripts/lb_client.py detect           # 查看当前模式和可用性
-LONGBRIDGE_MODE=api python3 scripts/lb_client.py detect  # 强制 API 模式
-LONGBRIDGE_MODE=cli python3 scripts/lb_client.py detect  # 强制 CLI 模式
-```
-
-### 行情数据
-
-```bash
-python3 scripts/lb_client.py quote <SYMBOL>   # 实时报价（含盘前盘后）
-python3 scripts/lb_client.py static <SYMBOL>  # 股本/EPS/BPS/股息
-python3 scripts/lb_client.py kline <SYMBOL> --period <P> --count <N>
-                                              # period: 1m/5m/15m/30m/1h/day/week/month
-```
-
-### 基本面
-
-```bash
-python3 scripts/lb_client.py calc-index <SYMBOL>         # PE TTM / PB / 换手率 / 总市值
-python3 scripts/lb_client.py institution-rating <SYMBOL> # 机构评级（CLI 兜底）
-python3 scripts/lb_client.py forecast-eps <SYMBOL>       # EPS 预测（CLI 兜底）
-```
-
-### 资金流
-
-```bash
-python3 scripts/lb_client.py capital <SYMBOL>            # 当日资金分布
-python3 scripts/lb_client.py capital <SYMBOL> --flow     # 分时净流入
-```
-
-### 持仓与订单
-
-```bash
-python3 scripts/lb_client.py positions                   # 当前持仓（港美股）
-longbridge portfolio                                      # 组合概览（CLI only）
-python3 scripts/lb_client.py orders [--history --start <YYYY-MM-DD>]
-python3 scripts/lb_client.py executions [--history --start <YYYY-MM-DD>]
-```
-
-### 下单（先 dry-run 预览，用户确认后换 --confirm 执行）
-
-```bash
-# 买入
-python3 scripts/lb_client.py order-buy <SYMBOL> --qty <n> --price <p> --dry-run
-python3 scripts/lb_client.py order-buy <SYMBOL> --qty <n> --price <p> --confirm
-
-# 卖出
-python3 scripts/lb_client.py order-sell <SYMBOL> --qty <n> --price <p> --dry-run
-python3 scripts/lb_client.py order-sell <SYMBOL> --qty <n> --price <p> --confirm
-
-# 撤单
-python3 scripts/lb_client.py order-cancel <ORDER_ID> --dry-run
-python3 scripts/lb_client.py order-cancel <ORDER_ID> --confirm
-```
-
-### 技术指标计算
-
-```bash
-# 提取 kline 的 data 字段，传给 calc_indicators.py
-python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
-  | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d['data']))" \
-  | python3 scripts/calc_indicators.py
-```
-
-### 资讯（网页搜索补充）
-
-连接器模式优先用 `longbridge_news` / `longbridge_news_search`；CLI/OpenAPI 没有可用新闻结果时再使用网页搜索：
-- 公司新闻: `"<公司名> <代码> <年份>"`
-- 板块动态: `"<行业> 行情 <年月>"`
-- 业绩公告: `"<公司名> 业绩 季报 <年份>"`
-
-> **完整 CLI 命令参考**（包括期权/窝轮/盯盘/watchlist 等进阶命令）见 `references/longbridge-commands.md`。
-> **OpenAPI 配置与字段说明**见 `references/longbridge-api.md`。
+连接器工具与返回字段见 `references/longbridge-connector.md`；完整 CLI 命令见 `references/longbridge-commands.md`；OpenAPI 配置与回退字段见 `references/longbridge-api.md`。执行脚本时始终将这些相对路径解析到 `SKILL_DIR`。

@@ -133,8 +133,8 @@ def analyze(data):
         return "severely_overbought"
 
     result["rsi"] = {
-        "rsi6": {"value": round(rsi6, 1), "signal": rsi_label(rsi6)},
-        "rsi14": {"value": round(rsi14, 1), "signal": rsi_label(rsi14)},
+        "rsi6": {"value": round(rsi6, 1), "assessment": rsi_label(rsi6)},
+        "rsi14": {"value": round(rsi14, 1), "assessment": rsi_label(rsi14)},
     }
 
     # KDJ
@@ -209,23 +209,23 @@ def analyze(data):
     result["volume_profile"] = [{"price": p, "volume": v} for p, v in dense]
 
     # Composite Score
-    signals = {}
+    votes = {}
     ma5_val = sma(closes, 5)
     ma5_prev = sma(closes, 5, n - 2)
     ma20_val = sma(closes, 20)
     ma20_prev = sma(closes, 20, n - 2)
 
-    signals["MA5_trend"] = "bull" if (ma5_val and ma5_prev and ma5_val > ma5_prev) else "bear"
-    signals["MA20_trend"] = "bull" if (ma20_val and ma20_prev and ma20_val > ma20_prev) else "bear"
-    signals["price_vs_MA20"] = "bull" if (ma20_val and closes[-1] > ma20_val) else "bear"
-    signals["MACD_hist"] = "bull" if hist[-1] > 0 else "bear"
-    signals["MACD_direction"] = "bull" if hist[-1] > hist[-2] else "bear"
-    signals["RSI14"] = "bull" if rsi14 > 50 else "bear"
-    signals["KDJ"] = "bull" if k > d else "bear"
-    signals["bollinger_pos"] = "bull" if result.get("bollinger", {}).get("position_pct", 50) > 50 else "bear"
+    votes["MA5_trend"] = "bull" if (ma5_val and ma5_prev and ma5_val > ma5_prev) else "bear"
+    votes["MA20_trend"] = "bull" if (ma20_val and ma20_prev and ma20_val > ma20_prev) else "bear"
+    votes["price_vs_MA20"] = "bull" if (ma20_val and closes[-1] > ma20_val) else "bear"
+    votes["MACD_hist"] = "bull" if hist[-1] > 0 else "bear"
+    votes["MACD_direction"] = "bull" if hist[-1] > hist[-2] else "bear"
+    votes["RSI14"] = "bull" if rsi14 > 50 else "bear"
+    votes["KDJ"] = "bull" if k > d else "bear"
+    votes["bollinger_pos"] = "bull" if result.get("bollinger", {}).get("position_pct", 50) > 50 else "bear"
 
-    bull_count = sum(1 for v in signals.values() if v == "bull")
-    bear_count = len(signals) - bull_count
+    bull_count = sum(1 for v in votes.values() if v == "bull")
+    bear_count = len(votes) - bull_count
 
     if bull_count >= 6:
         verdict = "bullish"
@@ -240,7 +240,7 @@ def analyze(data):
         "bull": bull_count,
         "bear": bear_count,
         "verdict": verdict,
-        "signals": signals,
+        "indicator_votes": votes,
     }
 
     # Recent stats
