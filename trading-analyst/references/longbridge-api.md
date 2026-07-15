@@ -1,6 +1,6 @@
 # Longbridge OpenAPI 参考
 
-本文件说明如何通过 OpenAPI（Python SDK）模式替代 CLI 获取数据，以及两种模式的差异。
+本文件说明如何通过 OpenAPI（Python SDK）模式替代 CLI 获取数据，以及两种模式的差异。官方在线文档 <https://open.longbridge.com/docs> 是权威来源；本地内容仅用于离线操作提示。
 
 ## 快速开始
 
@@ -12,7 +12,7 @@ pip install longport
 
 ### 配置认证
 
-在 https://open.longportapp.com 申请开发者权限，获取以下三个凭证并设为环境变量：
+按 <https://open.longbridge.com/docs> 的 Getting Started 指引登录 Longbridge 开发者平台、申请 OpenAPI 权限，取得以下三个凭证并设为环境变量：
 
 ```bash
 export LONGPORT_APP_KEY="your_app_key"
@@ -40,7 +40,7 @@ python3 scripts/lb_client.py detect
 ```
 
 如果 `api_trade_permission: false`，说明当前 token 只有行情权限。需要前往
-https://open.longportapp.com → 开发者中心 → 权限申请，勾选 **Trade** 权限并重新生成 ACCESS_TOKEN。
+Longbridge 开发者平台 → 权限申请，确认 **Trade** 权限并重新生成 ACCESS_TOKEN。
 
 > 行情权限（Quote）和交易权限（Trade）是独立申请的。`detect` 检测失败时会在 `api_trade_permission_hint` 字段给出详细提示。
 

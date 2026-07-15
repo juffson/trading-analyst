@@ -27,7 +27,22 @@ description: |
 2. **统一 Python 客户端（回退）**：连接器未安装、未授权、缺少目标接口或调用失败时，运行 `python3 "$SKILL_DIR/scripts/lb_client.py" <subcmd>`；它会在 CLI 和 OpenAPI 间自动选择。
 3. **网页搜索（补充）**：仅用于公告、行业背景或交叉验证，不用搜索结果替代可取得的实时账户或行情数据。
 
-连接器工具映射见 `references/longbridge-connector.md`；CLI/OpenAPI 回退见 `references/longbridge-api.md`。发生回退时简短告知用户原因。不要把连接器数据再次通过 CLI 重复拉取，除非需要核对异常值。
+调用连接器前读取 `references/longbridge-interface-reference.md` 的请求参数、返回字段和降级规则。Longbridge 官方接口文档 <https://open.longbridge.com/docs> 是在线权威来源；当前工具声明不完整，或涉及可能更新的权限、市场、枚举、限流和交易规则时查官方文档。CLI/OpenAPI 回退见 `references/longbridge-api.md`。发生回退时简短告知用户原因，不要整套重复拉取。
+
+**三级数据源全部不可用时**：如果连接器未暴露、且 `lb_client.py detect` 返回 `active_mode: null`（`cli_available` 和 `api_available` 都是 `false`），不要静默转向网页搜索凑数，也不要用记忆中的旧数据分析。停下来告诉用户当前没有可用的实时数据源，并给出以下配置路径：
+
+1. **连接官方 MCP（Codex 等支持 OAuth 2.1 的客户端）**：`codex mcp add longbridge --url https://mcp.longbridge.com`，然后完成 OAuth 授权；中国大陆可用 `https://mcp.longbridge.cn`。ChatGPT 直接安装 Longbridge App 并授权。
+2. **安装 Longbridge CLI**：https://github.com/longbridge/longbridge-terminal ，装好后免配置 key，`lb_client.py` 会自动识别。
+3. **配置 OpenAPI**（无需安装 CLI，纯 Python SDK）：
+   ```bash
+   pip install longport
+   export LONGPORT_APP_KEY="your_app_key"
+   export LONGPORT_APP_SECRET="your_app_secret"
+   export LONGPORT_ACCESS_TOKEN="your_access_token"
+   ```
+   按官方 Getting Started 在 Longbridge 开发者平台申请权限和凭证：<https://open.longbridge.com/docs>。行情和交易权限分开，只做分析时使用最小必要权限。
+
+配置完成后重新运行 `python3 "$SKILL_DIR/scripts/lb_client.py" detect` 验证 `active_mode` 是否变为 `api` 或 `cli`，再继续原本的分析请求。用户如果明确说"先不配置，随便看看/只测试"，可以退化为用户手动提供的行情数据或示例数据，但要先说清楚这不是实时数据。
 
 ## Driver → Trade View 结论层（模式 2 / 4 必做）
 
@@ -345,13 +360,13 @@ echo '{"plan": <prior_plan>, "current_snapshot": {"price": ..., "high_since": ..
 
 用户决定执行具体买卖操作时使用。**下单前必须二次确认**，这是不可跳过的安全机制。
 
-当前连接器映射只用于账户、订单和成交查询。如果当前会话没有明确暴露下单、改单或撤单写工具，不要臆造工具名；实际交易继续通过 `lb_client.py` 的 dry-run → 用户确认 → `--confirm` 流程。即使未来连接器出现交易写工具，也必须保留同等强度的预览和显式确认。
+先检查当前会话是否明确暴露官方 `submit_order` / `replace_order` / `cancel_order`。ChatGPT App 按官方说明不提供交易写工具；Codex 等客户端的可用性取决于账户、地区和 OAuth scopes。未暴露时不要臆造工具名，改用 `lb_client.py`。无论使用 connector 还是脚本，都必须保留同等强度的预览和显式确认。
 
 **完整流程（严格两步，不得合并）：**
 
 **第一步：预览（dry-run）**
 
-根据用户意图构造订单参数，运行 dry-run 展示完整订单详情：
+根据用户意图构造订单参数。connector 有独立预览/估算能力时先调用并展示；否则运行 dry-run：
 
 ```bash
 # 买入
@@ -373,6 +388,8 @@ python3 scripts/lb_client.py order-cancel <ORDER_ID> --dry-run
 > ❌ 任何其他回复 → 取消，不执行」
 
 **第二步：执行（仅在用户明确说"确认下单"后）**
+
+若当前 connector 暴露对应写工具，使用与预览完全一致的 symbol、side、order_type、quantity、price 等参数执行；否则：
 
 ```bash
 # 把 --dry-run 换成 --confirm，其余参数完全相同
@@ -489,4 +506,4 @@ HTML 报告的设计原则:
 
 ## 数据命令速查
 
-连接器工具与返回字段见 `references/longbridge-connector.md`；完整 CLI 命令见 `references/longbridge-commands.md`；OpenAPI 配置与回退字段见 `references/longbridge-api.md`。执行脚本时始终将这些相对路径解析到 `SKILL_DIR`。
+连接器接口见 `references/longbridge-interface-reference.md`；完整 CLI 命令见 `references/longbridge-commands.md`；OpenAPI 配置与回退字段见 `references/longbridge-api.md`。执行脚本时始终将这些相对路径解析到 `SKILL_DIR`。

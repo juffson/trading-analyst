@@ -62,11 +62,22 @@ import subprocess
 import sys
 from datetime import datetime, date
 
+# longport 原生模块在 QuoteContext 建立连接时会异步向真实 stdout 打印权限表格
+# 等噪声（时机不固定，可能在我们自己的 JSON 输出前后），会打断下游
+# `| python3 -c "json.load(...)"` 这类管道解析。这里把进程级 fd 1 换成 devnull，
+# 另外复制一份原始 fd 专门给 out() 写最终 JSON。
+_REAL_STDOUT_FD = os.dup(1)
+_REAL_STDOUT = os.fdopen(_REAL_STDOUT_FD, "w", closefd=False)
+_devnull_fd = os.open(os.devnull, os.O_WRONLY)
+os.dup2(_devnull_fd, 1)
+os.close(_devnull_fd)
+
 
 # ─── 工具函数 ──────────────────────────────────────────────────────────────────
 
 def out(data):
-    print(json.dumps(data, ensure_ascii=False, indent=2))
+    print(json.dumps(data, ensure_ascii=False, indent=2), file=_REAL_STDOUT)
+    _REAL_STDOUT.flush()
     sys.exit(0)
 
 
@@ -268,10 +279,13 @@ def cli_positions():
 def _norm_position(r):
     return {
         "symbol": r.get("symbol"),
+        "name": r.get("name") or r.get("symbol_name"),
         "quantity": to_int(r.get("quantity") or r.get("qty")),
         "available_quantity": to_int(r.get("available_quantity") or r.get("available_qty") or r.get("sellable_qty")),
         "avg_cost": to_float(r.get("cost_price") or r.get("avg_price") or r.get("avg_cost")),
         "currency": r.get("currency"),
+        "current_price": to_float(r.get("current_price")),
+        "today_change_pct": to_float(r.get("today_change_pct")),
         "market_value": to_float(r.get("market_value")),
         "unrealized_pnl": to_float(r.get("unrealized_pnl") or r.get("pnl")),
         "unrealized_pnl_pct": to_float(r.get("unrealized_pnl_pct") or r.get("pnl_pct")),
@@ -349,8 +363,9 @@ def _get_api_period(period_str):
         mapping = {
             "1m": Period.Min_1, "5m": Period.Min_5,
             "15m": Period.Min_15, "30m": Period.Min_30,
-            "1h": Period.Hour,
+            "1h": Period.Min_60,
             "day": Period.Day, "week": Period.Week, "month": Period.Month,
+            "year": Period.Year,
         }
         p = mapping.get(period_str)
         if p is None:
@@ -366,8 +381,14 @@ def _get_api_adjust(adjust_str):
         mapping = {
             "none": AdjustType.NoAdjust,
             "forward": AdjustType.ForwardAdjust,
-            "backward": AdjustType.BackwardAdjust,
         }
+        # 当前 longport SDK 未暴露后复权（BackwardAdjust），有则用，没有就明确报错，
+        # 不要静默退化成 NoAdjust 误导技术面判断
+        backward = getattr(AdjustType, "BackwardAdjust", None)
+        if backward is not None:
+            mapping["backward"] = backward
+        if adjust_str == "backward" and backward is None:
+            fail("当前 longport SDK 版本不支持后复权(backward)，请改用 forward 或 none")
         return mapping.get(adjust_str, AdjustType.NoAdjust)
     except ImportError:
         fail("longport 未安装")
@@ -376,7 +397,12 @@ def _get_api_adjust(adjust_str):
 def _api_config():
     try:
         from longport.openapi import Config
-        return Config.from_env()
+        # SDK 版本差异：新版方法名为 from_apikey_env，旧版为 from_env
+        factory = getattr(Config, "from_apikey_env", None) or getattr(Config, "from_env", None)
+        if factory is None:
+            fail("当前 longport SDK 版本不支持从环境变量创建 Config",
+                 hint="尝试升级 longport: pip install -U longport")
+        return factory()
     except ImportError:
         fail("longport 未安装，请 pip install longport")
     except Exception as e:
@@ -400,7 +426,7 @@ def _trade_ctx():
         return TradeContext(_api_config())
     except Exception as e:
         fail(f"TradeContext 初始化失败: {e}",
-             hint="请确认 token 已开启交易权限（在 https://open.longportapp.com 申请 Trade 权限）")
+             hint="请按 https://open.longbridge.com/docs 的 Getting Started 确认 token 已开启交易权限")
 
 
 def _check_trade_permission():
@@ -524,19 +550,53 @@ def api_static(symbols):
 def api_positions():
     tctx = _trade_ctx()
     resp = tctx.stock_positions()
-    positions = []
+    raw = []
     channels = resp.channels if hasattr(resp, "channels") else (resp if isinstance(resp, list) else [resp])
     for ch in channels:
         stocks = ch.positions if hasattr(ch, "positions") else (ch if isinstance(ch, list) else [])
         for r in stocks:
-            positions.append(_norm_position({
+            raw.append({
                 "symbol": str(r.symbol),
+                "name": getattr(r, "symbol_name", None),
                 "quantity": getattr(r, "quantity", None),
                 "available_quantity": getattr(r, "available_quantity", None),
                 "avg_cost": getattr(r, "cost_price", None),
                 "currency": getattr(r, "currency", None),
-                "market_value": getattr(r, "market_value", None),
-            }))
+            })
+
+    # StockPosition 不带 market_value/pnl，需要额外拉一次实时报价自己算
+    symbols = [p["symbol"] for p in raw]
+    price_map = {}
+    if symbols:
+        try:
+            qctx = _quote_ctx()
+            for q in qctx.quote(symbols):
+                price_map[str(q.symbol)] = {
+                    "last_done": to_float(q.last_done),
+                    "prev_close": to_float(q.prev_close),
+                }
+        except Exception:
+            pass  # 报价失败时保留成本/持仓字段，市值和盈亏留空
+
+    positions = []
+    for p in raw:
+        qty = to_int(p["quantity"])
+        cost = to_float(p["avg_cost"])
+        price = price_map.get(p["symbol"], {})
+        last_done = price.get("last_done")
+        prev_close = price.get("prev_close")
+        market_value = qty * last_done if qty is not None and last_done is not None else None
+        unrealized_pnl = (market_value - qty * cost) if market_value is not None and cost is not None else None
+        unrealized_pnl_pct = ((last_done - cost) / cost * 100) if last_done is not None and cost else None
+        today_change_pct = ((last_done - prev_close) / prev_close * 100) if last_done is not None and prev_close else None
+        positions.append(_norm_position({
+            **p,
+            "current_price": last_done,
+            "today_change_pct": today_change_pct,
+            "market_value": market_value,
+            "unrealized_pnl": unrealized_pnl,
+            "unrealized_pnl_pct": unrealized_pnl_pct,
+        }))
     return positions
 
 
@@ -757,7 +817,7 @@ def main():
             if not trade_ok:
                 result["api_trade_permission_hint"] = (
                     "交易权限未开启或 token 不包含 Trade 权限。"
-                    "请前往 https://open.longportapp.com 申请并重新生成 ACCESS_TOKEN。"
+                    "请按 https://open.longbridge.com/docs 的 Getting Started 申请权限并重新生成 ACCESS_TOKEN。"
                     f"错误详情: {trade_err}"
                 )
         out(result)

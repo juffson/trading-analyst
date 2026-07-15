@@ -17,7 +17,7 @@
         "报告包含波特五力（+ 第六力互补品）分析",
         "报告给出明确的买入价格带",
         "报告有免责声明和数据来源时间戳",
-        "Longbridge connector/app 可用时优先调用其 quote/calc_indexes/financial_statement 等工具，而不是先运行 lb_client.py",
+        "Longbridge connector/app 可用时优先调用其 quote/calc_indexes/financial_report 等工具，而不是先运行 lb_client.py；financial_statement 仅作详细科目补充",
         "分析过程中使用当前平台的真实子代理进行数据采集和分析（阶段 1 + 阶段 2 + 阶段 3）",
         "致命风险部分列出至少 2 个具体风险（不是空泛描述）",
         "所有金额/比率数据都基于真实财报（不是编造的数字）"

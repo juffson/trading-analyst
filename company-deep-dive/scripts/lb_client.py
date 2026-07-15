@@ -29,10 +29,14 @@ lb_client.py — Longbridge 统一数据客户端
   order-sell <symbol> --qty <n> --price <p> [--order-type LO|MO] [--remark <s>] --dry-run|--confirm
   order-cancel <order-id> --dry-run|--confirm
 
-CLI-only 命令（API 模式下需要 CLI 兜底，否则返回 ok=false）
-  institution-rating <symbol>
-  forecast-eps <symbol>
-  news <symbol> [--count n]
+基本面命令（API 模式优先 FundamentalContext，SDK 不支持时回退 CLI）
+  financial-report <symbol> [--kind ALL|IS|BS|CF] [--report af|saf|q1|q2|q3|3q|qf]
+  company / executive / institution-rating / forecast-eps / consensus / valuation
+  valuation-history / shareholder / shareholder-top / invest-relation <symbol>
+
+CLI 扩展命令（透传剩余参数）
+  financial-statement / financial-report-latest / filings / news
+  business-segments / business-segments-history / industry-peers ...
 
 用法示例
   python3 lb_client.py detect
@@ -55,12 +59,14 @@ CLI-only 命令（API 模式下需要 CLI 兜底，否则返回 ok=false）
 """
 
 import argparse
+from collections.abc import Mapping
 import json
 import os
 import shutil
 import subprocess
 import sys
 from datetime import datetime, date
+from decimal import Decimal
 
 
 # ─── 工具函数 ──────────────────────────────────────────────────────────────────
@@ -89,6 +95,43 @@ def to_int(v):
         return int(v)
     except (TypeError, ValueError):
         return None
+
+
+def to_jsonable(value, _seen=None):
+    """把 longport PyO3 响应对象递归转换成可序列化结构。"""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Mapping):
+        return {str(k): to_jsonable(v, _seen) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [to_jsonable(v, _seen) for v in value]
+
+    seen = _seen if _seen is not None else set()
+    obj_id = id(value)
+    if obj_id in seen:
+        return None
+    seen.add(obj_id)
+    try:
+        attrs = dict(vars(value)) if hasattr(value, "__dict__") else {}
+        if not attrs:
+            for name in dir(value):
+                if name.startswith("_"):
+                    continue
+                try:
+                    item = getattr(value, name)
+                except Exception:
+                    continue
+                if not callable(item):
+                    attrs[name] = item
+        if attrs:
+            return {name: to_jsonable(item, seen) for name, item in attrs.items()}
+        return str(value)
+    finally:
+        seen.discard(obj_id)
 
 
 # ─── 模式检测 ──────────────────────────────────────────────────────────────────
@@ -403,6 +446,17 @@ def _trade_ctx():
              hint="请确认 token 已开启交易权限（在 https://open.longportapp.com 申请 Trade 权限）")
 
 
+def _fundamental_ctx():
+    """基本面 context，只读；需要较新的 longport Python SDK。"""
+    try:
+        from longport.openapi import FundamentalContext
+        return FundamentalContext(_api_config())
+    except ImportError:
+        fail("当前 longport SDK 不含 FundamentalContext，请升级 longport")
+    except Exception as e:
+        fail(f"FundamentalContext 初始化失败: {e}")
+
+
 def _check_trade_permission():
     """静默检测交易权限，返回 (ok: bool, error: str | None)。"""
     try:
@@ -519,6 +573,84 @@ def api_static(symbols):
         "bps": getattr(r, "bps", None),
         "dividend_yield": getattr(r, "dividend_yield", None),
     }) for r in rows]
+
+
+FUNDAMENTAL_METHODS = {
+    "company": "company",
+    "executive": "executive",
+    "institution-rating": "institution_rating",
+    "forecast-eps": "forecast_eps",
+    "consensus": "consensus",
+    "valuation": "valuation",
+    "valuation-history": "valuation_history",
+    "industry-valuation": "industry_valuation",
+    "industry-valuation-dist": "industry_valuation_dist",
+    "shareholder": "shareholder",
+    "shareholder-top": "shareholder_top",
+    "invest-relation": "invest_relation",
+    "operating": "operating",
+    "dividend": "dividend",
+    "dividend-detail": "dividend_detail",
+    "fund-holder": "fund_holder",
+    "corp-action": "corp_action",
+    "buyback": "buyback",
+    "ratings": "ratings",
+    # 新版 SDK 可直接支持；旧版没有这些方法时会自动回退 CLI。
+    "business-segments": "business_segments",
+    "business-segments-history": "business_segments_history",
+    "filings": "filings",
+}
+
+CLI_RESEARCH_COMMANDS = {
+    "financial-statement", "financial-report-latest", "news", "news-search",
+    "industry-peers", "industry-rank", "valuation-comparison",
+}
+
+
+def api_financial_report(symbol, kind="ALL", report=None):
+    try:
+        from longport.openapi import FinancialReportKind, FinancialReportPeriod
+    except ImportError:
+        fail("当前 longport SDK 不支持 financial_report，请升级 longport")
+
+    kind_map = {
+        "ALL": FinancialReportKind.All,
+        "IS": FinancialReportKind.IncomeStatement,
+        "BS": FinancialReportKind.BalanceSheet,
+        "CF": FinancialReportKind.CashFlow,
+    }
+    period_map = {
+        "af": FinancialReportPeriod.Annual,
+        "saf": FinancialReportPeriod.SemiAnnual,
+        "q1": FinancialReportPeriod.Q1,
+        "q2": FinancialReportPeriod.Q2,
+        "q3": FinancialReportPeriod.Q3,
+        "3q": FinancialReportPeriod.ThreeQ,
+        "qf": FinancialReportPeriod.QuarterlyFull,
+    }
+    normalized_kind = kind.upper()
+    if normalized_kind not in kind_map:
+        fail(f"不支持 --kind {kind}，可选 ALL/IS/BS/CF")
+    normalized_report = report.lower() if report else None
+    if normalized_report and normalized_report not in period_map:
+        fail(f"不支持 --report {report}，可选 af/saf/q1/q2/q3/3q/qf")
+
+    kwargs = {"kind": kind_map[normalized_kind]}
+    if normalized_report:
+        kwargs["period"] = period_map[normalized_report]
+    response = _fundamental_ctx().financial_report(symbol, **kwargs)
+    return to_jsonable(response)
+
+
+def api_fundamental(subcmd, symbol):
+    method_name = FUNDAMENTAL_METHODS.get(subcmd)
+    if not method_name:
+        return None
+    ctx = _fundamental_ctx()
+    method = getattr(ctx, method_name, None)
+    if method is None:
+        return None
+    return to_jsonable(method(symbol))
 
 
 def api_positions():
@@ -703,11 +835,12 @@ def api_order_cancel(order_id, dry_run):
 # ─── CLI-only fallback ────────────────────────────────────────────────────────
 
 def cli_only_fallback(subcmd, args_extra):
-    """对 API 模式下不支持的命令，尝试 CLI 兜底；都没有就返回 ok=false。"""
+    """对 SDK 暂未覆盖的命令尝试 CLI 兜底。"""
     if _has_cli():
-        return cli_run([subcmd] + args_extra + ["--format", "json"])
-    return {"ok": False, "cli_fallback_required": True,
-            "error": f"`{subcmd}` 仅 CLI 支持，API 模式下需要同时安装 longbridge CLI 作为兜底"}
+        cli_args = [subcmd] + args_extra
+        return cli_run(cli_args + ([] if "--format" in cli_args else ["--format", "json"]))
+    fail(f"当前 SDK 不支持 `{subcmd}`，且未安装 longbridge CLI",
+         cli_fallback_required=True)
 
 
 # ─── 分发 ─────────────────────────────────────────────────────────────────────
@@ -726,6 +859,8 @@ def main():
     parser.add_argument("--history", action="store_true", help="历史数据（orders/executions 专用）")
     parser.add_argument("--start", help="历史起始日期 YYYY-MM-DD")
     parser.add_argument("--symbol", help="按标的筛选（orders/executions 专用）")
+    parser.add_argument("--kind", default="ALL", help="财报类型：ALL/IS/BS/CF")
+    parser.add_argument("--report", help="报告期：af/saf/q1/q2/q3/3q/qf/cumul")
     # 下单专用参数
     parser.add_argument("--qty", type=int, help="下单股数（order-buy/sell 专用）")
     parser.add_argument("--price", type=float, help="下单价格（order-buy/sell 专用）")
@@ -738,7 +873,10 @@ def main():
     parser.add_argument("--confirm", action="store_true",
                         help="真实执行下单，不可撤销（order-buy/sell/cancel 专用）")
 
-    args = parser.parse_args()
+    args, passthrough_args = parser.parse_known_args()
+    # 未内建的 CLI 子命令必须保留用户原始参数；否则 --kind/--report/--count
+    # 等恰好与本脚本参数同名的选项会被 argparse 吞掉。
+    raw_cli_args = sys.argv[2:]
     subcmd = args.subcmd.lower()
     mode = detect_mode()
 
@@ -864,20 +1002,49 @@ def main():
         result = fn(order_id, args.dry_run)
         out({"ok": True, "mode": mode, "dry_run": args.dry_run, "data": result})
 
-    # ── CLI-only 命令（institution-rating / forecast-eps / news 等） ──────────
-    elif subcmd in ("institution-rating", "forecast-eps", "news",
-                    "financial-report", "consensus", "valuation"):
+    # ── 财报：API 使用 FundamentalContext，CLI 保留完整 period/kind ───────────
+    elif subcmd == "financial-report":
+        if not symbols:
+            fail("financial-report 需要标的代码")
         if mode == "api":
-            result = cli_only_fallback(subcmd, symbols)
+            result = api_financial_report(symbols[0], args.kind, args.report)
         else:
-            result = cli_run([subcmd] + symbols + ["--format", "json"])
-        out({"ok": True, "mode": mode, "cli_fallback": (mode == "api" and _has_cli()), "data": result})
+            cli_args = [subcmd, symbols[0], "--kind", args.kind]
+            if args.report:
+                cli_args += ["--report", args.report]
+            result = cli_run(cli_args + passthrough_args + ["--format", "json"])
+        out({"ok": True, "mode": mode, "data": result})
+
+    # ── FundamentalContext 基本面接口；旧 SDK 缺方法时尝试 CLI ───────────────
+    elif subcmd in FUNDAMENTAL_METHODS:
+        if not symbols:
+            fail(f"{subcmd} 需要标的代码")
+        used_cli_fallback = False
+        if mode == "api":
+            result = api_fundamental(subcmd, symbols[0])
+            if result is None:
+                result = cli_only_fallback(subcmd, raw_cli_args)
+                used_cli_fallback = _has_cli()
+        else:
+            result = cli_run([subcmd] + raw_cli_args +
+                             ([] if "--format" in raw_cli_args else ["--format", "json"]))
+        out({"ok": True, "mode": mode, "cli_fallback": used_cli_fallback, "data": result})
+
+    # ── SDK 未覆盖的研究接口直接走 CLI，并保留全部原始参数 ────────────────
+    elif subcmd in CLI_RESEARCH_COMMANDS:
+        if not _has_cli():
+            fail(f"`{subcmd}` 当前需要 longbridge CLI",
+                 hint="安装文档：https://open.longbridge.com/docs/cli/install")
+        cli_args = [subcmd] + raw_cli_args
+        result = cli_run(cli_args + ([] if "--format" in cli_args else ["--format", "json"]))
+        out({"ok": True, "mode": "cli", "cli_fallback": mode == "api", "data": result})
 
     else:
-        # 未知命令：直接透传给 CLI（仅 CLI 模式有效）
-        if mode != "cli":
-            fail(f"未知命令 `{subcmd}`，API 模式下只支持内置子命令")
-        result = cli_run([subcmd] + symbols + (["--format", "json"] if "--format" not in symbols else []))
+        # 未知命令：只要 CLI 可用就完整透传；API 仍保持默认数据源。
+        if not _has_cli():
+            fail(f"未知命令 `{subcmd}`，且 longbridge CLI 不可用")
+        cli_args = [subcmd] + raw_cli_args
+        result = cli_run(cli_args + (["--format", "json"] if "--format" not in cli_args else []))
         out({"ok": True, "mode": "cli", "passthrough": True, "data": result})
 
 

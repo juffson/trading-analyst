@@ -84,17 +84,26 @@ lb_client 路径：{lb_client}（由主代理填入绝对路径）
 数据源优先级：
 
 **先用 Longbridge connector/app 获取结构化底稿**：
-- `longbridge_financial_statement(symbol={代码}, kind="ALL", report="af")`：年度三表
-- `longbridge_financial_statement(symbol={代码}, kind="ALL", report="qf")`：季度三表
+- `longbridge_financial_report(symbol={代码}, kind="ALL", report="af")`：近年年度核心三表，首选
+- `longbridge_financial_report(symbol={代码}, kind="ALL", report="qf")`：季度核心三表，首选
 - `longbridge_financial_report_latest(symbol={代码})`：最新营收、净利、ROE、毛利率摘要
+- `longbridge_financial_statement(...)`：仅补充流动资产/负债、债务拆分、商誉、D&A 等详细科目；返回空时直接转官方财报
 - `longbridge_forecast_eps`、`longbridge_institution_rating`、`longbridge_consensus`：预测和评级
 - `longbridge_filings`：监管披露链接
 
 **连接器不可用或字段缺失时再用 Longbridge 统一客户端回退**：
+- `python3 {lb_client} financial-report {代码} --kind ALL --report af`：年度核心三表
+- `python3 {lb_client} financial-report {代码} --kind ALL --report qf`：季度核心三表
 - `python3 {lb_client} static {代码}`：最新 EPS / BPS / 股息 / 股本
 - `python3 {lb_client} calc-index {代码}`：最新 PE TTM / PB（可反推近期净利润和净资产）
 - `python3 {lb_client} forecast-eps {代码}`：未来 1-3 年 EPS 预测（给 DCF 用；部分 A 股无数据，CLI 兜底）
 - `python3 {lb_client} institution-rating {代码}`：机构目标价 + 评级分布（CLI 兜底）
+
+**字段降级规则**：
+1. 聚合财报缺少详细科目时，只补抓缺失字段，不重复抓取整套报表。
+2. 流动资产/负债、长短债务、商誉、无形资产、D&A、股息支付、ROIC、流动/速动比率和归母净利润若无法核实，写 `null` 并在 `notes` 列出。
+3. 不得把接口空数组解释成 0；不得用总负债代替有息负债。
+4. DCF 基础自由现金流直接按 `OCF - CAPEX` 计算；只有做 FCFF 调整时才强制需要 D&A 等细项。
 
 **官方披露用于交叉验证和补齐口径**：
 - A股：巨潮资讯网官方披露 (cninfo.com.cn) → 东方财富财报 (data.eastmoney.com) → 新浪财经财务 → 雪球

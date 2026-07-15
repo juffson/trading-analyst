@@ -9,6 +9,7 @@
       "files": [],
       "expectations": [
         "连接器可用时调用 longbridge_quote / calc_indexes / candlesticks 等工具；不可用时才回退命令行",
+        "连接器调用符合 longbridge-interface-reference.md：批量报价使用 symbols，K 线 period/count 合法，并保留各接口 timestamp",
         "输出包含当前股价、成本、浮盈浮亏的持仓概况",
         "计算并展示了至少 4 个技术指标（MA、MACD、RSI、布林带之类）",
         "报告开头包含 Trade View：五级 outlook、中英文展示、strategy_fit_score、confidence、should_execute 和失效条件",
@@ -51,6 +52,7 @@
       "expectations": [
         "调用了 python3 scripts/plan_io.py load-latest-plan --dir <fixture 绝对路径> 加载 plan_2026-04-05.json",
         "优先调用 Longbridge connector/app 的 quote/candlesticks 获取从 2026-04-05 到现在的行情，必要时才回退 CLI/OpenAPI",
+        "历史订单和成交使用 RFC3339 的 start_at/end_at；区间包含今天时合并今日接口并按订单与成交时间去重",
         "调用了 diff-snapshot 做结构化对比（或在逻辑上等价地复用 plan_io.py 的 diff 能力）",
         "复盘报告里明确说明了哪个情景（乐观/中性/悲观）与实际走势最匹配",
         "复盘报告里对 fixture 的每个 price_level（$198 / $190 / $178 / $170）都给出了是否触及的判定",

@@ -2,13 +2,13 @@
 
 ## 第一优先：Longbridge connector/app（Codex / ChatGPT）
 
-当前会话暴露 `longbridge_*` 工具时直接调用。行情使用 `longbridge_quote` / `longbridge_candlesticks`，估值使用 `longbridge_calc_indexes` / `longbridge_valuation`，报表使用 `longbridge_financial_statement`，评级预测使用 `longbridge_institution_rating` / `longbridge_forecast_eps` / `longbridge_consensus`，公告资讯使用 `longbridge_filings` / `longbridge_news`。
+当前会话暴露 Longbridge 工具时直接调用。行情使用 `longbridge_quote` / `longbridge_candlesticks`，估值使用 `longbridge_calc_indexes` / `longbridge_valuation`，5 年核心报表使用 `longbridge_financial_report`，最新一期摘要使用 `longbridge_financial_report_latest`；`longbridge_financial_statement` 仅补充详细科目。评级预测使用 `longbridge_institution_rating` / `longbridge_forecast_eps` / `longbridge_consensus`，公告资讯使用 `longbridge_filings` / `longbridge_news`。
 
 完整映射见 `longbridge-connector.md`。连接器未安装、未授权、缺少接口或失败时才进入下面的 Python 回退。
 
 ## 第二优先：lb_client.py 统一客户端（所有市场通用）
 
-能命中 lb_client 就不要去爬网页——自动适配 CLI / OpenAPI 双模式，数据结构化、免登录、无验证码风险。
+能命中 lb_client 就先获取结构化底稿——它自动适配 CLI / OpenAPI 双模式。OpenAPI 模式同时使用行情 `QuoteContext` 和基本面 `FundamentalContext`；官方披露仍用于关键字段交叉验证。
 命令格式：`python3 $LB_CLIENT <subcmd> <SYMBOL>`（`$LB_CLIENT` 为 lb_client.py 的绝对路径）。
 
 | 子命令 | 用途 | 关键输出字段 |
@@ -16,14 +16,19 @@
 | `quote <SYMBOL>` | 实时行情 | `last_done` 现价、`volume` 成交量、`turnover` 成交额 |
 | `calc-index <SYMBOL>` | 核心估值指标 | `pe_ttm`、`pb`、`turnover_rate`、`total_market_value` |
 | `static <SYMBOL>` | 静态信息 | `total_shares`、`eps`、`eps_ttm`、`bps`、`dividend_yield` |
-| `institution-rating <SYMBOL>` | 机构评级（CLI 兜底） | 评级分布、目标价区间、行业排名 |
-| `forecast-eps <SYMBOL>` | EPS 预测（CLI 兜底） | 未来 1-3 年一致预期（部分 A 股无数据） |
+| `financial-report <SYMBOL> --kind ALL --report af` | 5 年年度核心三表 | 营收、利润、资产负债、现金流、CAPEX 等历史序列 |
+| `financial-report <SYMBOL> --kind ALL --report qf` | 季度核心三表 | 最新季度和历史季度序列 |
+| `company/executive <SYMBOL>` | 公司及管理层 | 公司概况、管理层资料 |
+| `institution-rating <SYMBOL>` | 机构评级 | 评级分布、目标价区间、行业排名 |
+| `forecast-eps/consensus <SYMBOL>` | 一致预期 | 未来 EPS、营收和利润预测（部分标的无数据） |
+| `valuation-history/shareholder-top <SYMBOL>` | 历史估值/股东 | 估值序列、主要股东 |
 | `kline <SYMBOL> --period day --count 260` | K 线 | OHLCV（可算 52 周高低、波动率） |
 | `capital <SYMBOL>` | 资金流 | 大/中/小单净流入 |
 | `capital <SYMBOL> --flow` | 分时资金 | 累计净流入曲线 |
 
 **使用原则**：
 - lb_client 输出均为 JSON，无需加 `--format json`
+- CLI 的其他参数会原样透传，例如 `financial-statement AAPL.US --kind BS --report af`
 - A 股代码：`600xxx.SH`（沪）、`000xxx.SZ`（深）、`688xxx.SH`（科创板）、`300xxx.SZ`（创业板）
 - 港股：`<5位代码>.HK`（如 `00700.HK`）
 - 美股：`<ticker>.US`（如 `AAPL.US`）
@@ -32,7 +37,8 @@
 - `forecast-eps` 对部分 A 股标的无数据，属正常情况——降级到爬取卖方研报摘要
 
 **仍需官方披露或网页研究补充的数据**：
-- 连接器返回不完整的历史报表科目或会计口径说明
+- 流动资产/负债、长短债务拆分、商誉、无形资产、D&A、股息支付、归母口径等聚合接口缺失项
+- 会计口径说明、财报附注及一次性项目
 - 财报附注、产能、客户集中度等定性信息
 - 行业数据（市场规模、竞争格局）
 - 宏观数据（利率、汇率、政策）

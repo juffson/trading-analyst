@@ -17,8 +17,8 @@ description: "买入前的公司深度价值分析，输出 HTML 决策仪表盘
 
 按以下顺序路由：
 
-1. **Longbridge connector/app（Codex / ChatGPT 首选）**：当前会话存在 `longbridge_*` 工具时直接调用，覆盖行情、K 线、估值、评级、EPS 预测、公司资料、业务分部、财务报表、公告和资讯。
-2. **统一 Python 客户端（回退）**：连接器未安装、未授权、缺少接口或失败时，使用 `scripts/lb_client.py`，由它在 CLI/OpenAPI 间选择。
+1. **Longbridge connector/app（Codex / ChatGPT 首选）**：当前会话存在 Longbridge 工具时直接调用，覆盖行情、估值、财报、评级预测、公司资料、业务分部、股东和公告资讯。
+2. **统一 Python 客户端（回退）**：连接器未安装、未授权、缺少接口或失败时，使用 `scripts/lb_client.py`。API 模式通过 `QuoteContext` + `FundamentalContext` 获取结构化数据；SDK 暂未覆盖的接口才回退 CLI。
 3. **官方披露交叉验证**：财务报表、股本、重大事项至少再核对一个一手来源；定性信息优先公司 IR、交易所、巨潮或 SEC EDGAR。
 
 连接器映射见 `references/longbridge-connector.md`。连接器可用时不运行 `lb_client.py detect`，不要求用户提供 API key，也不对同一批字段重复调用 CLI。
@@ -173,14 +173,17 @@ Agent(
    - 行情与估值：`longbridge_quote`、`longbridge_calc_indexes`、`longbridge_valuation`
    - 公司与证券资料：`longbridge_company`、`longbridge_static_info`、`longbridge_business_segments`
    - 评级预测：`longbridge_institution_rating`、`longbridge_forecast_eps`、`longbridge_consensus`
-   - 财务报表：`longbridge_financial_statement`、`longbridge_financial_report_latest`
+   - 财务报表：优先 `longbridge_financial_report`（年度 `report="af"`、季度 `report="qf"`），并用 `longbridge_financial_report_latest` 获取最新摘要；`longbridge_financial_statement` 仅作详细科目补充，返回空时不要阻塞
    - 公告资讯：`longbridge_filings`、`longbridge_news`、`longbridge_news_search`
 2. **第二优先：`python3 $LB_CLIENT` 回退**——自动适配 CLI / OpenAPI
    - `python3 $LB_CLIENT quote <SYMBOL>`：实时行情（价、涨跌、成交量、盘前盘后）
    - `python3 $LB_CLIENT calc-index <SYMBOL>`：PE TTM、PB、换手率、总市值
    - `python3 $LB_CLIENT static <SYMBOL>`：股本、EPS、BPS、股息、最小交易单位
-   - `python3 $LB_CLIENT institution-rating <SYMBOL>`：机构评级、目标价（CLI 兜底）
-   - `python3 $LB_CLIENT forecast-eps <SYMBOL>`：EPS 预测，部分 A 股可能无数据（CLI 兜底）
+   - `python3 $LB_CLIENT financial-report <SYMBOL> --kind ALL --report af`：年度核心三表
+   - `python3 $LB_CLIENT financial-report <SYMBOL> --kind ALL --report qf`：季度核心三表
+   - `python3 $LB_CLIENT institution-rating <SYMBOL>`：机构评级、目标价
+   - `python3 $LB_CLIENT forecast-eps <SYMBOL>`：EPS 预测，部分 A 股可能无数据
+   - `python3 $LB_CLIENT company <SYMBOL>` / `executive` / `shareholder-top`：公司、管理层和主要股东
    - `python3 $LB_CLIENT kline <SYMBOL> --period day --count 260`：K 线（可用于计算 52 周高低）
    - `python3 $LB_CLIENT capital <SYMBOL>`：资金分布（大单/中单/小单净额）
    - ⚠️ **A 股持仓不可查**（`positions` 只返回港美股账户），但行情/基本面/资金流都正常可用
@@ -189,7 +192,7 @@ Agent(
    - 港股：港交所 HKEXnews > 富途 > 新浪港股 > 雪球
    - 美股：SEC EDGAR（10-K/10-Q）> Yahoo Finance > Macrotrends > Stockanalysis.com
 
-两个 Agent 必须交叉验证至少 2 个数据源（longbridge 算一个），并在 JSON 里标注 `data_source` 和 `as_of_date`。如果 longbridge 返回空或字段缺失，降级到爬取路径并在 JSON 里注明。
+两个 Agent 必须交叉验证至少 2 个数据源（longbridge 算一个），并在 JSON 里标注 `data_source` 和 `as_of_date`。如果 longbridge 返回空或字段缺失，只补抓缺失字段并在 JSON 里注明。任何缺失值写 `null`，不得用 `0` 或未经验证的推算值代替。
 
 ### Step 3：等待阶段 1 完成，并行调用 4 个分析 Agent（阶段 2）
 
