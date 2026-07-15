@@ -3,7 +3,7 @@
 本文件列出所有子 agent 的完整 prompt。主代理直接复制使用，把 `{公司名}`、`{代码}`、`{市场}`、`{workspace}` 替换掉即可。
 
 所有 agent 必须：
-- 用 **subagent_type**: `general-purpose`
+- 使用当前平台的通用研究子代理；Claude Code 支持 `subagent_type` 时可用 `general-purpose`
 - 在 prompt 里清楚说明输出文件路径
 - 要求输出**结构化 JSON**（不只是 markdown），以便后续脚本读取
 - 每个数据点标注 `data_source` 和 `as_of_date`
@@ -14,13 +14,19 @@
 
 ```
 你是 {公司名}（股票代码：{代码}，市场：{市场}）的实时行情抓取 agent。
-**第一优先用 Longbridge 统一客户端**（`python3 {lb_client} <subcmd>`）——自动适配 CLI/OpenAPI 两种模式，能直接给结构化 JSON，无需爬网页；命中不了的字段再用 WebSearch + WebFetch 补齐（交叉验证至少 1 个外部源）。
+**第一优先用 Longbridge connector/app**：若当前会话有 Longbridge 工具，调用 `longbridge_quote`、`longbridge_calc_indexes`、`longbridge_static_info`、`longbridge_candlesticks`。连接器不可用或字段缺失时才用 `python3 {lb_client} <subcmd>` 回退。关键字段再与至少 1 个官方或权威外部源交叉验证。
 
 lb_client 路径：{lb_client}（由主代理填入绝对路径）
 
 数据源优先级：
 
-**第一优先：Longbridge 统一客户端**（能查到就直接用，不要绕开去爬网页）
+**第一优先：Longbridge connector/app**
+- `longbridge_quote(symbols=[{代码}])`：现价、涨跌、成交量、成交额
+- `longbridge_calc_indexes(symbols=[{代码}])`：PE TTM、PB、换手率、总市值、股息率
+- `longbridge_static_info(symbols=[{代码}])`：名称、交易所、最小交易单位
+- `longbridge_candlesticks(symbol={代码}, period="day", count=260)`：52 周高低
+
+**第二优先：Longbridge 统一客户端回退**
 - `python3 {lb_client} quote {代码}`：现价、涨跌、成交量、成交额、盘前盘后
 - `python3 {lb_client} calc-index {代码}`：PE TTM、PB、换手率、总市值
 - `python3 {lb_client} static {代码}`：股本、EPS、BPS、股息、最小交易单位
@@ -28,7 +34,7 @@ lb_client 路径：{lb_client}（由主代理填入绝对路径）
 - 代码格式：A 股 `600xxx.SH`/`000xxx.SZ`、港股 `00700.HK`、美股 `AAPL.US`
 - 注意：A 股 `positions` 不返回持仓，但行情/估值数据正常
 
-**第二优先（lb_client 不覆盖或字段缺失时）**：
+**第三优先（连接器与 lb_client 不覆盖或字段缺失时）**：
 - A股：东方财富 (quote.eastmoney.com) → 新浪财经 → 雪球
 - 港股：富途 (futunn.com) → 新浪港股 → 雪球
 - 美股：Yahoo Finance → Stockanalysis.com → Google Finance
@@ -77,13 +83,20 @@ lb_client 路径：{lb_client}（由主代理填入绝对路径）
 
 数据源优先级：
 
-**先用 Longbridge 统一客户端打底**（虽然没有完整 5 年三表，但能给到最新期关键字段，可作交叉验证基准）：
+**先用 Longbridge connector/app 获取结构化底稿**：
+- `longbridge_financial_statement(symbol={代码}, kind="ALL", report="af")`：年度三表
+- `longbridge_financial_statement(symbol={代码}, kind="ALL", report="qf")`：季度三表
+- `longbridge_financial_report_latest(symbol={代码})`：最新营收、净利、ROE、毛利率摘要
+- `longbridge_forecast_eps`、`longbridge_institution_rating`、`longbridge_consensus`：预测和评级
+- `longbridge_filings`：监管披露链接
+
+**连接器不可用或字段缺失时再用 Longbridge 统一客户端回退**：
 - `python3 {lb_client} static {代码}`：最新 EPS / BPS / 股息 / 股本
 - `python3 {lb_client} calc-index {代码}`：最新 PE TTM / PB（可反推近期净利润和净资产）
 - `python3 {lb_client} forecast-eps {代码}`：未来 1-3 年 EPS 预测（给 DCF 用；部分 A 股无数据，CLI 兜底）
 - `python3 {lb_client} institution-rating {代码}`：机构目标价 + 评级分布（CLI 兜底）
 
-**主力数据源：爬取官方披露**（5 年完整三表必须从这里来）：
+**官方披露用于交叉验证和补齐口径**：
 - A股：巨潮资讯网官方披露 (cninfo.com.cn) → 东方财富财报 (data.eastmoney.com) → 新浪财经财务 → 雪球
 - 港股：HKEXnews 官方 (hkexnews.hk) → 富途 → 雪球港股
 - 美股：SEC EDGAR (sec.gov/edgar) 10-K/10-Q → Macrotrends → Stockanalysis.com → Yahoo Finance
@@ -237,7 +250,7 @@ lb_client 路径：{lb_client}（由主代理填入绝对路径）
 你是 {公司名}（{市场}）的 PESTEL 宏观环境分析师。请基于 {workspace}/company_data/{公司名}/ 的财务数据和你对公司业务的了解，做六维动态分析。
 
 前置步骤：
-1. 先确认公司营收占比超过 10% 的业务板块（用 WebSearch 查最新年报分部数据）
+1. 先确认公司营收占比超过 10% 的业务板块（用当前平台的网页搜索查最新年报分部数据）
 2. 对每个 >10% 营收的板块**分别**做 PESTEL 分析（如果只有单一业务则只分析一次）
 
 六个维度：
@@ -427,7 +440,7 @@ lb_client 路径：{lb_client}（由主代理填入绝对路径）
 若为正 = 净现金（加分项）；若为负 = 净负债（减分项）
 
 ### 2. 股权投资价值
-- 上市子公司/联营公司股权：按当前市价估值（需要 WebSearch 查被投公司股价 × 持股比例）
+- 上市子公司/联营公司股权：按当前市价估值（使用当前平台的网页搜索查被投公司股价 × 持股比例）
 - 非上市股权投资：按账面价值 × 折价系数（默认 60%，说明理由可调整）
 - 长期股权投资合计
 

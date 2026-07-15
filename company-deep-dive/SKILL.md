@@ -1,6 +1,6 @@
 ---
 name: company-deep-dive
-description: "买入前的公司深度价值分析，输出 HTML 决策仪表盘。覆盖 A股/港股/美股。数据优先用 longbridge CLI 获取（行情、PE/PB、机构评级、EPS 预测等），longbridge 不覆盖的（5 年历史三表、定性信息）再爬取巨潮/东财/SEC EDGAR。请务必在以下场景触发：用户说「深度分析 X 公司」「估值一下 X」「价值投资角度看 X」「X 值不值得买」「帮我做 X 的 DCF」「X 的护城河怎么样」，或者提供了股票代码（600519、hk00700、AAPL 等）并明确要求做基本面/价值分析而非短线技术分析；即使用户只说「研究一下 X」「帮我看看 X」并且上下文是长期投资/选股/估值，也应触发。关键特征：输出是深度基本面报告（11 个维度 1-5 打分 + DCF 估值 + 安全边际 + HTML 仪表盘），不是短线买卖点；分析框架包括业务、经济模型、商业模式、企业文化、护城河、管理团队、PESTEL、波特五力、安全边际、第二层思维、致命风险。与短线技术分析（MA/MACD/资金流）明确区分，若用户要短线/做T/持仓管理请走 trading-analyst。"
+description: "买入前的公司深度价值分析，输出 HTML 决策仪表盘。覆盖 A股/港股/美股。Codex/ChatGPT 优先通过 Longbridge connector/app 获取行情、估值、评级、预测、财务报表和公司资料，连接器不可用时回退 CLI/OpenAPI；关键财务数据再与交易所、巨潮、SEC EDGAR 等一手披露交叉验证。请务必在以下场景触发：用户说「深度分析 X 公司」「估值一下 X」「价值投资角度看 X」「X 值不值得买」「帮我做 X 的 DCF」「X 的护城河怎么样」，或者提供股票代码并明确要求做基本面/价值分析；即使用户只说「研究一下 X」「帮我看看 X」且上下文是长期投资/选股/估值，也应触发。输出包含 11 维度评分、DCF、安全边际和 HTML 仪表盘，不处理短线买卖点；短线、做T、持仓管理请走 trading-analyst。"
 ---
 
 # Company Deep Dive — 买入前公司深度研究
@@ -15,24 +15,24 @@ description: "买入前的公司深度价值分析，输出 HTML 决策仪表盘
 
 ## 数据源选择
 
-本 skill 通过统一客户端 `scripts/lb_client.py` 获取行情和基本面数据，支持两种模式：
+按以下顺序路由：
 
-| 模式 | 前提条件 | 特点 |
-|------|---------|------|
-| **CLI 模式**（默认） | 安装了 `longbridge` CLI 并已登录 | 命令全面，institution-rating / forecast-eps 均可用 |
-| **API 模式** | `pip install longport` + 配置 `LONGPORT_APP_KEY` / `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` | 不依赖 CLI，institution-rating/forecast-eps 需要 CLI 兜底 |
+1. **Longbridge connector/app（Codex / ChatGPT 首选）**：当前会话存在 `longbridge_*` 工具时直接调用，覆盖行情、K 线、估值、评级、EPS 预测、公司资料、业务分部、财务报表、公告和资讯。
+2. **统一 Python 客户端（回退）**：连接器未安装、未授权、缺少接口或失败时，使用 `scripts/lb_client.py`，由它在 CLI/OpenAPI 间选择。
+3. **官方披露交叉验证**：财务报表、股本、重大事项至少再核对一个一手来源；定性信息优先公司 IR、交易所、巨潮或 SEC EDGAR。
 
-**session 开始时检测并告知用户**（先确定 skill 根目录，记为 `SKILL_DIR`）：
+连接器映射见 `references/longbridge-connector.md`。连接器可用时不运行 `lb_client.py detect`，不要求用户提供 API key，也不对同一批字段重复调用 CLI。
 
-```bash
-python3 $SKILL_DIR/scripts/lb_client.py detect
-```
+`SKILL_DIR` 是当前 `SKILL.md` 所在目录。Skill 可能由 Agent 安装器放到平台自己的目录，也可能由用户手动安装；不要猜测固定位置或依赖当前工作目录。**在调用任何命令或构造子代理 prompt 之前，先从 Skill 文件路径解析绝对目录**，记为 `SKILL_DIR`；`LB_CLIENT="$SKILL_DIR/scripts/lb_client.py"`，后续统一用绝对路径调用。
 
-- `active_mode: "api"` → 告知用户「当前使用 OpenAPI 模式」
-- `active_mode: "cli"` → 告知用户「当前使用 CLI 模式」
-- 两者都可用时默认优先 API；用户可设置 `LONGBRIDGE_MODE=cli` 强制 CLI
+## Agent 平台兼容
 
-`SKILL_DIR` 的确认方式：当前 skill 安装路径，通常为 `~/.claude/skills/company-deep-dive`，也可能是工作目录下的 `company-deep-dive/`。**在调用任何 lb_client 命令或构造子 agent prompt 之前，先用 `find` 或已知路径定位到 `lb_client.py` 的绝对路径**，记为 `LB_CLIENT`，后续统一用 `python3 $LB_CLIENT <subcmd>` 调用。
+- 在 Codex / ChatGPT 中，使用平台原生的 subagent workflow，把同一阶段的独立任务并行委派并等待全部完成。
+- 在 Claude Code 中，使用对应的 Agent/Task 工具完成相同委派。
+- 构造数据子代理 prompt 时明确传入“Longbridge connector/app 优先”的路由；子代理能看到连接器工具时直接调用，不要先跑 `lb_client.py`。
+- 文中的 `Agent(...)` 只是平台无关的伪代码，不要求工具名称或参数名完全相同。关键是启动真实、隔离的子代理，而不是由主代理串行模拟。
+- 文中的网页搜索指当前平台提供的搜索/浏览工具。优先官方披露和一手来源，最终报告保留可点击来源链接。
+- 文中的“写文件”或“运行 shell”使用当前平台提供的等价工具；所有写入必须落在用户指定目录或当前 workspace 内。
 
 ---
 
@@ -40,14 +40,14 @@ python3 $SKILL_DIR/scripts/lb_client.py detect
 
 这个 skill 有三个反复出错的点，先讲清楚：
 
-### 铁律 1：必须用 Agent 工具真的 spawn 子代理，不要用 Python 脚本代替
+### 铁律 1：必须用平台原生能力真的 spawn 子代理，不要用 Python 脚本代替
 
-阶段 1 的 2 个数据 agent、阶段 2 的 4 个分析 agent、阶段 3 的 DCF agent，都必须通过真正的 `Agent` 工具调用（即在工具调用块里发出 `Agent(description=..., prompt=...)`）来启动。**不要**在主线程里自己写 `fetch_financials.py` 或 `analyze_porter.py` 之类的脚本来"模拟"子代理——那样会：
+阶段 1 的 2 个数据 agent、阶段 2 的 4 个分析 agent、阶段 3 的 DCF agent，都必须通过当前平台真正的子代理/委派能力启动。**不要**在主线程里自己写 `fetch_financials.py` 或 `analyze_porter.py` 之类的脚本来“模拟”子代理——那样会：
 - 丢失并行加速（阶段 1 和阶段 2 本来能并发）
 - 主代理 context 被原始数据塞满，推理质量下降
 - 每个维度的独立视角消失，变成一个声音自说自话
 
-判断是否做对了，看一下工具调用的名字：应该出现 6-7 次 `Agent` 调用（不是 `Bash` 或 `Write`）。如果你发现自己在想"让我写个 Python 脚本抓一下数据就行"，**停下来**，改用 Agent。
+判断是否做对了：应该出现 7 个真实子代理任务（2 + 4 + 1），而不是若干主线程 shell/文件写入来冒充委派。如果平台不支持子代理，明确告知用户并请求允许降级为串行执行；不要静默降级。
 
 ### 铁律 2：生成 HTML 必须调用 `scripts/render_dashboard.py`，不要自己手写 HTML
 
@@ -57,10 +57,10 @@ python3 $SKILL_DIR/scripts/lb_client.py detect
 python <skill根目录>/scripts/render_dashboard.py \
   --data-dir <workspace/company_data/公司名> \
   --analysis-json <workspace/公司名/analysis_summary.json> \
-  --output /Users/sirius/Desktop/daily-work/<公司名>_价值分析_<日期>.html
+  --output <workspace/outputs/公司名_价值分析_日期.html>
 ```
 
-**不要**用 `<script>` 标签写一个新的 HTML、不要用 f-string 拼 HTML、不要用 Write 工具直接写 `.html`。脚本已经包含了所有必要的中文标签（"波特五力"、"PESTEL"、11 个维度名、"致命风险"、"第二层思维"、"安全边际"等），以及 Chart.js CDN 引入、雷达图、财务趋势图、DCF 横条、颜色规范。自己写 HTML 会漏掉这些字面标签和可视化，测试会挂。
+**不要**用 `<script>` 标签写一个新的 HTML、不要用 f-string 拼 HTML、不要绕过渲染脚本直接写 `.html`。脚本已经包含了所有必要的中文标签（"波特五力"、"PESTEL"、11 个维度名、"致命风险"、"第二层思维"、"安全边际"等），以及 Chart.js CDN 引入、雷达图、财务趋势图、DCF 横条、颜色规范。自己写 HTML 会漏掉这些字面标签和可视化，测试会挂。
 
 如果脚本不够用（比如要加新维度），**改脚本本身**，不要绕过。
 
@@ -101,7 +101,7 @@ python <skill根目录>/scripts/render_dashboard.py \
 [阶段 3] DCF 估值（1 个 Agent）
     └─ dcf_valuator  乐观/中性/悲观三档，内部用 Python 精确计算
                               ↓
-[阶段 4] 主代理综合分析（主 Claude 自己做）
+[阶段 4] 主代理综合分析
     ├─ 11 维度逐项打分（1-5 分）
     ├─ 公司总价值 = DCF 经营价值 + 账面资产价值
     ├─ 安全边际计算（基于当前股价 vs 内在价值）
@@ -124,7 +124,7 @@ python <skill根目录>/scripts/render_dashboard.py \
 美团 → hk03690 (港股)        苹果 → AAPL (美股)
 ```
 
-不确定的时候用 WebSearch 确认一次，避免代码写错。
+不确定时使用当前平台的网页搜索确认，并优先交易所或公司官网，避免代码写错。
 
 ### Step 1：检查 workspace 是否已有数据
 
@@ -135,7 +135,7 @@ python <skill根目录>/scripts/render_dashboard.py \
 
 ### Step 2：并行调用 2 个数据 Agent（阶段 1）
 
-**用 Agent 工具**发出 2 个并行调用。同一条消息、两个工具调用块。**不要**用 Bash + Python 抓数据代替。
+使用平台原生子代理能力发出 2 个并行调用，并在继续前等待两者完成。**不要**用主线程 shell + Python 抓数据代替。
 
 形式上应该长这样（示意，实际 prompt 去 `references/sub_agent_prompts.md` 里拿完整版）：
 
@@ -169,7 +169,13 @@ Agent(
 
 **数据源优先级**（详见 `references/data_sources.md`）：
 
-1. **第一优先：`python3 $LB_CLIENT`**——自动适配 CLI / OpenAPI 两种模式，能命中就不去爬网页
+1. **第一优先：Longbridge connector/app**——工具映射见 `references/longbridge-connector.md`
+   - 行情与估值：`longbridge_quote`、`longbridge_calc_indexes`、`longbridge_valuation`
+   - 公司与证券资料：`longbridge_company`、`longbridge_static_info`、`longbridge_business_segments`
+   - 评级预测：`longbridge_institution_rating`、`longbridge_forecast_eps`、`longbridge_consensus`
+   - 财务报表：`longbridge_financial_statement`、`longbridge_financial_report_latest`
+   - 公告资讯：`longbridge_filings`、`longbridge_news`、`longbridge_news_search`
+2. **第二优先：`python3 $LB_CLIENT` 回退**——自动适配 CLI / OpenAPI
    - `python3 $LB_CLIENT quote <SYMBOL>`：实时行情（价、涨跌、成交量、盘前盘后）
    - `python3 $LB_CLIENT calc-index <SYMBOL>`：PE TTM、PB、换手率、总市值
    - `python3 $LB_CLIENT static <SYMBOL>`：股本、EPS、BPS、股息、最小交易单位
@@ -178,7 +184,7 @@ Agent(
    - `python3 $LB_CLIENT kline <SYMBOL> --period day --count 260`：K 线（可用于计算 52 周高低）
    - `python3 $LB_CLIENT capital <SYMBOL>`：资金分布（大单/中单/小单净额）
    - ⚠️ **A 股持仓不可查**（`positions` 只返回港美股账户），但行情/基本面/资金流都正常可用
-2. **第二优先：爬取官方披露**（lb_client 不覆盖的才用，主要是 5 年历史三表和定性信息）
+3. **第三优先：官方披露与网页研究**（用于交叉验证、补齐历史口径和定性信息）
    - A股：巨潮资讯网（官方）> 东方财富 > 新浪财经 > 雪球
    - 港股：港交所 HKEXnews > 富途 > 新浪港股 > 雪球
    - 美股：SEC EDGAR（10-K/10-Q）> Yahoo Finance > Macrotrends > Stockanalysis.com
@@ -187,7 +193,7 @@ Agent(
 
 ### Step 3：等待阶段 1 完成，并行调用 4 个分析 Agent（阶段 2）
 
-阶段 1 的两个 JSON 落地后，**同一条消息里发 4 个 `Agent(...)` 工具调用**。再次提醒：用 Agent 工具，不要在主线程里用 Python 分析。这 4 个维度（经济模型、PESTEL、波特、账面资产）的判断要独立视角——交给 4 个 agent 分别做，主代理再综合。
+阶段 1 的两个 JSON 落地后，在同一阶段并行启动 4 个子代理并等待完成。不要在主线程里用 Python 模拟分析。这 4 个维度（经济模型、PESTEL、波特、账面资产）的判断要保持独立视角——交给 4 个 agent 分别做，主代理再综合。
 
 1. **economic_model_analyst** — 盈利/成长/营运/偿债四大能力 + 5 年趋势判断
 2. **pestel_analyst** — 政治/经济/社会/技术/环境/法律 六维 + 动态趋势（↗↘→）
@@ -208,7 +214,7 @@ Agent(description="账面资产估值", prompt="<sub_agent_prompts.md 第 6 节>
 
 ### Step 4：阶段 2 完成后，调用 DCF agent（阶段 3）
 
-主代理聚合阶段 2 的数据，再次**用 `Agent` 工具**调用 `dcf_valuator`（见 `references/sub_agent_prompts.md` 第 7 节）。
+主代理聚合阶段 2 的数据，再次使用当前平台的真实子代理能力调用 `dcf_valuator`（见 `references/sub_agent_prompts.md` 第 7 节）。
 
 传入 Agent 的信息必须包括：
 - 财务数据（营收、净利润、经营现金流、CAPEX、折旧摊销、总负债、现金）
@@ -222,7 +228,7 @@ Agent 必须输出乐观/中性/悲观三档估值，且内部用 Python 做 DCF
 
 ### Step 5：主代理做 11 维度综合分析
 
-主 Claude 读完所有子 agent 的产出后，**自己**做下面这些事：
+主代理读完所有子 agent 的产出后，**自己**做下面这些事：
 
 #### 5.1 计算公司总价值
 
@@ -276,7 +282,7 @@ Agent 必须输出乐观/中性/悲观三档估值，且内部用 Python 做 DCF
 
 #### 5.5 把结果写成 `analysis_summary.json`（`render_dashboard.py` 的唯一输入）
 
-主代理用 Write 工具把上面所有结论写成一个结构化 JSON，保存到 `<workspace>/company_data/<公司名>/analysis_summary.json`。**字段必须齐全**，缺了脚本对应区块就空白：
+主代理使用当前平台的文件写入能力，把上面所有结论写成一个结构化 JSON，保存到 `<workspace>/company_data/<公司名>/analysis_summary.json`。**字段必须齐全**，缺了脚本对应区块就空白：
 
 ```json
 {
@@ -352,10 +358,10 @@ Agent 必须输出乐观/中性/悲观三档估值，且内部用 Python 做 DCF
 
 ### Step 6：生成 HTML 决策仪表盘（必须调 `render_dashboard.py`）
 
-**这里只有一条路径**：用 Bash 跑 `scripts/render_dashboard.py`。重申铁律 2——不要自己写 HTML。
+**这里只有一条路径**：用 shell 运行 `scripts/render_dashboard.py`。重申铁律 2——不要自己写 HTML。
 
 ```bash
-python ~/.claude/skills/company-deep-dive/scripts/render_dashboard.py \
+python "$SKILL_DIR/scripts/render_dashboard.py" \
   --data-dir <workspace/company_data/公司名> \
   --analysis-json <analysis_summary.json> \
   --output <output.html>
@@ -367,8 +373,7 @@ python ~/.claude/skills/company-deep-dive/scripts/render_dashboard.py \
 - `analysis_summary.json`（11 维度打分 + 估值 + 投资建议，由主代理写）
 - 4 个子 agent 的分析报告
 
-输出：单个独立的 `.html` 文件（内联所有 CSS/JS/Chart.js），放到
-`/Users/sirius/Desktop/daily-work/` 下，文件名格式：`<公司名>_价值分析_<日期>.html`。
+输出：单个独立的 `.html` 文件（内联所有 CSS/JS/Chart.js）。默认放在当前 workspace 的 `outputs/` 下；如果用户指定了目录则使用用户目录。文件名格式：`<公司名>_价值分析_<日期>.html`。
 
 仪表盘包含 12 个区块，详见 `references/dashboard_structure.md`：
 1. 公司标题 + 综合评分雷达图
@@ -390,6 +395,7 @@ python ~/.claude/skills/company-deep-dive/scripts/render_dashboard.py \
 
 - `references/sub_agent_prompts.md` — 7 个子 agent 的完整 prompt 模板，直接复制使用
 - `references/data_sources.md` — A股/港股/美股的数据源优先级和 URL 模板
+- `references/longbridge-connector.md` — Codex/ChatGPT Longbridge connector/app 工具映射
 - `references/scoring_rubric.md` — 11 维度 1-5 分打分的具体标准和例子
 - `references/dashboard_structure.md` — HTML 仪表盘 12 个区块的设计规范
 - `references/dcf_methodology.md` — DCF 估值方法论（无风险利率、WACC、终值、敏感性）
@@ -443,12 +449,12 @@ python ~/.claude/skills/company-deep-dive/scripts/render_dashboard.py \
 
 交给用户 HTML 之前，主代理心里过一遍：
 
-1. 工具调用记录里是不是真的有 6-7 次 `Agent(...)` 调用？如果全是 `Bash`/`Write`/`Read`，回到铁律 1 重跑。
+1. 执行记录里是否真的有 7 个子代理任务（2 + 4 + 1）？如果全是主线程 shell/文件读写，回到铁律 1 重跑。
 2. HTML 是不是由 `python .../render_dashboard.py` 生成的？有没有自己用 Write 写过一个 `.html`？如果是自己写的，丢弃，用脚本重来（铁律 2）。
 3. `analysis_summary.json` 的 11 个维度 key 是不是都用了中文字符串（"业务简单性"、"经济模型"…"致命风险"）？
 4. HTML 打开后能看到：雷达图、5 年财务趋势、DCF 三档横条、PESTEL、波特五力、致命风险 Top 3、买入价格带？
 5. 所有金额/比率是不是真的来自 agent 抓取的财报，而不是你脑补的数字？
-6. HTML 文件是不是放到了 `/Users/sirius/Desktop/daily-work/`（不是仅放 workspace/outputs/）？
-7. 最后有没有用 `present_files` 或 `computer://` 链接给用户？
+6. HTML 是否放在用户指定目录；未指定时是否放到当前 workspace 的 `outputs/`？
+7. 最后是否返回了当前客户端可打开的文件链接和绝对路径？
 
 过不去就别急着交，补齐再交。

@@ -1,6 +1,12 @@
 # 数据源优先级与 URL 模板
 
-## 第一优先：lb_client.py 统一客户端（所有市场通用）
+## 第一优先：Longbridge connector/app（Codex / ChatGPT）
+
+当前会话暴露 `longbridge_*` 工具时直接调用。行情使用 `longbridge_quote` / `longbridge_candlesticks`，估值使用 `longbridge_calc_indexes` / `longbridge_valuation`，报表使用 `longbridge_financial_statement`，评级预测使用 `longbridge_institution_rating` / `longbridge_forecast_eps` / `longbridge_consensus`，公告资讯使用 `longbridge_filings` / `longbridge_news`。
+
+完整映射见 `longbridge-connector.md`。连接器未安装、未授权、缺少接口或失败时才进入下面的 Python 回退。
+
+## 第二优先：lb_client.py 统一客户端（所有市场通用）
 
 能命中 lb_client 就不要去爬网页——自动适配 CLI / OpenAPI 双模式，数据结构化、免登录、无验证码风险。
 命令格式：`python3 $LB_CLIENT <subcmd> <SYMBOL>`（`$LB_CLIENT` 为 lb_client.py 的绝对路径）。
@@ -25,9 +31,9 @@
 - `institution-rating` 目标价偏离现价 >30% 时数据可能过时，需标注并交叉验证
 - `forecast-eps` 对部分 A 股标的无数据，属正常情况——降级到爬取卖方研报摘要
 
-**longbridge 不覆盖的数据**（必须走爬取路径）：
-- 5 年历史三表（利润表/资产负债表/现金流量表完整数据）
-- 财报附注、分部营收、产能、客户集中度等定性信息
+**仍需官方披露或网页研究补充的数据**：
+- 连接器返回不完整的历史报表科目或会计口径说明
+- 财报附注、产能、客户集中度等定性信息
 - 行业数据（市场规模、竞争格局）
 - 宏观数据（利率、汇率、政策）
 

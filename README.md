@@ -1,6 +1,6 @@
 # Trading Analyst
 
-个人交易分析 Skill 集合 —— 基于 [Claude Code](https://claude.ai/claude-code)，通过 [Longbridge](https://longbridge.com) CLI 实时获取行情数据，覆盖**买入前深度研究**和**持有期交易操作**两个阶段。
+个人交易分析 Agent Skills 集合，支持 **OpenAI Codex / ChatGPT** 与 **Claude Code**。Codex/ChatGPT 优先直连 Longbridge connector/app；其他环境或连接器不可用时回退 CLI/OpenAPI。覆盖买入前研究、持有期操作和量化回测。
 
 ## 仓库包含的 Skill
 
@@ -29,21 +29,48 @@
 
 ## 前置依赖
 
-- [Claude Code](https://claude.ai/claude-code)
-- [Longbridge Terminal](https://github.com/longbridge/longbridge-terminal) — 已登录并配置好行情权限
+- OpenAI Codex（桌面端、CLI 或 IDE 扩展），或 Claude Code
+- Codex/ChatGPT：安装并授权 Longbridge plugin/connector
+- 回退环境：[Longbridge Terminal](https://github.com/longbridge/longbridge-terminal) 已登录，或配置 LongPort OpenAPI 凭据
+- Python 3.10+
 
 ## 安装
 
-克隆仓库后，把两个 skill 目录链接或复制到 `~/.claude/skills/`：
+### Codex / ChatGPT
+
+把下面这段话直接交给 Codex/ChatGPT 的 Agent：
+
+```text
+请使用 $skill-installer 从 GitHub 仓库 juffson/trading-analyst 安装以下 Skill paths：
+- trading-analyst
+- company-deep-dive
+- quant-backtest
+```
+
+Agent 会从仓库中读取每个独立目录并安装到它自己的 Skill 目录。仓库不包含 `.agents/skills` 自动加载镜像，也不要求用户手动复制整个仓库。
+
+也可以只安装其中一个，例如：
+
+```text
+请使用 $skill-installer 从 juffson/trading-analyst 的 company-deep-dive path 安装这个 Skill。
+```
+
+安装完成后可显式输入 `$trading-analyst`、`$company-deep-dive` 或 `$quant-backtest`，也可以用自然语言触发。
+
+### Claude Code（手动安装）
+
+Claude Code 继续使用 `~/.claude/skills/`：
 
 ```bash
 git clone https://github.com/juffson/trading-analyst.git
 cd trading-analyst
-ln -sf "$PWD/trading-analyst"     ~/.claude/skills/trading-analyst
-ln -sf "$PWD/company-deep-dive"   ~/.claude/skills/company-deep-dive
+mkdir -p ~/.claude/skills
+ln -sfn "$PWD/trading-analyst"   ~/.claude/skills/trading-analyst
+ln -sfn "$PWD/company-deep-dive" ~/.claude/skills/company-deep-dive
+ln -sfn "$PWD/quant-backtest"     ~/.claude/skills/quant-backtest
 ```
 
-## 两个 Skill 的关系
+## 三个 Skill 的关系
 
 | 场景 | 用哪个 | 输出 |
 |------|--------|------|
@@ -52,6 +79,18 @@ ln -sf "$PWD/company-deep-dive"   ~/.claude/skills/company-deep-dive
 | "做T计划" / "支撑压力位" | `trading-analyst` | 交易计划 HTML |
 | "XX 的 DCF 估值" | `company-deep-dive` | 估值三档 + 安全边际 |
 | "查看持仓" | `trading-analyst` | 持仓审视 |
+| "回测 RSI/均线策略" | `quant-backtest` | 回测指标 + 图表数据 |
+
+## 跨平台约定
+
+- Skill 遵循开放的 Agent Skills 目录格式：每个 Skill 都以带 `name` 和 `description` frontmatter 的 `SKILL.md` 为入口。
+- 仓库根目录直接暴露三个可独立安装的 Skill path，不在 `.agents/skills` 下复制或镜像。
+- Skill 内调用脚本时先解析 Skill 的绝对路径，不假设当前工作目录就是 Skill 目录。
+- Codex/ChatGPT 检测到 Longbridge connector/app 时直接调用工具，不再先运行 `lb_client.py`。
+- connector 不可用或缺少接口时才回退 CLI/OpenAPI，并向用户说明原因。
+- 需要联网研究时，使用当前平台可用的网页搜索工具，并给出来源链接。
+- `company-deep-dive` 需要真实子代理并行工作：Codex 使用原生 subagent workflow，Claude Code 使用对应的 Agent/Task 工具。
+- 会话交接文件采用平台无关格式；仅在当前平台能可靠获得任务或会话 ID 时才记录该 ID。
 
 ## 免责声明
 

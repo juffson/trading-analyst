@@ -1,0 +1,5 @@
+interface:
+  display_name: "Company Deep Dive"
+  short_description: "公司基本面、DCF 与价值投资决策仪表盘"
+  default_prompt: "使用 $company-deep-dive 对指定公司做完整的基本面、DCF 和风险分析。"
+

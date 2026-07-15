@@ -9,7 +9,7 @@ render_dashboard.py
         --analysis-json /path/to/analysis_summary.json \
         --output /path/to/茅台_价值分析_YYYY-MM-DD.html
 
-analysis_summary.json 的结构由主 Claude 生成，结构见 README 或 SKILL.md。
+analysis_summary.json 的结构由主代理生成，结构见 README 或 SKILL.md。
 """
 
 import argparse
@@ -90,7 +90,7 @@ def render_dashboard(data_dir, analysis, output_path):
     stock_quote = load_json(os.path.join(data_dir, "stock_quote.json")) or {}
     financials = load_json(os.path.join(data_dir, "financial_statements.json")) or {}
 
-    # analysis 是主 Claude 传进来的综合分析 JSON
+    # analysis 是主代理传进来的综合分析 JSON
     scores = analysis.get("scores", {})  # 11 个维度
     valuation = analysis.get("valuation", {})  # DCF + 账面资产
     moat = analysis.get("moat", {})  # 护城河分析

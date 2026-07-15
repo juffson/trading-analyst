@@ -1,0 +1,32 @@
+{
+  "skill_name": "quant-backtest",
+  "evals": [
+    {
+      "id": 1,
+      "name": "rsi-strategy-backtest",
+      "prompt": "用 $quant-backtest 帮我回测 AAPL.US 的 RSI 策略，区间是 2024-01-01 到 2025-12-31。RSI 低于 30 买入，高于 70 平仓，并解释结果是否跑赢买入持有。",
+      "expected_output": "优先调用 Longbridge connector/app 的 quant_run，生成合法 QuantScript，运行回测并比较净利润、最大回撤、夏普、胜率和买入持有收益；连接器不可用时才从 Skill 绝对路径调用 run_script.py。",
+      "files": [],
+      "expectations": [
+        "连接器可用时调用 longbridge_quant_run；不可用时使用绝对 Skill 路径调用 scripts/run_script.py",
+        "QuantScript 第一行使用 //@version=6",
+        "展示净利润、最大回撤、夏普比率、交易次数和胜率",
+        "比较策略收益与买入持有收益",
+        "清楚标注回测区间和标的代码"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "parameter-sensitivity",
+      "prompt": "用 $quant-backtest 把这个均线策略的快线参数分别改成 5、10、20 回测 TSLA.US，其他参数不变，给我一个横向比较。",
+      "expected_output": "保持脚本其余部分不变，通过 inputs_json 分别运行三次，输出一致口径的指标比较并说明样本内参数优化风险。",
+      "files": [],
+      "expectations": [
+        "通过 --inputs 或等价 inputs_json 覆盖参数，而不是改写三份不同策略",
+        "三组结果使用相同标的和时间范围",
+        "横向比较净利润、最大回撤、夏普和交易次数",
+        "提醒参数敏感性和过拟合风险"
+      ]
+    }
+  ]
+}

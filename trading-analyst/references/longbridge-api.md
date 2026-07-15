@@ -80,7 +80,7 @@ python3 scripts/lb_client.py detect
 | `forecast-eps AAPL.US` | `longbridge forecast-eps AAPL.US` | ⚠️ CLI 兜底 | API SDK 未暴露此接口 |
 | `news AAPL.US` | `longbridge news AAPL.US` | ⚠️ CLI 兜底 | API SDK 未暴露此接口 |
 
-**⚠️ CLI 兜底**：API 模式下，`lb_client.py` 会自动检查本机是否也安装了 CLI；有则转发给 CLI，无则返回 `{"ok": false, "cli_fallback_required": true}`。遇到这种情况需要告知用户该命令在纯 API 模式下不可用，建议安装 CLI 或从其他渠道（WebSearch）补充数据。
+**⚠️ CLI 兜底**：API 模式下，`lb_client.py` 会自动检查本机是否也安装了 CLI；有则转发给 CLI，无则返回 `{"ok": false, "cli_fallback_required": true}`。遇到这种情况需要告知用户该命令在纯 API 模式下不可用，建议安装 CLI 或使用当前平台的网页搜索补充数据。
 
 ---
 
@@ -180,7 +180,7 @@ python3 scripts/lb_client.py kline AAPL.US --period day --count 60 \
 ## 常见问题
 
 **Q: API 模式和 CLI 模式的数据一样吗？**
-基本一致，底层都接 LongPort 服务。主要差异是 API 模式下 `institution-rating` / `forecast-eps` / `news` 需要 CLI 兜底或改用 WebSearch。
+基本一致，底层都接 LongPort 服务。主要差异是 API 模式下 `institution-rating` / `forecast-eps` / `news` 需要 CLI 兜底或改用当前平台的网页搜索。
 
 **Q: API 的 rate limit 是多少？**
 行情接口：每秒 10 次、最多 5 路并发。K 线：30 秒内 60 次。分析时串行调用即可，不需要特别控速。
@@ -192,4 +192,4 @@ python3 scripts/lb_client.py kline AAPL.US --period day --count 60 \
 ```bash
 python3 -c "import os; print(os.environ.get('LONGPORT_APP_KEY', 'NOT SET'))"
 ```
-如果显示 NOT SET，检查 shell 配置或在启动 Claude Code 前先 `export` 相关变量。
+如果显示 NOT SET，检查 shell 配置，并在启动 Codex、ChatGPT 桌面端或 Claude Code 前先 `export` 相关变量。

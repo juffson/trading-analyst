@@ -1,0 +1,5 @@
+interface:
+  display_name: "Quant Backtest"
+  short_description: "运行 QuantScript 回测并比较策略表现"
+  default_prompt: "使用 $quant-backtest 回测这个 QuantScript 策略并解释关键绩效指标。"
+

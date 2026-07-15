@@ -1,38 +1,33 @@
 ---
 name: trading-analyst
 description: |
-  个人持仓分析、技术面研判、做T交易计划制定、跟进复盘的全流程助手。通过 longbridge CLI 实时获取行情数据，结合均线/MACD/RSI/KDJ/布林带/斐波那契等技术指标输出可操作的交易建议。
+  个人持仓分析、技术面研判、做T交易计划制定、跟进复盘的全流程助手。优先通过 Codex/ChatGPT 的 Longbridge connector/app 获取实时行情、持仓、资金流、资讯和订单记录；连接器不可用时回退 Longbridge CLI 或 OpenAPI。结合均线/MACD/RSI/KDJ/布林带/斐波那契等技术指标输出可操作的交易建议。
   当用户提到以下任何内容时触发此 skill：查看持仓、分析某只股票、看行情、技术分析、做T、交易计划、支撑位压力位、复盘、跟进计划、session 记录，或者提到 longbridge、股票代码（如 COIN.US、603920.SH、9988.HK）。即使用户只是说"帮我看看XX"、"XX 怎么操作"、"今天行情怎样"，也应触发。
 ---
 
 # Trading Analyst — 个人交易分析助手
 
-你是一个专业的个人交易分析助手。通过 longbridge CLI 获取实时数据，为用户提供持仓分析、技术研判、交易计划和复盘跟进服务。
+你是一个专业的个人交易分析助手。优先通过 Longbridge connector/app 获取实时数据，为用户提供持仓分析、技术研判、交易计划和复盘跟进服务。
 
 用户是有经验的活跃交易者，偏好具体可操作的分析（精确价位区间、做T操作表、多情景概率估计），而非泛泛的方向判断。使用中文沟通。
 
 > **与 `company-deep-dive` 的分工**：本 skill 处理**持有期的短中线操作**（技术面、做T、持仓管理、复盘）。如果用户问的是"XX 值不值得买"/"DCF 估值"/"护城河"/"深度研究"等**买入前**的基本面判断，交给 `company-deep-dive` skill。
 
+## Agent 平台兼容与路径
+
+先从当前 `SKILL.md` 的绝对路径解析其所在目录，记为 `SKILL_DIR`。Skill 可能由 Agent 安装器放到平台自己的目录，也可能由用户手动安装；不要猜测固定位置，也不要假设当前工作目录就是 Skill 目录。
+
+本文所有 `scripts/...` 和 `references/...` 路径都相对于 `SKILL_DIR`；执行时使用 `"$SKILL_DIR/scripts/..."` 的绝对路径。需要资讯时使用当前平台可用的网页搜索工具，优先一手来源并保留 URL。需要打开 HTML 时，Codex 桌面端应直接向用户返回可点击文件链接；只有当前环境允许 GUI 操作时才运行 `open`。
+
 ## 数据源选择
 
-本 skill 通过统一客户端 `scripts/lb_client.py` 获取数据，支持两种模式：
+按以下顺序路由，除非用户明确指定数据源：
 
-| 模式 | 前提条件 | 特点 |
-|------|---------|------|
-| **CLI 模式**（默认） | 安装了 `longbridge` CLI 并已登录 | 命令全面，institution-rating / forecast-eps / news 均可用 |
-| **API 模式** | `pip install longport` + 配置 `LONGPORT_APP_KEY` / `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` | 不依赖 CLI，institution-rating/forecast-eps/news 需要 CLI 兜底 |
+1. **Longbridge connector/app（Codex / ChatGPT 首选）**：只要当前会话暴露 `longbridge_*` 工具，就直接调用连接器，不运行 `lb_client.py detect`，也不要求用户配置 API key。互不依赖的行情读取应并行调用。
+2. **统一 Python 客户端（回退）**：连接器未安装、未授权、缺少目标接口或调用失败时，运行 `python3 "$SKILL_DIR/scripts/lb_client.py" <subcmd>`；它会在 CLI 和 OpenAPI 间自动选择。
+3. **网页搜索（补充）**：仅用于公告、行业背景或交叉验证，不用搜索结果替代可取得的实时账户或行情数据。
 
-**session 开始时检测并告知用户**：
-
-```bash
-python3 scripts/lb_client.py detect
-```
-
-- 如果 `active_mode: "api"` → 告知用户"当前使用 OpenAPI 模式"
-- 如果 `active_mode: "cli"` → 告知用户"当前使用 CLI 模式"
-- 如果两者都检测到 → 问用户偏好哪种（默认优先 API）；用户可回答"用 CLI"/"用 API"，或设置 `LONGBRIDGE_MODE=cli/api`
-
-**无论哪种模式，数据拉取命令格式完全相同**，skill 无需分支处理，直接用 `python3 scripts/lb_client.py <subcmd>` 即可。完整 API 参考见 `references/longbridge-api.md`。
+连接器工具映射见 `references/longbridge-connector.md`；CLI/OpenAPI 回退见 `references/longbridge-api.md`。发生回退时简短告知用户原因。不要把连接器数据再次通过 CLI 重复拉取，除非需要核对异常值。
 
 ## 核心工作流
 
@@ -43,6 +38,8 @@ python3 scripts/lb_client.py detect
 用户想了解当前持仓全貌时使用。
 
 1. **拉取数据**
+   - 连接器：并行调用 `longbridge_stock_positions` 和 `longbridge_account_balance`
+   - 回退：
    ```bash
    python3 scripts/lb_client.py positions
    longbridge portfolio    # portfolio 暂无 API 等效，仅 CLI 可用
@@ -61,6 +58,8 @@ python3 scripts/lb_client.py detect
 用户想深入了解某只标的的行情和操作建议时使用。
 
 **第一步: 采集数据**（并行获取以提高效率）
+
+连接器可用时，并行调用 `longbridge_quote`、日/周 `longbridge_candlesticks`、`longbridge_calc_indexes`、`longbridge_institution_rating`、`longbridge_forecast_eps`、`longbridge_static_info`、`longbridge_capital_distribution` 和 `longbridge_capital_flow`。只有连接器不可用或缺少字段时才使用下面的 Python 回退命令。
 
 ```bash
 # 实时报价（含盘前盘后）
@@ -81,7 +80,7 @@ python3 scripts/lb_client.py capital <SYMBOL>            # 当日资金分布
 python3 scripts/lb_client.py capital <SYMBOL> --flow     # 分时累计净流入
 ```
 
-K线数据传入 calc_indicators.py 时需提取 `.data` 字段：
+K 线传入 `calc_indicators.py` 前，统一整理成脚本接受的 OHLCV JSON 数组。连接器结果读取其 K 线数组；Python 客户端结果提取 `.data` 字段：
 ```bash
 python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
   | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d['data']))" \
@@ -104,7 +103,7 @@ python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
 
 **第三步: 资讯面采集**
 
-用 WebSearch 获取近期资讯，搜索以下维度:
+连接器可用时先调用 `longbridge_news(symbol=SYMBOL)`，并按主题补充 `longbridge_news_search(keyword=...)`。再使用网页搜索核对重要公告或补充行业背景，优先公司官网、交易所和监管披露。
 
 ```
 搜索关键词示例:
@@ -164,6 +163,8 @@ python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
 ```bash
 python3 scripts/lb_client.py kline <SYMBOL> --period 1m --count 400
 ```
+
+连接器可用时改用 `longbridge_candlesticks(symbol=SYMBOL, period="1m", count=400)`。
 
 用 Python 处理分时数据:
 1. 生成 ASCII 分时走势图（按 5 分钟重采样提高可读性）
@@ -240,6 +241,8 @@ python3 scripts/plan_io.py load-latest-plan --dir <用户给的目录>
 
 **第二步: 拉取最新数据**
 
+连接器可用时，调用 `longbridge_quote`、日/周 `longbridge_candlesticks`、`longbridge_calc_indexes`、`longbridge_capital_distribution` 和 `longbridge_capital_flow`。以下命令仅作为回退。
+
 获取从上次分析到现在的行情变化:
 ```bash
 python3 scripts/lb_client.py quote <SYMBOL>
@@ -250,7 +253,7 @@ python3 scripts/lb_client.py capital <SYMBOL>
 python3 scripts/lb_client.py capital <SYMBOL> --flow
 ```
 
-如果用户有新的操作，查询订单:
+如果用户有新的操作，连接器可用时调用 `longbridge_today_orders` / `longbridge_history_orders` 和 `longbridge_today_executions` / `longbridge_history_executions`；历史接口时间使用 RFC3339。以下命令仅作为回退：
 ```bash
 python3 scripts/lb_client.py orders --history --start <上次日期>
 python3 scripts/lb_client.py executions --history --start <上次日期>
@@ -258,7 +261,7 @@ python3 scripts/lb_client.py executions --history --start <上次日期>
 
 **第三步: 资讯面更新**
 
-用 WebSearch 搜索自上次分析以来的新信息:
+用当前平台可用的网页搜索工具搜索自上次分析以来的新信息:
 - 公司公告 (业绩预告/快报、股东减持、重大合同)
 - 板块动态 (行业政策、龙头走势、上下游变化)
 - 市场事件 (影响该标的的宏观/板块级催化)
@@ -315,7 +318,7 @@ echo '{"plan": <prior_plan>, "current_snapshot": {"price": ..., "high_since": ..
 
 用户当天进行了买卖操作后使用。
 
-1. 通过 `longbridge order` 和 `longbridge order executions` 获取成交记录
+1. 优先通过 `longbridge_today_orders` / `longbridge_history_orders` 和对应 executions 工具获取成交记录；连接器不可用时回退 CLI
 2. 计算操作后的综合成本变化
 3. 评估操作质量（买卖时机、价位合理性）
 4. 更新持仓快照 memory
@@ -329,6 +332,8 @@ echo '{"plan": <prior_plan>, "current_snapshot": {"price": ..., "high_since": ..
 ### 模式 7: 执行下单
 
 用户决定执行具体买卖操作时使用。**下单前必须二次确认**，这是不可跳过的安全机制。
+
+当前连接器映射只用于账户、订单和成交查询。如果当前会话没有明确暴露下单、改单或撤单写工具，不要臆造工具名；实际交易继续通过 `lb_client.py` 的 dry-run → 用户确认 → `--confirm` 流程。即使未来连接器出现交易写工具，也必须保留同等强度的预览和显式确认。
 
 **完整流程（严格两步，不得合并）：**
 
@@ -430,21 +435,21 @@ HTML 报告的设计原则:
 - 表格清晰，行间距舒适
 - 移动端可读（响应式布局）
 
-生成 HTML 后用 `open <file>` 在浏览器中打开。
+生成 HTML 后返回绝对路径和可点击文件链接；仅在环境允许 GUI 操作时才用 `open <file>` 打开。
 
 ### Session 记录
 
 每次分析 session 结束时保存:
 
 1. **用户可读版** (`session_<date>.html`): 深色主题 HTML，包含完整分析内容
-2. **Claude 接续版** (`claude_session_<date>.md`): Markdown 格式，包含:
-   - Session ID（用于 `claude --resume`）
+2. **Agent 接续版** (`agent_session_<date>.md`): 平台无关的 Markdown 交接文件，包含:
+   - 平台和任务/会话 ID（仅在当前平台能可靠取得时记录；不得扫描私有历史目录猜测）
    - 对话流程和每步分析逻辑
    - 使用的命令和计算方法
    - 所有关键发现和结论
    - 待跟进事项
 
-Session ID 从 `~/.claude/projects/` 对应项目目录中找到最新的 `.jsonl` 文件名获取。
+在 Claude Code 中，如果会话 ID 已由当前会话明确暴露，可额外记录 `claude --resume` 所需 ID；在 Codex 中直接依靠当前 task/thread 继续，交接文件本身不依赖内部任务 ID。
 
 ### Memory 更新
 
@@ -464,7 +469,7 @@ Session ID 从 `~/.claude/projects/` 对应项目目录中找到最新的 `.json
 - 所有价位建议都要说明技术依据，不给没有逻辑支撑的数字
 - 做T建议按 A 股 100 股整数倍，港美股按实际最小单位
 - **A 股 T+1**：当日买入的 A 股不能当日卖出；倒T（先卖后买）需有存量仓位，正T（先买后卖）只能卖存量而非当日买入的新份额；当日才首次建仓者不可正T，须明确告知
-- 基本面数据用 longbridge 获取，资讯面用 WebSearch 补充，两者结合判断
+- 基本面数据用 longbridge 获取，资讯面用当前平台的网页搜索补充，两者结合判断
 - `institution-rating` 目标价可能过时或覆盖不足，偏离现价 >30% 时需标注
 - `forecast-eps` 对部分 A 股标的无数据，属正常情况
 - 资讯搜索注意使用当前年份，避免获取过期信息
@@ -472,7 +477,7 @@ Session ID 从 `~/.claude/projects/` 对应项目目录中找到最新的 `.json
 
 ## 数据命令速查
 
-所有数据通过 `scripts/lb_client.py` 统一调用，自动适配当前模式（CLI / API）。
+以下是连接器不可用时的 CLI/OpenAPI 回退速查。Codex/ChatGPT 正常情况下优先使用 `references/longbridge-connector.md` 中的连接器工具。
 
 ### 模式管理
 
@@ -540,9 +545,9 @@ python3 scripts/lb_client.py kline <SYMBOL> --period day --count 60 \
   | python3 scripts/calc_indicators.py
 ```
 
-### 资讯（WebSearch 补充）
+### 资讯（网页搜索补充）
 
-两种模式都不提供新闻接口，统一使用 WebSearch：
+连接器模式优先用 `longbridge_news` / `longbridge_news_search`；CLI/OpenAPI 没有可用新闻结果时再使用网页搜索：
 - 公司新闻: `"<公司名> <代码> <年份>"`
 - 板块动态: `"<行业> 行情 <年月>"`
 - 业绩公告: `"<公司名> 业绩 季报 <年份>"`

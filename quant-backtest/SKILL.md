@@ -1,44 +1,57 @@
 ---
 name: quant-backtest
-description: 通过 Longbridge OpenAPI /v1/quant/run_script 运行 QuantScript 量化脚本，返回回测报告、图表数据和执行事件。支持动态调参（inputs_json）、终端图表绘制、参数敏感性分析。当用户想运行 QuantScript 策略脚本、进行量化回测、获取策略性能指标（夏普比率/最大回撤/胜率）、动态调整策略参数对比效果，或需要图表 plot 输出数据时，使用此 skill。即使用户只说"跑一下这个策略"、"帮我回测 RSI 策略"、"调一下参数再测"，也应触发。
+description: 优先通过 Codex/ChatGPT 的 Longbridge connector/app `quant_run` 工具运行 QuantScript 量化脚本；连接器不可用时回退 Longbridge CLI/OpenAPI。返回回测报告、图表数据和执行事件，支持动态调参、参数敏感性分析。当用户想运行 QuantScript 策略、进行量化回测、获取夏普比率/最大回撤/胜率、动态调整参数对比效果，或需要 plot 输出数据时使用。即使用户只说"跑一下这个策略"、"帮我回测 RSI 策略"、"调一下参数再测"，也应触发。
 ---
 
 # Quant Backtest Skill
 
-通过 Longbridge OpenAPI REST 接口运行 QuantScript 脚本，返回完整回测结果。
+优先通过 Longbridge connector/app 运行 QuantScript，返回完整回测结果。
 
-## 认证 / 模式选择
+## Agent 平台兼容与路径
 
-与 `trading-analyst` 采用相同的双模式架构：
+先从当前 `SKILL.md` 的绝对路径解析其所在目录，记为 `SKILL_DIR`。Skill 可能由 Agent 安装器放到平台自己的目录，也可能由用户手动安装；不要猜测固定位置或依赖当前工作目录。本文所有 `scripts/...` 和 `references/...` 路径都相对于 `SKILL_DIR`，执行时使用绝对路径。
 
-| 模式 | 前提条件 | 特点 |
-|------|---------|------|
-| **CLI**（默认） | `longbridge` CLI 已登录 | 无需额外配置，自动使用 CLI 认证 |
-| **API** | `LONGPORT_APP_KEY` + `LONGPORT_APP_SECRET` + `LONGPORT_ACCESS_TOKEN` | 直接 HTTP，不依赖 CLI |
+## 数据源选择
 
-**模式控制（同 trading-analyst）：**
+按以下顺序路由：
+
+1. 当前会话有 `longbridge_quant_run` 时直接调用，参数为 `symbol`、`start`、`end`，可选 `period`、`script`、`input`。`input` 是与 `input.*()` 顺序一致的 JSON 数组字符串。
+2. connector/app 不可用、未授权或调用失败时，回退 `scripts/run_script.py`；脚本自动选择 CLI/OpenAPI。
+3. 发生回退时简短告知用户原因，不要求已授权 connector 的用户重复配置 API key。
+
+**回退模式控制：**
 ```bash
-LONGBRIDGE_MODE=cli  python3 scripts/run_script.py ...   # 强制 CLI
-LONGBRIDGE_MODE=api  python3 scripts/run_script.py ...   # 强制 API
+LONGBRIDGE_MODE=cli  python3 "$SKILL_DIR/scripts/run_script.py" ...   # 强制 CLI
+LONGBRIDGE_MODE=api  python3 "$SKILL_DIR/scripts/run_script.py" ...   # 强制 API
 # 不设置: 有 LONGPORT_ACCESS_TOKEN → api，否则 → cli
 ```
 
 **API 模式 base URL：** 默认 `https://openapi.longbridge.cn`，可通过 `LONGPORT_OPENAPI_HTTP_URL` 覆盖。
 
-检测当前模式：
-```bash
-python3 scripts/lb_client.py detect   # 复用 trading-analyst 的检测脚本
-```
+`run_script.py` 会自行检测认证模式，不依赖另一个 Skill 的脚本。
 
 ## 运行流程
 
 1. 编写 QuantScript 脚本（见下方语法说明）
-2. 调用 `scripts/run_script.py`，传入脚本、标的、时间范围
+2. 优先调用 `longbridge_quant_run`；不可用时调用 `scripts/run_script.py`
 3. 检查 `code == 0`
 4. 解析 `data` 中的三份 JSON 数据
 5. 展示结果
 
-### 调用示例
+### connector/app 调用
+
+调用 `longbridge_quant_run`：
+
+```text
+symbol="TSLA.US"
+start="2024-01-01"
+end="2024-12-31"
+period="day"
+script="<完整 QuantScript>"
+input="[14,70,30]"  # 可选
+```
+
+### CLI/OpenAPI 回退示例
 
 ```bash
 # 从文件运行
@@ -173,7 +186,7 @@ filled_orders: { "bar_index": [{ order_id, price, quantity }] }  // 正数=买 �
 
 ## 终端图表绘制
 
-先安装依赖：`pip3 install plotext`
+connector 返回结果优先直接总结；只有用户要求终端图表且已把结果整理为 `chart.py` 支持的 JSON 结构时才使用本地绘图。回退模式先安装依赖：`pip3 install plotext`。
 
 ```bash
 # 绘制 chart_json 所有 plot 线条（默认）

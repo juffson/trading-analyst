@@ -5,10 +5,10 @@
       "id": 1,
       "name": "aapl-technical-and-t-plan",
       "prompt": "帮我分析 AAPL.US 的技术面并给个做T计划。假设我持有 100 股，成本价 $250。",
-      "expected_output": "先用 longbridge CLI 拉 quote / calc-index / kline / capital 数据，计算 MA/MACD/RSI/KDJ/布林带/斐波那契等指标，产出持仓概况 + 技术指标结果 + 关键价位操作表 + 做T明细（正T/倒T）+ 多情景预估 + 操作纪律。优先输出为 HTML 文件。完成后主动询问用户是否把计划作为复盘基线存起来。",
+      "expected_output": "优先用 Longbridge connector/app 拉 quote / calc_indexes / candlesticks / capital 数据；连接器不可用时回退 CLI/OpenAPI。计算 MA/MACD/RSI/KDJ/布林带/斐波那契等指标，产出持仓概况 + 技术指标结果 + 关键价位操作表 + 做T明细 + 多情景预估 + 操作纪律。优先输出 HTML，完成后询问是否保存为复盘基线。",
       "files": [],
       "expectations": [
-        "调用了 longbridge quote AAPL.US / calc-index / kline 等命令获取实时数据",
+        "连接器可用时调用 longbridge_quote / calc_indexes / candlesticks 等工具；不可用时才回退命令行",
         "输出包含当前股价、成本、浮盈浮亏的持仓概况",
         "计算并展示了至少 4 个技术指标（MA、MACD、RSI、布林带之类）",
         "给出了具体的支撑/阻力价位（带技术含义说明，不是凭空数字）",
@@ -26,7 +26,7 @@
       "expected_output": "做完完整的技术分析和交易计划后，直接（不再询问）调用 scripts/plan_io.py save-plan 把 Plan JSON 存到用户指定的目录，产出 plan_<date>.json + plan_<date>.html。JSON 结构要符合 references/plan-schema.md 的 schema，必填字段齐全且可被 load-latest-plan 加载。",
       "files": [],
       "expectations": [
-        "调用了 longbridge CLI 获取 AAPL.US 实时数据",
+        "优先通过 Longbridge connector/app 获取 AAPL.US 实时数据，必要时才回退 CLI/OpenAPI",
         "输出目录下产出了 plan_<YYYY-MM-DD>.json 文件（不是随便的 .json 名字）",
         "plan_<date>.json 能被 python3 scripts/plan_io.py load-latest-plan --dir <输出目录> 成功加载，返回 ok=true 且 found=true",
         "plan JSON 包含 symbol / plan_date / snapshot / price_levels / t_plans / scenarios 等所有必填字段",
@@ -45,7 +45,7 @@
       "files": [],
       "expectations": [
         "调用了 python3 scripts/plan_io.py load-latest-plan --dir <fixture 绝对路径> 加载 plan_2026-04-05.json",
-        "调用了 longbridge quote AAPL.US 和/或 kline 拉取从 2026-04-05 到现在的最新行情",
+        "优先调用 Longbridge connector/app 的 quote/candlesticks 获取从 2026-04-05 到现在的行情，必要时才回退 CLI/OpenAPI",
         "调用了 diff-snapshot 做结构化对比（或在逻辑上等价地复用 plan_io.py 的 diff 能力）",
         "复盘报告里明确说明了哪个情景（乐观/中性/悲观）与实际走势最匹配",
         "复盘报告里对 fixture 的每个 price_level（$198 / $190 / $178 / $170）都给出了是否触及的判定",

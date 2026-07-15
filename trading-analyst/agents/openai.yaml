@@ -1,0 +1,5 @@
+interface:
+  display_name: "Trading Analyst"
+  short_description: "技术分析、持仓管理、做T计划与复盘"
+  default_prompt: "使用 $trading-analyst 分析我的持仓或指定股票，并给出有数据依据的操作计划。"
+

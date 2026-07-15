@@ -137,6 +137,6 @@
 - `腾讯控股_价值分析_2026-04-21.html`
 - `Apple_Value_Analysis_2026-04-21.html`
 
-保存位置：`/Users/sirius/Desktop/daily-work/`（或用户指定的 workspace）
+保存位置：用户指定目录；未指定时使用当前 workspace 的 `outputs/`。
 
-报告完成后用 `present_files` 工具向用户展示，并用 `computer://` 链接让用户直接打开。
+报告完成后返回当前客户端可打开的文件链接和绝对路径；不要假设某个特定平台工具或 URI 一定存在。
