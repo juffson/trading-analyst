@@ -1,0 +1,10 @@
+//@version=6
+strategy("williams_14", overlay=false, initial_capital=100000)
+wprLength = input.int(14, title="Williams %R Length")
+wprOversold = input.int(-80, title="Williams %R Oversold")
+wprOverbought = input.int(-20, title="Williams %R Overbought")
+wprValue = ta.wpr(wprLength)
+if ta.crossover(wprValue, wprOversold)
+    strategy.entry("Long", strategy.long, qty=100)
+if ta.crossunder(wprValue, wprOverbought)
+    strategy.close("Long")

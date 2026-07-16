@@ -1,0 +1,10 @@
+//@version=6
+strategy("macd_12_26_9", overlay=false, initial_capital=100000)
+macdFast = input.int(12, title="MACD Fast Length")
+macdSlow = input.int(26, title="MACD Slow Length")
+macdSignal = input.int(9, title="MACD Signal Length")
+[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)
+if ta.crossover(macdLine, macdSignalLine)
+    strategy.entry("Long", strategy.long, qty=100)
+if ta.crossunder(macdLine, macdSignalLine)
+    strategy.close("Long")

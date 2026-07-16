@@ -1,0 +1,13 @@
+# auto-trader 定时任务示例（Linux/cron）。
+# macOS 建议用 launchd（更可靠、休眠唤醒后会补跑）——见 com.user.autotrader.plist.example。
+#
+# 安装方式: crontab -e，把下面这行粘进去，并把路径换成你本机的绝对路径。
+# 下面示例是"交易时段内每 15 分钟跑一次"，具体时间按你交易的市场时区调整
+# （美股/港股/A股的开收盘时间不一样，这里的 9-16 只是占位，不要直接照抄）。
+#
+# 注意: cron 的 PATH 很短，不会包含 ~/.local/bin——如果 `longbridge` 装在那里
+# （比如 `which longbridge` 显示 /Users/you/.local/bin/longbridge），
+# 下面这行手动把它的目录加进 PATH，否则 scripts/signal_from_backtest.py 会报"找不到 longbridge CLI"。
+
+PATH=/usr/bin:/bin:/Users/YOUR_USERNAME/.local/bin
+*/15 9-16 * * 1-5 cd /ABSOLUTE/PATH/TO/ai-quant/trading-analyst/auto-trader && /usr/bin/python3 scripts/run_cycle.py >> logs/cron.log 2>&1

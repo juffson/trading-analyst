@@ -1,0 +1,19 @@
+{
+  "_comment": "复制成 strategies.json 再编辑（strategies.json 已被 .gitignore 排除，不会误提交）。calibrating 阶段完成后，把 quant-backtest 选中的 strategy_file / inputs 填进来。execution_mode 默认 signal_only：只生成交易计划（watchlist/<symbol>/plans.jsonl，status=pending），不会碰风控或下单，你自己看计划决定要不要动手。切到 auto_paper 才会走风控+预览下单（仍然只是 --dry-run，不是真实成交）。没有 auto_live——真实下单永远是手动调用 executor.confirm_order()，不受这个开关控制。",
+  "symbols": {
+    "EXAMPLE.US": {
+      "execution_mode": "signal_only",
+      "strategy_file": "watchlist/EXAMPLE.US/strategy.pine",
+      "strategy_name": "rsi_example",
+      "inputs": null,
+      "period": "day",
+      "lookback_days": 90,
+      "risk": {
+        "max_position_shares": 100,
+        "max_orders_per_day": 1,
+        "max_daily_loss_pct": 3.0,
+        "stop_loss_pct": 8.0
+      }
+    }
+  }
+}

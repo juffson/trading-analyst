@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS launchd 示例。安装步骤（手动执行，不会自动生效）:
+    1. 把下面的 /ABSOLUTE/PATH/TO/... 换成你本机的绝对路径（出现 3 次）
+    2. 另存为 ~/Library/LaunchAgents/com.user.autotrader.plist
+    3. launchctl load ~/Library/LaunchAgents/com.user.autotrader.plist
+  卸载: launchctl unload ~/Library/LaunchAgents/com.user.autotrader.plist
+
+  StartInterval=900 表示每 15 分钟跑一次（不区分是否在交易时段——run_cycle.py 自己
+  跑一次回测查信号，非交易时段跑了也不会有新信号，代价只是多耗一点资源，如果介意可以
+  换成 StartCalendarInterval 只在交易时段的具体分钟触发）。
+
+  launchd 的 PATH 同样很短，不含 ~/.local/bin——下面 EnvironmentVariables 里的 PATH
+  记得按你机器上 `which longbridge` 的实际路径改（出现的用户名占位符也要换掉）。
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.autotrader</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/ABSOLUTE/PATH/TO/ai-quant/trading-analyst/auto-trader/scripts/run_cycle.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/ABSOLUTE/PATH/TO/ai-quant/trading-analyst/auto-trader</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/Users/YOUR_USERNAME/.local/bin</string>
+    </dict>
+    <key>StartInterval</key>
+    <integer>900</integer>
+    <key>StandardOutPath</key>
+    <string>/ABSOLUTE/PATH/TO/ai-quant/trading-analyst/auto-trader/logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/ABSOLUTE/PATH/TO/ai-quant/trading-analyst/auto-trader/logs/launchd.err.log</string>
+</dict>
+</plist>

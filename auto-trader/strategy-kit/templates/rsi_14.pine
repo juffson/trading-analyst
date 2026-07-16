@@ -1,0 +1,10 @@
+//@version=6
+strategy("rsi_14", overlay=false, initial_capital=100000)
+rsiLength = input.int(14, title="RSI Length")
+rsiOversold = input.int(30, title="RSI Oversold")
+rsiOverbought = input.int(70, title="RSI Overbought")
+rsiValue = ta.rsi(close, rsiLength)
+if ta.crossunder(rsiValue, rsiOversold)
+    strategy.entry("Long", strategy.long, qty=100)
+if ta.crossover(rsiValue, rsiOverbought)
+    strategy.close("Long")

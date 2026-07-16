@@ -1,0 +1,12 @@
+//@version=6
+strategy("bollinger_bands_20", overlay=false, initial_capital=100000)
+bbLength = input.int(20, title="Bollinger Length")
+bbMult = input.float(2.0, title="Bollinger StdDev Mult")
+bbBasis = ta.sma(close, bbLength)
+bbDev = ta.stdev(close, bbLength)
+bbUpper = bbBasis + bbMult * bbDev
+bbLower = bbBasis - bbMult * bbDev
+if ta.crossover(close, bbLower)
+    strategy.entry("Long", strategy.long, qty=100)
+if ta.crossunder(close, bbUpper)
+    strategy.close("Long")

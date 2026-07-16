@@ -1,0 +1,427 @@
+{
+  "_comment": "内置策略片段库 (strategy-kit)。数据来源: ../../facts-hub/pkg/test/factor_lib.json（id/direction/groups/description 尽量保持一致，方便对照 facts-hub 那边的因子定义）。每个片段的 setup/condition 是翻译成 QuantScript 后、已经用 `longbridge quant run` 实测跑通的 Pine v6 片段（见 auto-trader/strategy-kit/README.md 的验证记录）。所有 input 变量名在片段之间全局唯一（如 rsiLength/bbLength/wprLength 而不是都叫 length），这样两个片段组合成一份脚本时不会因为同名变量互相覆盖。",
+  "version": "1.0.0",
+  "blocks": {
+    "rsi_14_long": {
+      "name": "rsi_14",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "RSI指标发出多头信号",
+      "implemented": true,
+      "pair_with": "rsi_14_short",
+      "inputs": [
+        {
+          "var": "rsiLength",
+          "label": "RSI Length",
+          "default": 14
+        },
+        {
+          "var": "rsiOversold",
+          "label": "RSI Oversold",
+          "default": 30
+        }
+      ],
+      "setup": [
+        "rsiValue = ta.rsi(close, rsiLength)"
+      ],
+      "condition": "ta.crossunder(rsiValue, rsiOversold)"
+    },
+    "rsi_14_short": {
+      "name": "rsi_14",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "RSI指标发出空头信号",
+      "implemented": true,
+      "pair_with": "rsi_14_long",
+      "inputs": [
+        {
+          "var": "rsiLength",
+          "label": "RSI Length",
+          "default": 14
+        },
+        {
+          "var": "rsiOverbought",
+          "label": "RSI Overbought",
+          "default": 70
+        }
+      ],
+      "setup": [
+        "rsiValue = ta.rsi(close, rsiLength)"
+      ],
+      "condition": "ta.crossover(rsiValue, rsiOverbought)"
+    },
+    "macd_12_26_9_long": {
+      "name": "macd_12_26_9",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "MACD指标发出多头信号",
+      "implemented": true,
+      "pair_with": "macd_12_26_9_short",
+      "inputs": [
+        {
+          "var": "macdFast",
+          "label": "MACD Fast Length",
+          "default": 12
+        },
+        {
+          "var": "macdSlow",
+          "label": "MACD Slow Length",
+          "default": 26
+        },
+        {
+          "var": "macdSignal",
+          "label": "MACD Signal Length",
+          "default": 9
+        }
+      ],
+      "setup": [
+        "[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)"
+      ],
+      "condition": "ta.crossover(macdLine, macdSignalLine)"
+    },
+    "macd_12_26_9_short": {
+      "name": "macd_12_26_9",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "MACD指标发出空头信号",
+      "implemented": true,
+      "pair_with": "macd_12_26_9_long",
+      "inputs": [
+        {
+          "var": "macdFast",
+          "label": "MACD Fast Length",
+          "default": 12
+        },
+        {
+          "var": "macdSlow",
+          "label": "MACD Slow Length",
+          "default": 26
+        },
+        {
+          "var": "macdSignal",
+          "label": "MACD Signal Length",
+          "default": 9
+        }
+      ],
+      "setup": [
+        "[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)"
+      ],
+      "condition": "ta.crossunder(macdLine, macdSignalLine)"
+    },
+    "bollinger_bands_20_long": {
+      "name": "bollinger_bands_20",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "布林带指标发出多头信号（价格从下轨下方收回上轨内侧，均值回归买点）",
+      "implemented": true,
+      "pair_with": "bollinger_bands_20_short",
+      "inputs": [
+        {
+          "var": "bbLength",
+          "label": "Bollinger Length",
+          "default": 20
+        },
+        {
+          "var": "bbMult",
+          "label": "Bollinger StdDev Mult",
+          "default": 2.0
+        }
+      ],
+      "setup": [
+        "bbBasis = ta.sma(close, bbLength)",
+        "bbDev = ta.stdev(close, bbLength)",
+        "bbUpper = bbBasis + bbMult * bbDev",
+        "bbLower = bbBasis - bbMult * bbDev"
+      ],
+      "condition": "ta.crossover(close, bbLower)"
+    },
+    "bollinger_bands_20_short": {
+      "name": "bollinger_bands_20",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "布林带指标发出空头信号（价格从上轨上方回落至下方，均值回归卖点）",
+      "implemented": true,
+      "pair_with": "bollinger_bands_20_long",
+      "inputs": [
+        {
+          "var": "bbLength",
+          "label": "Bollinger Length",
+          "default": 20
+        },
+        {
+          "var": "bbMult",
+          "label": "Bollinger StdDev Mult",
+          "default": 2.0
+        }
+      ],
+      "setup": [
+        "bbBasis = ta.sma(close, bbLength)",
+        "bbDev = ta.stdev(close, bbLength)",
+        "bbUpper = bbBasis + bbMult * bbDev",
+        "bbLower = bbBasis - bbMult * bbDev"
+      ],
+      "condition": "ta.crossunder(close, bbUpper)"
+    },
+    "williams_14_long": {
+      "name": "williams_14",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "威廉指标发出多头信号",
+      "implemented": true,
+      "pair_with": "williams_14_short",
+      "inputs": [
+        {
+          "var": "wprLength",
+          "label": "Williams %R Length",
+          "default": 14
+        },
+        {
+          "var": "wprOversold",
+          "label": "Williams %R Oversold",
+          "default": -80
+        }
+      ],
+      "setup": [
+        "wprValue = ta.wpr(wprLength)"
+      ],
+      "condition": "ta.crossover(wprValue, wprOversold)"
+    },
+    "williams_14_short": {
+      "name": "williams_14",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "威廉指标发出空头信号",
+      "implemented": true,
+      "pair_with": "williams_14_long",
+      "inputs": [
+        {
+          "var": "wprLength",
+          "label": "Williams %R Length",
+          "default": 14
+        },
+        {
+          "var": "wprOverbought",
+          "label": "Williams %R Overbought",
+          "default": -20
+        }
+      ],
+      "setup": [
+        "wprValue = ta.wpr(wprLength)"
+      ],
+      "condition": "ta.crossunder(wprValue, wprOverbought)"
+    },
+    "trend_acceleration": {
+      "name": "Trend_Acceleration",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "MACD近4日逐日递增，显示多头强劲；RSI近期大于50，显示了多头的强势信号",
+      "implemented": true,
+      "pair_with": "momentum_exhaustion",
+      "inputs": [
+        {
+          "var": "macdFast",
+          "label": "MACD Fast Length",
+          "default": 12
+        },
+        {
+          "var": "macdSlow",
+          "label": "MACD Slow Length",
+          "default": 26
+        },
+        {
+          "var": "macdSignal",
+          "label": "MACD Signal Length",
+          "default": 9
+        },
+        {
+          "var": "rsiLength",
+          "label": "RSI Length",
+          "default": 14
+        }
+      ],
+      "setup": [
+        "[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)",
+        "rsiValue = ta.rsi(close, rsiLength)"
+      ],
+      "condition": "macdHist > macdHist[1] and macdHist[1] > macdHist[2] and macdHist[2] > macdHist[3] and rsiValue > 50"
+    },
+    "momentum_exhaustion": {
+      "name": "Momentum_Exhaustion",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "MACD近4日逐日递减，显示多头渐进衰竭；前期RSI大于50，显示了多头的强势信号",
+      "implemented": true,
+      "pair_with": "trend_acceleration",
+      "inputs": [
+        {
+          "var": "macdFast",
+          "label": "MACD Fast Length",
+          "default": 12
+        },
+        {
+          "var": "macdSlow",
+          "label": "MACD Slow Length",
+          "default": 26
+        },
+        {
+          "var": "macdSignal",
+          "label": "MACD Signal Length",
+          "default": 9
+        },
+        {
+          "var": "rsiLength",
+          "label": "RSI Length",
+          "default": 14
+        }
+      ],
+      "setup": [
+        "[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)",
+        "rsiValue = ta.rsi(close, rsiLength)"
+      ],
+      "condition": "macdHist < macdHist[1] and macdHist[1] < macdHist[2] and macdHist[2] < macdHist[3] and rsiValue[3] > 50",
+      "note": "「前期RSI大于50」翻译成 rsiValue[3]（衰竭开始前3根bar）> 50，是对原始文字描述的近似，不是facts-hub给出的精确公式"
+    },
+    "breakout": {
+      "name": "Breakout",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "MACD近4日逐日递增，显示多头强劲；前期RSI处于40至60区间，行情横向震荡",
+      "implemented": true,
+      "pair_with": "bearish_divergence",
+      "inputs": [
+        {
+          "var": "macdFast",
+          "label": "MACD Fast Length",
+          "default": 12
+        },
+        {
+          "var": "macdSlow",
+          "label": "MACD Slow Length",
+          "default": 26
+        },
+        {
+          "var": "macdSignal",
+          "label": "MACD Signal Length",
+          "default": 9
+        },
+        {
+          "var": "rsiLength",
+          "label": "RSI Length",
+          "default": 14
+        }
+      ],
+      "setup": [
+        "[macdLine, macdSignalLine, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)",
+        "rsiValue = ta.rsi(close, rsiLength)"
+      ],
+      "condition": "macdHist > macdHist[1] and macdHist[1] > macdHist[2] and macdHist[2] > macdHist[3] and rsiValue[4] > 40 and rsiValue[4] < 60",
+      "note": "「前期RSI处于40至60区间」翻译成 rsiValue[4]（4根bar前，加速开始前）在40-60之间，是近似"
+    },
+    "bearish_divergence": {
+      "name": "Bearish_Divergence",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "近日布林线突破上轨，显示动量反转预期；近日RSI处于超买位置，有一定反转预期",
+      "implemented": true,
+      "pair_with": "breakout",
+      "inputs": [
+        {
+          "var": "bbLength",
+          "label": "Bollinger Length",
+          "default": 20
+        },
+        {
+          "var": "bbMult",
+          "label": "Bollinger StdDev Mult",
+          "default": 2.0
+        },
+        {
+          "var": "rsiLength",
+          "label": "RSI Length",
+          "default": 14
+        },
+        {
+          "var": "rsiOverboughtDiv",
+          "label": "RSI Overbought (divergence)",
+          "default": 70
+        }
+      ],
+      "setup": [
+        "bbBasis = ta.sma(close, bbLength)",
+        "bbDev = ta.stdev(close, bbLength)",
+        "bbUpper = bbBasis + bbMult * bbDev",
+        "rsiValue = ta.rsi(close, rsiLength)"
+      ],
+      "condition": "close > bbUpper and rsiValue > rsiOverboughtDiv"
+    },
+    "pullback_in_uptrend": {
+      "name": "Pullback_in_Uptrend",
+      "direction": "long",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "长期趋势向上，价格回撤至支撑位，回撤量能小",
+      "implemented": false,
+      "note": "「支撑位」「回撤量能小」涉及需要人工判断的模式识别，没有把它硬翻译成一条容易踩坑的近似规则——先不实现，等你有更明确的量化定义再补"
+    },
+    "false_breakout": {
+      "name": "False_Breakout",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "突破后快速回落，突破时量能不足，显示假突破信号",
+      "implemented": false,
+      "note": "同上，「突破」「量能不足」的具体量化标准没有在 facts-hub 里给出精确定义，先不实现"
+    },
+    "momentum_crash": {
+      "name": "Momentum_Crash",
+      "direction": "short",
+      "type": "Technical",
+      "groups": [
+        "MOMENTUM"
+      ],
+      "description": "价格快速大幅下跌，成交量暴增，多重支撑被击穿",
+      "implemented": false,
+      "note": "同上，「多重支撑被击穿」需要人工定义支撑位算法，先不实现"
+    }
+  }
+}
