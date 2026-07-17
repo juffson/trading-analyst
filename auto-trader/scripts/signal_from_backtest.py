@@ -1,79 +1,91 @@
-"""滚动跑 Longbridge 的 `longbridge quant run` CLI，取「今天」新出现的信号。
+"""滚动跑 Longbridge 的 `/v1/quant/run_script`，取「今天」新出现的信号。
 
-为什么直接调 `longbridge` 二进制，不通过 ../../quant-backtest/scripts/run_script.py：
+用 `longport` SDK 的 `HttpClient` 直接发请求，不依赖外部 `longbridge` CLI 二进制：
 
-- 实测过 run_script.py 的「API 模式」（手写 HTTP 签名调 /v1/quant/run_script）稳定 401，
-  官方 longport SDK（同款凭据在 quote/trade 上完全正常）里也根本没有这块能力——这条路径没打通。
-- run_script.py 的「CLI 模式」响应解析假设了 `{code, data: {report_json, chart_json,
-  events_json}}` 的包装结构，但实测 `longbridge quant run --format json` 返回的是**没有包装**的
-  `{report_json, chart_json, events_json}`——那段解析代码 (`result.get("data", {})`) 会静默拿到
-  空 dict，report/chart/events 全部变空，且不会报错。这是 quant-backtest skill 自身的 bug，
-  按约定「skill不动」这里不改它，改成 auto-trader 自己直接调同一个 CLI 命令，用实测过的真实
-  响应结构解析。
-- `chart_json` 实测无论脚本有没有触发信号都恒为空字符串——不用它判断信号。改用
-  `report_json.closedTrades` / `openTrades`，两者都带精确的 `entryTime`/`exitTime`
-  （epoch 毫秒），比 chart_json.filled_orders 的 bar_index 更可靠，也不需要额外做
-  bar_index → 日期的映射。
+- `longport` 官方 Python SDK 没有专门的 quant/backtest 方法，但暴露了一个通用的
+  `HttpClient`（`HttpClient.from_apikey_env()`），可以对 OpenAPI 后端发任意认证请求——
+  直接 POST `/v1/quant/run_script`，鉴权走 SDK 自己内部的实现（和 quote/trade 共用，已验证
+  有效），不用再单独安装 + 配置 PATH 的 longbridge-terminal 二进制（早期版本就是这样做的，
+  见 git 历史；这个版本改用纯 Python，部署更简单）。
+- 请求体字段名（`counter_id`/`start_time`/`end_time`/`script`/`inputs_json`/`line_type`/
+  `exclude_chart`）来自 longbridge-terminal 的 PR #118 源码；`counter_id`/`line_type` 的转换
+  逻辑和 `../../quant-backtest/scripts/run_script.py` 里写的一致（保持同样的映射，但不做
+  跨目录 import，避免和那个 skill 产生代码耦合）。
+- `exclude_chart` 必须显式传 `False`——不传时 `chart_json` 会是空字符串；传 `False` 后
+  `chart_json.filledOrders`（注意是驼峰，不是 SKILL.md 文档里写的 `filled_orders`）才会有
+  数据，已实测确认。不过信号判断仍然优先用 `report_json.closedTrades`/`openTrades`——
+  它们带精确的 `entryTime`/`exitTime`（epoch 毫秒），比 `filledOrders` 的 bar_index 更直接，
+  不需要额外做 bar_index → 日期的映射。
 """
 import json
-import shutil
-import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-_FALLBACK_BINARY = str(Path.home() / ".local" / "bin" / "longbridge")
+from longport.openapi import HttpClient
+
+_MARKET_MAP = {"US": "US", "HK": "HK", "SH": "SH", "SZ": "SZ", "SG": "SG"}
+_PERIOD_TO_LINE_TYPE = {
+    "day": 1000, "week": 2000, "month": 3000, "year": 4000,
+    "1h": 60, "30m": 30, "15m": 15, "5m": 5, "1m": 1,
+}
 
 
 class BacktestError(RuntimeError):
     pass
 
 
-def _resolve_binary():
-    found = shutil.which("longbridge")
-    if found:
-        return found
-    if Path(_FALLBACK_BINARY).exists():
-        return _FALLBACK_BINARY
-    raise BacktestError(
-        "找不到 longbridge CLI——需要先装好 https://github.com/longbridge/longbridge-terminal "
-        "并确保 `longbridge` 在 PATH 里（cron/launchd 的 PATH 可能和交互 shell 不一样，"
-        f"装完建议确认一下绝对路径，当前 fallback 找的是 {_FALLBACK_BINARY}）"
-    )
+def _to_counter_id(symbol):
+    """TSLA.US → ST/US/TSLA"""
+    if symbol.startswith("ST/"):
+        return symbol
+    parts = symbol.rsplit(".", 1)
+    if len(parts) != 2:
+        raise BacktestError(f"无法解析符号格式: {symbol}，请用 TSLA.US / 700.HK / 600519.SH")
+    code, market = parts
+    market = market.upper()
+    if market not in _MARKET_MAP:
+        raise BacktestError(f"不支持的市场: {market}")
+    return f"ST/{_MARKET_MAP[market]}/{code}"
+
+
+def _to_line_type(period):
+    lt = _PERIOD_TO_LINE_TYPE.get(period)
+    if lt is None:
+        raise BacktestError(f"不支持的 period: {period}，可用值: {sorted(_PERIOD_TO_LINE_TYPE)}")
+    return lt
 
 
 def run_rolling_backtest(script_path, symbol, lookback_days=90, period="day", inputs=None, end_date=None):
     """跑 [end_date - lookback_days, end_date] 区间的回测（默认 end_date = 今天 UTC）。
 
     返回 (report, events, end_date)：report/events 是 report_json/events_json 解析后的
-    dict/list。chart_json 目前恒为空，不解析。
+    dict/list。
     """
-    binary = _resolve_binary()
     end = end_date or datetime.now(timezone.utc).date()
     start = end - timedelta(days=lookback_days)
     script = Path(script_path).read_text(encoding="utf-8")
 
-    cmd = [
-        binary, "quant", "run", symbol,
-        "--start", start.isoformat(),
-        "--end", end.isoformat(),
-        "--period", period,
-        "--script", script,
-        "--format", "json",
-    ]
-    if inputs:
-        cmd += ["--input", inputs]
+    start_ts = int(datetime(start.year, start.month, start.day, tzinfo=timezone.utc).timestamp())
+    end_ts = int(datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=timezone.utc).timestamp())
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise BacktestError(f"longbridge quant run 失败: {proc.stderr.strip()}")
+    body = {
+        "counter_id": _to_counter_id(symbol),
+        "start_time": start_ts,
+        "end_time": end_ts,
+        "script": script,
+        "inputs_json": inputs or "[]",
+        "line_type": _to_line_type(period),
+        "exclude_chart": False,
+    }
 
     try:
-        result = json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
-        raise BacktestError(f"响应不是合法 JSON: {exc}；原始输出: {proc.stdout[:500]}") from exc
+        client = HttpClient.from_apikey_env()
+        resp = client.request("post", "/v1/quant/run_script", body=body)
+    except Exception as exc:  # longport 抛的是它自己的 OpenApiException，统一包装成 BacktestError
+        raise BacktestError(f"/v1/quant/run_script 调用失败: {exc}") from exc
 
-    report = json.loads(result["report_json"]) if result.get("report_json") else {}
-    events = json.loads(result["events_json"]) if result.get("events_json") else []
+    report = json.loads(resp["report_json"]) if resp.get("report_json") else {}
+    events = json.loads(resp["events_json"]) if resp.get("events_json") else []
     return report, events, end
 
 

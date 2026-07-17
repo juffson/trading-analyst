@@ -59,6 +59,9 @@ python3 auto-trader/scripts/run_cycle.py
 
 # 只跑某个标的
 python3 auto-trader/scripts/run_cycle.py --symbol TSLA.US
+
+# 生成本地监控 dashboard（深色主题，dashboard.html，不提交/不分享，浏览器直接打开看）
+python3 auto-trader/scripts/render_dashboard.py
 ```
 
 定时调度见 `scheduling/crontab.example`（Linux/cron）或 `scheduling/com.user.autotrader.plist.example`（macOS launchd）——
@@ -66,11 +69,12 @@ python3 auto-trader/scripts/run_cycle.py --symbol TSLA.US
 
 ## 依赖
 
-- Python 3.10+，标准库为主，无需额外 pip 包
-- **`longbridge` CLI（[longbridge-terminal](https://github.com/longbridge/longbridge-terminal)）必须装好并在 PATH 里**，
-  且 `LONGPORT_APP_KEY` / `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` 已配置（`longbridge check` 能看到
-  `"token": "valid"` 就算通过）。`scripts/signal_from_backtest.py` 直接调这个二进制的 `quant run` 子命令，
-  不经过 `../quant-backtest/scripts/run_script.py`（原因见该文件顶部注释——那条路径实测走不通/有解析 bug）
+- Python 3.10+ + `pip install longport`（官方 OpenAPI SDK），且 `LONGPORT_APP_KEY` /
+  `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` 已配置。`scripts/signal_from_backtest.py`
+  用 `longport.openapi.HttpClient` 直接 POST `/v1/quant/run_script`，**不需要额外安装
+  `longbridge-terminal` CLI 二进制**——纯 Python 依赖，部署更简单（不用操心 cron/launchd 的
+  PATH），也不经过 `../quant-backtest/scripts/run_script.py`（原因见该文件顶部注释——
+  那条路径实测有解析 bug）
 - `scripts/executor.py` 依赖 `../trading-analyst/scripts/lb_client.py` 能正常工作（下单预览用）
 
 ## 已知局限（v1 骨架，先跑通再补）
@@ -79,6 +83,5 @@ python3 auto-trader/scripts/run_cycle.py --symbol TSLA.US
   目前骨架里这个字段不会自动算——先占位，后续要接实时报价才能算准。
 - `scripts/report.py` 目前只把运行事件写成结构化日志（`logs/YYYY-MM-DD.jsonl`）。后续会替换成
   直接调 Claude API 生成播报/异常解释，不再经过 headless `claude -p`。
-- `longbridge quant run` 的 `chart_json` 字段实测恒为空（不管脚本有没有 `plot()`、有没有成交都是空字符串），
-  已经确认不是我们传参的问题——所以信号判断完全依赖 `report_json.closedTrades`/`openTrades`，
-  不依赖 chart 数据。如果这个接口以后修好了 chart_json，不影响现有逻辑，只是多了一个可选的数据源。
+- `/v1/quant/run_script` 返回的 `chart_json.filledOrders` 只有 bar_index，没有具体日期，
+  所以信号判断仍然用 `report_json.closedTrades`/`openTrades`（带精确的 entryTime/exitTime）。

@@ -3,5 +3,6 @@ watchlist/
 state/
 logs/
 config/strategies.json
+dashboard.html
 
 .DS_Store

@@ -11,8 +11,9 @@
   跑一次回测查信号，非交易时段跑了也不会有新信号，代价只是多耗一点资源，如果介意可以
   换成 StartCalendarInterval 只在交易时段的具体分钟触发）。
 
-  launchd 的 PATH 同样很短，不含 ~/.local/bin——下面 EnvironmentVariables 里的 PATH
-  记得按你机器上 `which longbridge` 的实际路径改（出现的用户名占位符也要换掉）。
+  launchd 不会 source 你的 shell 配置文件（~/.zshrc 等），所以 LONGPORT_APP_KEY /
+  LONGPORT_APP_SECRET / LONGPORT_ACCESS_TOKEN 这三个环境变量必须写进下面的
+  EnvironmentVariables 里，不然 signal_from_backtest.py 会因为读不到凭据而报错。
 -->
 <plist version="1.0">
 <dict>
@@ -27,8 +28,12 @@
     <string>/ABSOLUTE/PATH/TO/ai-quant/trading-analyst/auto-trader</string>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>PATH</key>
-        <string>/usr/bin:/bin:/Users/YOUR_USERNAME/.local/bin</string>
+        <key>LONGPORT_APP_KEY</key>
+        <string>YOUR_APP_KEY</string>
+        <key>LONGPORT_APP_SECRET</key>
+        <string>YOUR_APP_SECRET</string>
+        <key>LONGPORT_ACCESS_TOKEN</key>
+        <string>YOUR_ACCESS_TOKEN</string>
     </dict>
     <key>StartInterval</key>
     <integer>900</integer>
