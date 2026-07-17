@@ -1,0 +1,8 @@
+/target
+
+# 个人回测历史——具体标的/因子表现快照，不提交
+/data/performance/*.jsonl
+# 公司分析/交易复盘任务产出——命令、生成的报告、账户记录快照，都是个人数据，不提交
+/data/company-analysis/
+/data/trade-review/
+.env
