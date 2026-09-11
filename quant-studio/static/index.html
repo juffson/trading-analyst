@@ -124,6 +124,77 @@
   .legend span { display: inline-flex; align-items: center; gap: 4px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
+  /* 结果区二级 tab：图表是主角，指标/成交/月度/历史各占一屏，
+     不要全部纵向堆在一页——之前 31 行的指标表把价格图挤到首屏外面去了 */
+  .subtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--stroke);
+             margin-bottom: var(--sp-4); flex-wrap: wrap; }
+  .subtab { background: none; border: none; border-radius: 0; color: var(--fg-2);
+            font-size: 12px; font-weight: 600; padding: 9px 14px; cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .subtab:hover { color: var(--fg-1); }
+  .subtab.active { color: var(--fg-1); border-bottom-color: var(--chart-blue); }
+  .subtab .tabcount { color: var(--fg-3); font-weight: 500; margin-left: 5px; font-size: 11px; }
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  /* 全部指标按「收益/风险/交易」分成 3 张小表，宽屏并排两列——
+     31 行拉成一条竖列要滚半屏，分组并排一眼扫完 */
+  .perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+               gap: var(--sp-4) var(--sp-5); align-items: start; }
+  .perf-group h4 { margin: 0 0 4px; font-size: 10px; text-transform: uppercase;
+                   color: var(--fg-3); letter-spacing: .04em; }
+
+  /* 6 个头条指标固定一行；窄屏或以后加 tile 时自动换行，不要挤成一条缝 */
+  .metrics { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+
+  /* 全部指标：All / Long / Short 三栏对照。数字列右对齐 + tabular-nums，
+     这样上下扫一列时小数点是对齐的，肉眼比大小才快。 */
+  table.perf-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: var(--sp-2); }
+  table.perf-table th { text-align: right; color: var(--fg-2); font-weight: 500; padding: 6px 8px;
+                        border-bottom: 1px solid var(--stroke); font-size: 10px; text-transform: uppercase; }
+  table.perf-table th:first-child, table.perf-table td:first-child { text-align: left; }
+  table.perf-table td { padding: 6px 8px; border-bottom: 1px solid var(--stripe);
+                        text-align: right; font-variant-numeric: tabular-nums; }
+  table.perf-table tr:hover td { background: var(--stripe); }
+  table.perf-table td.k { color: var(--fg-2); }
+  table.perf-table { margin-top: 0; }
+
+  /* 成交明细 */
+  table.trade-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.trade-table th { text-align: right; color: var(--fg-2); font-weight: 500; padding: 6px 8px;
+                         border-bottom: 1px solid var(--stroke); font-size: 10px; text-transform: uppercase;
+                         white-space: nowrap; cursor: pointer; user-select: none; }
+  table.trade-table th:first-child, table.trade-table td:first-child { text-align: left; }
+  table.trade-table th:hover { color: var(--fg-1); }
+  table.trade-table th.sorted::after { content: ' \25BE'; }
+  table.trade-table th.sorted.asc::after { content: ' \25B4'; }
+  table.trade-table td { padding: 6px 8px; border-bottom: 1px solid var(--stripe);
+                         text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.trade-table tr:hover td { background: var(--stripe); }
+  .trade-scroll { max-height: 340px; overflow-y: auto; }
+  .pos { color: var(--up); } .neg { color: var(--down); }
+  .side-tag { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: var(--radius-pill); }
+  .side-tag.long { background: rgba(0,173,162,0.18); color: var(--up); }
+  .side-tag.short { background: rgba(255,58,117,0.18); color: var(--down); }
+  .side-tag.open { background: rgba(255,146,45,0.18); color: var(--risk-warning); }
+
+  /* 月度收益热力图：一行一年，12 列月份 + 全年合计 */
+  .heatmap { display: grid; grid-template-columns: 44px repeat(12, 1fr) 60px; gap: 3px;
+             font-size: 10px; font-variant-numeric: tabular-nums; }
+  .heatmap .hm-head { color: var(--fg-3); text-align: center; padding: 2px 0; text-transform: uppercase; }
+  .heatmap .hm-year { color: var(--fg-2); display: flex; align-items: center; font-weight: 600; }
+  .heatmap .hm-cell { text-align: center; padding: 7px 2px; border-radius: var(--radius-sm);
+                      background: var(--stripe); color: var(--fg-3); }
+  .heatmap .hm-cell.has { color: var(--fg-1); font-weight: 600; }
+  .heatmap .hm-total { text-align: center; padding: 7px 2px; border-radius: var(--radius-sm);
+                       background: var(--bg-1); border: 1px solid var(--stroke); font-weight: 700; }
+  .empty-note { color: var(--fg-2); font-size: 12px; padding: 10px 0; }
+  .card-sub { color: var(--fg-2); font-size: 11px; margin: -4px 0 10px; }
+  select.inline-select { background: var(--bg-1); color: var(--fg-1); border: 1px solid var(--stroke);
+                         border-radius: var(--radius-sm); padding: 3px 8px; font-size: 11px; }
+  .card-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+  .card-head h3 { margin: 0; }
+
   table.hist-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: var(--sp-3); }
   table.hist-table th { text-align: left; color: var(--fg-2); font-weight: 500; padding: 6px 8px;
                         border-bottom: 1px solid var(--stroke); font-size: 10px; text-transform: uppercase; }
@@ -299,6 +370,7 @@
         </div>
 
         <div class="results">
+          <!-- 6 个头条指标不进 tab：切到哪一页都要能看见这次跑出来是好是坏 -->
           <div class="metrics" id="metricsRow">
             <div class="metric"><div class="k">Sharpe</div><div class="v" id="mSharpe">&mdash;</div></div>
             <div class="metric"><div class="k">Max Drawdown</div><div class="v down" id="mDD">&mdash;</div></div>
@@ -308,46 +380,119 @@
             <div class="metric"><div class="k">Net Profit</div><div class="v" id="mNet">&mdash;</div></div>
           </div>
 
-          <div class="chart-card">
-            <h3>价格 + 买卖点</h3>
-            <div id="priceChart"></div>
-            <div class="legend">
-              <span><span class="dot" style="background:var(--up);"></span>buy</span>
-              <span><span class="dot" style="background:var(--down);"></span>sell</span>
+          <div class="subtabs" id="resultTabs">
+            <button class="subtab active" data-tab="charts">图表</button>
+            <button class="subtab" data-tab="perf">全部指标</button>
+            <button class="subtab" data-tab="trades">成交明细<span class="tabcount" id="tabTradeCount"></span></button>
+            <button class="subtab" data-tab="monthly">月度收益</button>
+            <button class="subtab" data-tab="history">回测历史</button>
+            <button class="subtab" data-tab="script">脚本</button>
+          </div>
+
+          <div class="tabpanel active" id="tab-charts">
+            <div class="chart-card">
+              <h3>价格 + 买卖点</h3>
+              <div id="priceChart"></div>
+              <div class="legend">
+                <span><span class="dot" style="background:var(--up);"></span>buy</span>
+                <span><span class="dot" style="background:var(--down);"></span>sell</span>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <h3>净值曲线 &middot; 回撤 &middot; 买入持有对照</h3>
+              <div id="equityChart"></div>
+              <div class="legend">
+                <span><span class="dot" style="background:var(--chart-blue);"></span>净值 (equity)</span>
+                <span><span class="dot" style="background:var(--chart-red);"></span>回撤 (drawdown)</span>
+                <span><span class="dot" style="background:var(--chart-grey);"></span>买入持有 (buy &amp; hold)</span>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <h3>指标线</h3>
+              <div id="indicatorChart"></div>
+              <div class="legend" id="indicatorLegend"></div>
             </div>
           </div>
 
-          <div class="chart-card">
-            <h3>净值曲线 &middot; 回撤 &middot; 买入持有对照</h3>
-            <div id="equityChart"></div>
-            <div class="legend">
-              <span><span class="dot" style="background:var(--chart-blue);"></span>净值 (equity)</span>
-              <span><span class="dot" style="background:var(--chart-red);"></span>回撤 (drawdown)</span>
-              <span><span class="dot" style="background:var(--chart-grey);"></span>买入持有 (buy &amp; hold)</span>
+          <div class="tabpanel" id="tab-perf">
+            <div class="chart-card">
+              <div class="card-head"><h3>全部指标</h3></div>
+              <div class="card-sub">report.performanceAll / performanceLong / performanceShort &mdash; 多空分开看，才知道收益是哪一边赚的</div>
+              <div class="perf-grid" id="perfGrid"><div class="empty-note">（还没跑过回测）</div></div>
             </div>
           </div>
 
-          <div class="chart-card">
-            <h3>指标线</h3>
-            <div id="indicatorChart"></div>
-            <div class="legend" id="indicatorLegend"></div>
+          <div class="tabpanel" id="tab-trades">
+            <div class="chart-card">
+              <div class="card-head">
+                <h3>成交明细</h3>
+                <span class="hint" id="tradeCount"></span>
+              </div>
+              <div class="card-sub">点表头排序 &middot; 最大浮盈/浮亏是持仓期间的账面极值，不是最终盈亏</div>
+              <div class="trade-scroll">
+                <table class="trade-table" id="tradeTable">
+                  <thead><tr>
+                    <th data-sort="tradeNum">#</th>
+                    <th data-sort="entrySide">方向</th>
+                    <th data-sort="entryTime">开仓时间</th>
+                    <th data-sort="entryPrice">开仓价</th>
+                    <th data-sort="exitTime">平仓时间</th>
+                    <th data-sort="exitPrice">平仓价</th>
+                    <th data-sort="quantity">数量</th>
+                    <th data-sort="profit">盈亏</th>
+                    <th data-sort="profitPercent">盈亏%</th>
+                    <th data-sort="barsHeld">持仓</th>
+                    <th data-sort="maxRunupPercent">最大浮盈%</th>
+                    <th data-sort="maxDrawdownPercent">最大浮亏%</th>
+                  </tr></thead>
+                  <tbody id="tradeTableBody"><tr><td colspan="12" class="empty-note">（还没跑过回测）</td></tr></tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <div class="chart-card">
-            <h3>回测历史（该因子在这个 symbol 上的表现变化）</h3>
-            <div id="perfChart"></div>
-            <table class="hist-table" id="histTable">
-              <thead><tr>
-                <th>时间</th><th>Symbol</th><th>Sharpe</th><th>Max DD</th><th>Win Rate</th><th>Closed</th><th>Open</th><th>Net Profit</th>
-              </tr></thead>
-              <tbody id="histTableBody"><tr><td colspan="8" style="color:var(--fg-2);">还没有历史记录</td></tr></tbody>
-            </table>
+          <div class="tabpanel" id="tab-monthly">
+            <div class="chart-card">
+              <div class="card-head"><h3>月度收益</h3><span class="hint" id="monthlySummary"></span></div>
+              <div class="card-sub">按 report.equityCurve 的月末净值折算（含浮动盈亏）&mdash; 看收益是均匀摊开的，还是全靠某一两个月。<b>不是</b>用 dailyReturns：那个字段其实是累计已实现盈亏的阶梯值，不能当日收益率算</div>
+              <div id="monthlyHeatmap"><div class="empty-note">（还没跑过回测）</div></div>
+            </div>
           </div>
 
-          <details>
-            <summary>查看生成的 QuantScript</summary>
-            <pre id="scriptView">（还没跑过回测）</pre>
-          </details>
+          <div class="tabpanel" id="tab-history">
+            <div class="chart-card">
+              <div class="card-head">
+                <h3>回测历史（该因子在这个 symbol 上的表现变化）</h3>
+                <select class="inline-select" id="perfMetricSelect">
+                  <option value="sharpe_ratio" selected>Sharpe</option>
+                  <option value="sortino_ratio">Sortino</option>
+                  <option value="net_profit_pct">Net Profit %</option>
+                  <option value="max_drawdown_pct">Max Drawdown %</option>
+                  <option value="win_rate_pct">Win Rate %</option>
+                  <option value="profit_factor">Profit Factor</option>
+                  <option value="avg_trade_pct">Avg Trade %</option>
+                  <option value="buy_hold_return_pct">Buy &amp; Hold %</option>
+                </select>
+              </div>
+              <div id="perfChart"></div>
+              <table class="hist-table" id="histTable">
+                <thead><tr>
+                  <th>时间</th><th>Symbol</th><th>Sharpe</th><th>Sortino</th><th>Max DD</th><th>Win Rate</th><th>PF</th><th>Closed</th><th>Open</th><th>Net Profit</th><th>B&amp;H</th>
+                </tr></thead>
+                <tbody id="histTableBody"><tr><td colspan="11" style="color:var(--fg-2);">还没有历史记录</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-script">
+            <div class="chart-card">
+              <div class="card-head"><h3>生成的 QuantScript</h3></div>
+              <div class="card-sub">因子库里的 setup/condition 片段拼出来的完整脚本，就是发给 /v2/quant/run_script 的原文</div>
+              <pre id="scriptView">（还没跑过回测）</pre>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -374,7 +519,7 @@
     <section class="page" id="page-company">
       <div class="page-header">
         <h1>公司分析</h1>
-        <span class="hint">调用 ../company-deep-dive skill &middot; 命令需要你自己在终端里跑并逐条确认，quant-studio 不代跑</span>
+        <span class="hint">调用 ../skills/company-deep-dive skill &middot; 命令需要你自己在终端里跑并逐条确认，quant-studio 不代跑</span>
       </div>
       <div class="skill-form">
         <input id="companyNameInput" placeholder="公司名或代码，比如 贵州茅台 / 600519 / AAPL">
@@ -389,7 +534,7 @@
     <section class="page" id="page-trade-review">
       <div class="page-header">
         <h1>交易记录分析</h1>
-        <span class="hint">调用 ../trading-analyst skill 模式5复盘 &middot; 命令需要你自己在终端里跑并逐条确认，quant-studio 不代跑</span>
+        <span class="hint">调用 ../skills/trading-analyst skill 模式5复盘 &middot; 命令需要你自己在终端里跑并逐条确认，quant-studio 不代跑</span>
       </div>
       <div class="skill-form">
         <input id="reviewSymbolInput" list="knownSymbolsList" placeholder="标的代码，比如 AAPL.US / 700.HK">
@@ -444,16 +589,10 @@ function setStatus(msg, isError) {
 }
 
 /* ---------------- 因子库 ---------------- */
+// 配对怎么算是后端 factors.rs 的事（_long/_short 后缀，或 pair_with 显式指向），
+// 前端只读它算好的 paired_base——两边各写一套规则迟早会不一致。
 function pairedBaseNames(factors) {
-  const baseNames = new Map();
-  for (const f of factors) {
-    const m = f.id.match(/^(.+)_(long|short)$/);
-    if (!m) continue;
-    const [, base, dir] = m;
-    if (!baseNames.has(base)) baseNames.set(base, {});
-    baseNames.get(base)[dir] = f.implemented;
-  }
-  return [...baseNames.entries()].filter(([, d]) => d.long && d.short).map(([base]) => base);
+  return [...new Set(factors.map(f => f.paired_base).filter(Boolean))].sort();
 }
 
 function renderFactorList() {
@@ -466,7 +605,7 @@ function renderFactorList() {
   list.innerHTML = '';
   for (const f of factors) {
     const card = document.createElement('div');
-    const isSelected = (selection.mode === 'paired' && f.name === selection.pairedBase)
+    const isSelected = (selection.mode === 'paired' && f.paired_base === selection.pairedBase)
       || (selection.mode === 'compose' && (selection.entryId === f.id || selection.exitId === f.id));
     card.className = 'factor-card' + (isSelected ? ' selected' : '');
     card.innerHTML = `
@@ -479,11 +618,11 @@ function renderFactorList() {
 
 function onFactorCardClick(f) {
   if (selection.mode === 'paired') {
-    const base = f.name;
-    if (pairedBaseNames(Object.values(factorsById)).includes(base)) {
-      selection.pairedBase = base;
+    if (f.paired_base) {
+      selection.pairedBase = f.paired_base;
+      setStatus('');
     } else {
-      setStatus(`${f.id} 没有对应的 long/short 配对，切到 Compose 模式选它`, true);
+      setStatus(`${f.id} 没有可配对的反向片段，切到 Compose 模式选它`, true);
       return;
     }
   } else {
@@ -561,12 +700,44 @@ function initCharts() {
   perfChart = LightweightCharts.createChart(el('perfChart'), { ...chartOpts, height: 130 });
   perfSeries = perfChart.addLineSeries({ color: SERIES_COLORS[2], lineWidth: 2, title: 'Sharpe' });
 
-  new ResizeObserver(() => {
-    for (const container of ['priceChart', 'indicatorChart', 'equityChart', 'perfChart']) {
-      const chart = { priceChart, indicatorChart, equityChart, perfChart }[container];
-      chart.applyOptions({ width: el(container).clientWidth });
-    }
-  }).observe(el('priceChart').parentElement);
+  // 观察 .results（一直可见），不要观察图表自己的卡片——卡片在没激活的 tab 里
+  // clientWidth 是 0，一次回调就能把所有图压成 0 宽再也回不来
+  new ResizeObserver(() => resizeCharts(Object.keys(CHART_BY_ID))).observe(el('resultTabs').parentElement);
+}
+
+const CHART_BY_ID = {
+  priceChart: () => priceChart,
+  indicatorChart: () => indicatorChart,
+  equityChart: () => equityChart,
+  perfChart: () => perfChart,
+};
+
+// 每个 tab 里有哪些图——切过去的时候要重新量宽度：lightweight-charts 在
+// display:none 的容器里量到的宽度是 0，画出来是一条缝，必须等可见了再 applyOptions
+const CHARTS_IN_TAB = {
+  charts: ['priceChart', 'equityChart', 'indicatorChart'],
+  history: ['perfChart'],
+};
+
+function resizeCharts(ids) {
+  for (const id of ids) {
+    const w = el(id).clientWidth;
+    if (!w) continue;                     // 还藏着，量不出宽度，这次跳过
+    const chart = CHART_BY_ID[id]();
+    if (!chart) continue;
+    chart.applyOptions({ width: w });
+    chart.timeScale().fitContent();
+  }
+}
+
+let activeResultTab = 'charts';
+function showResultTab(name) {
+  activeResultTab = name;
+  document.querySelectorAll('#resultTabs .subtab')
+    .forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tabpanel')
+    .forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
+  resizeCharts(CHARTS_IN_TAB[name] || []);
 }
 
 function zipSeries(barTimes, values) {
@@ -597,34 +768,297 @@ function buildMarkers(report) {
   return markers;
 }
 
+/* ---------------- 指标表 / 成交明细 / 月度收益 ---------------- */
+
+// report.performance* 有 38 个字段，之前只有 6 个上了头条 tile，剩下的全丢了。
+// 这里按「收益 / 风险 / 交易」分组铺开 31 个，每组的行顺序就是看的时候的顺序。
+// 剩下 7 个（avgTrade / avgWinningTrade / avgLosingTrade / largestWinningTrade /
+// largestLosingTrade / buyHoldReturn / maxRunup）是已展示百分比字段的货币版孪生，
+// 同一件事按 initial_capital 换算一遍，故意不铺——要绝对金额看净利润那几行就够。
+// fmt: 'pct' 百分比 | 'num' 3 位小数 | 'money' 货币金额 | 'int' 整数
+const PERF_FIELDS = [
+  ['group', '收益'],
+  ['netProfit', '净利润', 'money', true],
+  ['netProfitPercent', '净利润 %', 'pct', true],
+  ['grossProfit', '毛利', 'money', true],
+  ['grossProfitPercent', '毛利 %', 'pct', true],
+  ['grossLoss', '毛损', 'money', false],
+  ['grossLossPercent', '毛损 %', 'pct', false],
+  ['buyHoldReturnPercent', '买入持有 %', 'pct', true],
+  ['maxRunupPercent', '最大浮盈 %', 'pct', true],
+  ['commissionPaid', '手续费', 'money', false],
+  ['group', '风险'],
+  ['sharpeRatio', 'Sharpe', 'num', true],
+  ['sortinoRatio', 'Sortino', 'num', true],
+  ['maxDrawdown', '最大回撤', 'money', false],
+  ['maxDrawdownPercent', '最大回撤 %', 'pct', false],
+  ['profitFactor', 'Profit Factor', 'num', true],
+  ['marginCalls', 'Margin Calls', 'int'],
+  ['group', '交易'],
+  ['totalClosedTrades', '已平仓笔数', 'int'],
+  ['totalOpenTrades', '持仓中笔数', 'int'],
+  ['numWinningTrades', '盈利笔数', 'int'],
+  ['numLosingTrades', '亏损笔数', 'int'],
+  ['numEvenTrades', '打平笔数', 'int'],
+  ['percentProfitable', '胜率 %', 'pct', true],
+  ['avgTradePercent', '平均每笔 %', 'pct', true],
+  ['avgWinningTradePercent', '平均盈利 %', 'pct', true],
+  ['avgLosingTradePercent', '平均亏损 %', 'pct', false],
+  ['ratioAvgWinLoss', '盈亏比', 'num', true],
+  ['largestWinningTradePercent', '最大单笔盈利 %', 'pct', true],
+  ['largestLosingTradePercent', '最大单笔亏损 %', 'pct', false],
+  ['avgBarsInTrades', '平均持仓 bar', 'int'],
+  ['avgBarsInWinningTrades', '盈利单平均持仓 bar', 'int'],
+  ['avgBarsInLosingTrades', '亏损单平均持仓 bar', 'int'],
+  ['maxContractsHeld', '最大持仓量', 'num'],
+];
+
+function fmtMoney(v) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  return (n < 0 ? '-' : '') + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+function fmtInt(v) { return (v === null || v === undefined) ? '—' : String(v); }
+function fmtBy(kind, v) {
+  if (kind === 'pct') return fmtPct(v);
+  if (kind === 'money') return fmtMoney(v);
+  if (kind === 'int') return fmtInt(v);
+  return fmtNum(v);
+}
+
+// higherIsBetter 只用来上色：true 时正数绿、负数红；false 时（回撤、亏损这类"越小越好"
+// 的量，接口返回的是正数绝对值）一律按风险色，不去猜符号。undefined 就不上色。
+function perfCellClass(value, higherIsBetter) {
+  if (value === null || value === undefined || higherIsBetter === undefined) return '';
+  const n = Number(value);
+  if (!isFinite(n) || n === 0) return '';
+  if (higherIsBetter === false) return 'neg';
+  return n > 0 ? 'pos' : 'neg';
+}
+
+function renderPerfTable(report) {
+    const grid = el('perfGrid');
+    const all = report.performanceAll || {};
+    const long = report.performanceLong || {};
+    const short = report.performanceShort || {};
+    if (!Object.keys(all).length) {
+        grid.innerHTML = '<div class="empty-note">（本次回测没有返回 performanceAll）</div>';
+        return;
+    }
+
+    // PERF_FIELDS 是一条扁平列表，['group', 名字] 当分隔符——按它切成几段，每段一张小表
+    const groups = [];
+    for (const f of PERF_FIELDS) {
+        if (f[0] === 'group') groups.push({ title: f[1], rows: [] });
+        else if (groups.length) groups[groups.length - 1].rows.push(f);
+    }
+
+    grid.innerHTML = groups.map(g => {
+        const rows = g.rows.map(([key, label, kind, hib]) => {
+            const cell = (src) => `<td class="${perfCellClass(src[key], hib)}">${fmtBy(kind, src[key])}</td>`;
+            return `<tr><td class="k">${label}</td>${cell(all)}${cell(long)}${cell(short)}</tr>`;
+        }).join('');
+        return `<div class="perf-group">
+      <h4>${g.title}</h4>
+      <table class="perf-table">
+        <thead><tr><th>指标</th><th>全部</th><th>多头</th><th>空头</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+    }).join('');
+}
+
+/* ----- 成交明细 ----- */
+let tradeRows = [];
+let tradeSort = { key: 'entryTime', asc: true };
+
+function normalizeTrades(report) {
+  const rows = [];
+  const push = (t, isOpen) => {
+    const entryBar = t.entryBar ?? null;
+    const exitBar = t.exitBar ?? null;
+    rows.push({
+      ...t,
+      isOpen,
+      // openTrades 没有 exitBar——持仓天数只有平仓的算得出来，未平仓的留空，
+      // 不拿"当前 bar"去补，那是另一个含义。
+      barsHeld: (entryBar !== null && exitBar !== null) ? exitBar - entryBar : null,
+    });
+  };
+  (report.closedTrades || []).forEach(t => push(t, false));
+  (report.openTrades || []).forEach(t => push(t, true));
+  return rows;
+}
+
+function renderTradeTable() {
+  const body = el('tradeTableBody');
+  el('tradeCount').textContent = tradeRows.length
+    ? `${tradeRows.filter(t => !t.isOpen).length} 笔已平仓 · ${tradeRows.filter(t => t.isOpen).length} 笔持仓中`
+    : '';
+  el('tabTradeCount').textContent = tradeRows.length ? tradeRows.length : '';
+  if (!tradeRows.length) {
+    body.innerHTML = '<tr><td colspan="12" class="empty-note">这次回测没有产生任何成交（条件太严，或区间内没触发）</td></tr>';
+    return;
+  }
+  const { key, asc } = tradeSort;
+  const sorted = tradeRows.slice().sort((a, b) => {
+    const av = a[key], bv = b[key];
+    // null 永远排最后，不管升序降序——空值飘到顶上会挡住真正想看的行
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    const c = (typeof av === 'string') ? av.localeCompare(bv) : av - bv;
+    return asc ? c : -c;
+  });
+
+  const money = (v) => `<td class="${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${fmtMoney(v)}</td>`;
+  const pct = (v) => `<td class="${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${fmtPct(v)}</td>`;
+  body.innerHTML = sorted.map(t => {
+    const side = t.isOpen ? 'open' : (t.entrySide || 'long');
+    const sideLabel = t.isOpen ? '持仓中' : (t.entrySide === 'short' ? 'short' : 'long');
+    return `<tr>
+      <td>${t.tradeNum ?? '—'}</td>
+      <td><span class="side-tag ${side}">${sideLabel}</span></td>
+      <td>${t.entryTime ? fmtTs(t.entryTime) : '—'}</td>
+      <td>${t.entryPrice != null ? Number(t.entryPrice).toFixed(2) : '—'}</td>
+      <td>${t.exitTime ? fmtTs(t.exitTime) : '—'}</td>
+      <td>${t.exitPrice != null ? Number(t.exitPrice).toFixed(2) : '—'}</td>
+      <td>${t.quantity != null ? Number(t.quantity).toFixed(0) : '—'}</td>
+      ${money(t.profit)}
+      ${pct(t.profitPercent)}
+      <td>${t.barsHeld ?? '—'}</td>
+      <td class="pos">${fmtPct(t.maxRunupPercent)}</td>
+      <td class="neg">${fmtPct(t.maxDrawdownPercent)}</td>
+    </tr>`;
+  }).join('');
+
+  for (const th of document.querySelectorAll('#tradeTable th')) {
+    th.classList.toggle('sorted', th.dataset.sort === key);
+    th.classList.toggle('asc', th.dataset.sort === key && asc);
+  }
+}
+
+/* ----- 月度收益热力图 ----- */
+const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+// 月度收益从 report.equityCurve 算，**不要**用 report.dailyReturns。
+//
+// dailyReturns 这个名字是骗人的（这接口的字段名一贯不可信，见 src/longbridge.rs 的注释）：
+// 它不是"每日收益率"，而是**累计已实现盈亏 %** 的阶梯序列——只在有平仓/开仓的那天写值，
+// 其余 620 多天全是 0，而且同一个值会在平仓日和下一次开仓日各出现一次。实测 AAPL.US 两年
+// 那次：632 条里只有 12 条非 0，值是 1.806 → 1.681 → 1.978 → 3.662 → 5.717 → 7.695，
+// 正好是 closedTrades 的 cumulativeProfitPercent，最后一个等于 performanceAll.netProfitPercent。
+// 把它当日收益率去求和/复利会得出 55% 这种离谱数字（真实是 7.695%）。
+//
+// equityCurve 才是逐 bar 的真实净值（长度和 candles 一致，按 bar_times 对齐），
+// 月收益 = 本月最后一根 bar 的净值 / 上月最后一根 bar 的净值 - 1，含未平仓的浮动盈亏。
+function monthlyReturns(barTimes, equityCurve) {
+    const lastByMonth = new Map();
+    let first = null;
+    const n = Math.min(barTimes ? barTimes.length : 0, equityCurve ? equityCurve.length : 0);
+    for (let i = 0; i < n; i++) {
+        const v = Number(equityCurve[i]);
+        if (!isFinite(v)) continue;
+        if (first === null) first = v;
+        // 用 UTC 取年月：bar_times 是 Unix 秒，美股日线落在 04:00Z，本地时区换算会把
+        // 月初/月末的 bar 挪到隔一个月去
+        const d = new Date(barTimes[i] * 1000);
+        const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+        lastByMonth.set(ym, v);   // Map 保留插入顺序，bar 本身有序，所以这就是时间顺序
+    }
+    const out = new Map();
+    if (first === null) return out;
+    let prev = first;   // 第一个月的基准是序列起点的净值（= initial_capital）
+    for (const [ym, v] of lastByMonth) {
+        if (prev) out.set(ym, (v / prev - 1) * 100);
+        prev = v;
+    }
+    return out;
+}
+
+// 色阶以本次回测里绝对值最大的月为满格，避免固定阈值在低波动策略上全是灰的
+function heatColor(pct, scale) {
+    if (pct === null || pct === undefined || !scale) return null;
+    const a = Math.min(1, Math.abs(pct) / scale) * 0.75 + 0.08;
+    return pct >= 0 ? `rgba(0,173,162,${a.toFixed(3)})` : `rgba(255,58,117,${a.toFixed(3)})`;
+}
+
+function renderMonthlyHeatmap(report, barTimes) {
+    const target = el('monthlyHeatmap');
+    const summary = el('monthlySummary');
+    const monthly = monthlyReturns(barTimes, report.equityCurve);
+    if (!monthly.size) {
+        target.innerHTML = '<div class="empty-note">这次回测没有返回 equityCurve</div>';
+        summary.textContent = '';
+        return;
+    }
+    const years = [...new Set([...monthly.keys()].map(k => k.slice(0, 4)))].sort();
+    const vals = [...monthly.values()];
+    const scale = Math.max(...vals.map(Math.abs)) || 1;
+    const wins = vals.filter(v => v > 0).length;
+    summary.textContent = `${vals.length} 个月 · ${wins} 个月正收益（${(wins / vals.length * 100).toFixed(0)}%）· 最好 ${Math.max(...vals).toFixed(2)}% / 最差 ${Math.min(...vals).toFixed(2)}%`;
+
+    let html = '<div class="heatmap">';
+    html += '<div class="hm-head"></div>' + MONTHS.map(m => `<div class="hm-head">${m}</div>`).join('') + '<div class="hm-head">全年</div>';
+    for (const y of years) {
+        html += `<div class="hm-year">${y}</div>`;
+        let growth = 1, seen = false;
+        for (let m = 1; m <= 12; m++) {
+            const key = `${y}-${String(m).padStart(2, '0')}`;
+            const v = monthly.has(key) ? monthly.get(key) : null;
+            if (v !== null) { growth *= 1 + v / 100; seen = true; }
+            const bg = heatColor(v, scale);
+            const style = bg ? ` style="background:${bg}"` : '';
+            html += `<div class="hm-cell${v !== null ? ' has' : ''}"${style}>${v !== null ? v.toFixed(1) : ''}</div>`;
+        }
+        const yearPct = seen ? (growth - 1) * 100 : null;
+        html += `<div class="hm-total ${yearPct > 0 ? 'pos' : yearPct < 0 ? 'neg' : ''}">${yearPct !== null ? yearPct.toFixed(1) + '%' : '—'}</div>`;
+    }
+    html += '</div>';
+    target.innerHTML = html;
+}
+
 function fmtPct(v) { return (v === null || v === undefined) ? '—' : `${Number(v).toFixed(2)}%`; }
 function fmtNum(v) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(3); }
 function fmtTs(ts) { const d = new Date(ts); return isNaN(d) ? '—' : d.toISOString().slice(0, 16).replace('T', ' '); }
 
+let lastFactorKey = null;
 async function loadPerformanceHistory(factorKey) {
+  lastFactorKey = factorKey;
   const resp = await fetch(`/api/performance/${encodeURIComponent(factorKey)}`);
   const data = await resp.json();
   const rows = (data.history || []).slice().sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
-  const points = rows
-    .filter(h => h.metrics && h.metrics.sharpe_ratio !== null && h.metrics.sharpe_ratio !== undefined)
-    .map(h => ({ time: Math.floor(new Date(h.ts).getTime() / 1000), value: h.metrics.sharpe_ratio }))
-    .sort((a, b) => a.time - b.time);
+  const metricKey = el('perfMetricSelect').value;
+  const metricLabel = el('perfMetricSelect').selectedOptions[0].textContent;
+  // 同一时刻可能有多条（同因子换 symbol 重跑），lightweight-charts 不接受重复 time，
+  // 后来的覆盖先来的；秒级去重足够，这是人工点按钮跑出来的数据，不会毫秒级撞车。
+  const byTime = new Map();
+  for (const h of rows) {
+    const v = h.metrics ? h.metrics[metricKey] : null;
+    if (v === null || v === undefined || !isFinite(Number(v))) continue;
+    byTime.set(Math.floor(new Date(h.ts).getTime() / 1000), Number(v));
+  }
+  const points = [...byTime.entries()].map(([time, value]) => ({ time, value })).sort((a, b) => a.time - b.time);
+  perfSeries.applyOptions({ title: metricLabel });
   perfSeries.setData(points);
   perfChart.timeScale().fitContent();
 
   const body = el('histTableBody');
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="8" style="color:var(--fg-2);">还没有历史记录</td></tr>';
+    body.innerHTML = '<tr><td colspan="11" style="color:var(--fg-2);">还没有历史记录</td></tr>';
     return;
   }
   body.innerHTML = rows.map(h => {
     const m = h.metrics || {};
+    // sortino/profit_factor/buy_hold 是后加的字段，老快照里没有——fmt* 会显示 —，
+    // 不用为旧记录做迁移。
     return `<tr>
       <td>${fmtTs(h.ts)}</td><td>${h.symbol}</td><td>${fmtNum(m.sharpe_ratio)}</td>
+      <td>${fmtNum(m.sortino_ratio)}</td>
       <td>${fmtPct(m.max_drawdown_pct)}</td><td>${fmtPct(m.win_rate_pct)}</td>
+      <td>${fmtNum(m.profit_factor)}</td>
       <td>${m.total_closed_trades ?? '—'}</td><td>${m.total_open_trades ?? '—'}</td>
-      <td>${fmtPct(m.net_profit_pct)}</td>
+      <td>${fmtPct(m.net_profit_pct)}</td><td>${fmtPct(m.buy_hold_return_pct)}</td>
     </tr>`;
   }).join('');
 }
@@ -697,7 +1131,15 @@ async function runBacktest() {
     }
     indicatorChart.timeScale().fitContent();
 
+    renderPerfTable(report);
+    tradeRows = normalizeTrades(report);
+    tradeSort = { key: 'entryTime', asc: true };
+    renderTradeTable();
+    renderMonthlyHeatmap(report, barTimes);
+
     await loadPerformanceHistory(data.factor_key);
+    // 数据都填完了再按当前可见的 tab 量一次宽度——setData 时图可能还在隐藏面板里
+    resizeCharts(CHARTS_IN_TAB[activeResultTab] || []);
     setStatus(`完成 · factor_key=${data.factor_key}`);
   } catch (e) {
     setStatus(String(e.message || e), true);
@@ -1012,6 +1454,19 @@ el('reviewGenBtn').addEventListener('click', async () => {
   }
 });
 
+document.querySelectorAll('#resultTabs .subtab')
+  .forEach(b => b.addEventListener('click', () => showResultTab(b.dataset.tab)));
+el('perfMetricSelect').addEventListener('change', () => {
+  if (lastFactorKey) loadPerformanceHistory(lastFactorKey);
+});
+for (const th of document.querySelectorAll('#tradeTable th')) {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (!key) return;
+    tradeSort = (tradeSort.key === key) ? { key, asc: !tradeSort.asc } : { key, asc: true };
+    renderTradeTable();
+  });
+}
 el('modePairedBtn').addEventListener('click', () => setMode('paired'));
 el('modeComposeBtn').addEventListener('click', () => setMode('compose'));
 el('factorSearch').addEventListener('input', renderFactorList);

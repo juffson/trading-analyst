@@ -9,7 +9,7 @@
   见 git 历史；这个版本改用纯 Python，部署更简单）。
 - 请求体字段名（`counter_id`/`start_time`/`end_time`/`script`/`inputs_json`/`line_type`/
   `exclude_chart`）来自 longbridge-terminal 的 PR #118 源码；`counter_id`/`line_type` 的转换
-  逻辑和 `../../quant-backtest/scripts/run_script.py` 里写的一致（保持同样的映射，但不做
+  逻辑和 `../../skills/quant-backtest/scripts/run_script.py` 里写的一致（保持同样的映射，但不做
   跨目录 import，避免和那个 skill 产生代码耦合）。
 - `exclude_chart` 必须显式传 `False`——不传时 `chart_json` 会是空字符串；传 `False` 后
   `chart_json.filledOrders`（注意是驼峰，不是 SKILL.md 文档里写的 `filled_orders`）才会有

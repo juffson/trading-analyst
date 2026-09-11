@@ -1,6 +1,7 @@
 # Auto Trader — 研究 → 回测 → 模拟交易 → 复盘 的循环
 
-把 `../company-deep-dive`、`../quant-backtest`、`../trading-analyst` 三个 Skill 串成一个持续运转的循环，
+把 `../skills/company-deep-dive`、`../skills/quant-backtest`、`../skills/trading-analyst`
+三个 Skill 串成一个持续运转的循环，
 用规则型策略（不是每轮都靠 LLM 判断）驱动模拟交易的执行决策。**这三个 Skill 目录本身不做任何修改**——
 本目录只依赖它们已有的脚本和输出格式，通过 `pipeline/README.md` 里约定的方式调用。
 
@@ -73,9 +74,9 @@ python3 auto-trader/scripts/render_dashboard.py
   `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` 已配置。`scripts/signal_from_backtest.py`
   用 `longport.openapi.HttpClient` 直接 POST `/v1/quant/run_script`，**不需要额外安装
   `longbridge-terminal` CLI 二进制**——纯 Python 依赖，部署更简单（不用操心 cron/launchd 的
-  PATH），也不经过 `../quant-backtest/scripts/run_script.py`（原因见该文件顶部注释——
+  PATH），也不经过 `../skills/quant-backtest/scripts/run_script.py`（原因见该文件顶部注释——
   那条路径实测有解析 bug）
-- `scripts/executor.py` 依赖 `../trading-analyst/scripts/lb_client.py` 能正常工作（下单预览用）
+- `scripts/executor.py` 依赖 `../skills/trading-analyst/scripts/lb_client.py` 能正常工作（下单预览用）
 
 ## 已知局限（v1 骨架，先跑通再补）
 

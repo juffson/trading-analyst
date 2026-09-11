@@ -1,6 +1,6 @@
 //! 策略片段库读取 + 渲染。
 //!
-//! 数据来自 data/strategy_kit.json（从 ../trading-analyst/auto-trader/strategy-kit/
+//! 数据来自 data/strategy_kit.json（从 ../auto-trader/strategy-kit/
 //! 复制的一份种子拷贝——quant-studio 是独立工具，不跨目录依赖那个 Python 项目，
 //! 两边各自维护，暂时靠手动同步）。渲染逻辑（dedupe setup 行、拼装 input 声明、
 //! 组合 entry/exit）和 strategy_kit.py 保持一致。
@@ -62,18 +62,53 @@ impl FactorLib {
             .ok_or_else(|| anyhow!("未知片段 id: {id}"))
     }
 
-    /// 同名 long/short 配对，拼成一个「开仓/平仓」完整策略。
-    pub fn render_paired(&self, base_name: &str, qty: i64, capital: f64) -> Result<String> {
+    /// 找出 `base_name` 对应的一对 (long_id, short_id)。
+    ///
+    /// 库里有两种配对写法，都要支持：
+    /// 1. **后缀配对**——`rsi_14_long` / `rsi_14_short`，base_name 是去掉后缀的公共前缀。
+    /// 2. **`pair_with` 显式配对**——`breakout` ↔ `bearish_divergence`，两个 id 毫无字面关系，
+    ///    只能顺着 `pair_with` 字段找对家。这类 base_name 传任意一边的 id 都认，
+    ///    统一归一到 long 那一边（见 `paired_key`），这样 performance jsonl 的文件名才稳定。
+    pub fn resolve_pair(&self, base_name: &str) -> Result<(String, String)> {
         let long_id = format!("{base_name}_long");
         let short_id = format!("{base_name}_short");
+        if self.blocks.contains_key(&long_id) && self.blocks.contains_key(&short_id) {
+            return Ok((long_id, short_id));
+        }
+
+        let this = self.get(base_name)?;
+        let mate_id = this
+            .pair_with
+            .as_deref()
+            .ok_or_else(|| anyhow!("{base_name} 既没有 _long/_short 后缀配对，也没有 pair_with"))?;
+        let mate = self.get(mate_id)?;
+        if this.direction == mate.direction {
+            anyhow::bail!("{base_name} 和 {mate_id} 方向相同（都是 {}），配不成开仓/平仓", this.direction);
+        }
+        Ok(if this.direction == "long" {
+            (base_name.to_string(), mate_id.to_string())
+        } else {
+            (mate_id.to_string(), base_name.to_string())
+        })
+    }
+
+    /// 配对的规范 key——固定取 long 那一边，且后缀配对时去掉 `_long`。
+    /// performance jsonl 用它当文件名，所以同一对因子不管从哪一边点进来都要落到同一个 key。
+    pub fn paired_key(&self, base_name: &str) -> Result<String> {
+        let (long_id, _) = self.resolve_pair(base_name)?;
+        Ok(long_id.strip_suffix("_long").unwrap_or(&long_id).to_string())
+    }
+
+    /// 配对成一个「long 开仓 / short 平仓」的完整策略。
+    pub fn render_paired(&self, base_name: &str, qty: i64, capital: f64) -> Result<String> {
+        let (long_id, short_id) = self.resolve_pair(base_name)?;
         let long_f = self.get(&long_id)?;
         let short_f = self.get(&short_id)?;
         if !(long_f.implemented && short_f.implemented) {
-            anyhow::bail!("{base_name} 的 long/short 片段里有一个 implemented=false");
+            anyhow::bail!("{long_id} / {short_id} 里有一个 implemented=false");
         }
-        Ok(build_script(
-            base_name, long_f, short_f, qty, capital,
-        ))
+        let key = long_id.strip_suffix("_long").unwrap_or(&long_id);
+        Ok(build_script(key, long_f, short_f, qty, capital))
     }
 
     /// 任意两个片段：entry 开仓 / exit 平仓。

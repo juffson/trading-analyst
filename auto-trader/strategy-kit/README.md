@@ -50,7 +50,7 @@ python3 strategy-kit/strategy_kit.py render rsi_14 --out /tmp/rsi_14.pine
 python3 strategy-kit/strategy_kit.py compose --entry breakout --exit bearish_divergence --out /tmp/combo.pine
 ```
 
-生成的 `.pine` 文件可以直接喂给 `quant-backtest`（交互式回测调参）或复制到
+生成的 `.pine` 文件可以直接喂给 `skills/quant-backtest`（交互式回测调参）或复制到
 `watchlist/<symbol>/strategy.pine`（calibrating 阶段确定下来之后）。`templates/` 目录下
 已经存了 4 个同名 long/short 配对的现成模板（`rsi_14.pine`/`macd_12_26_9.pine`/
 `bollinger_bands_20.pine`/`williams_14.pine`），组合类片段（`trend_acceleration` 等）

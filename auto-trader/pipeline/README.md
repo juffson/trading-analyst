@@ -1,7 +1,8 @@
 # pipeline/ — 标的生命周期状态机
 
-管理每只标的从"研究"到"稳定模拟交易"的完整流转，聚合 `../../company-deep-dive`、
-`../../quant-backtest`、`../../trading-analyst` 三个 Skill 的产出。**不修改这三个 Skill 目录本身**——
+管理每只标的从"研究"到"稳定模拟交易"的完整流转，聚合 `../../skills/company-deep-dive`、
+`../../skills/quant-backtest`、`../../skills/trading-analyst` 三个 Skill 的产出。
+**不修改这三个 Skill 目录本身**——
 本目录只依赖它们已有的脚本和输出格式，通过下面约定的方式触发。
 
 ## 阶段

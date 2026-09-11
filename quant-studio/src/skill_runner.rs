@@ -1,4 +1,5 @@
-//! 把 `../company-deep-dive` / `../trading-analyst` 这两个 Skill 接到 quant-studio 页面里——
+//! 把 `../skills/company-deep-dive` / `../skills/trading-analyst` 这两个 Skill 接到
+//! quant-studio 页面里——
 //! **不**在后台无人值守跑 headless claude。跑完整个 skill 流程需要 Bash/网络/子 agent 权限，
 //! 没有 TTY 就没法逐条确认，唯一能不卡住的办法是 `--permission-mode bypassPermissions`，
 //! 那等于让一个点了页面按钮就能触发的进程完全绕过审批——这个口子太大，用户明确选了不开。
