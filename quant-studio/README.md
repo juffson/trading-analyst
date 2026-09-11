@@ -1,6 +1,6 @@
 # Quant Studio
 
-本地 Rust web 应用，是 `trading-analyst` 下的一个独立子项目（自己的 Cargo 工程，不是
+本地 Rust web 应用，是本仓库根下的一个独立子项目（自己的 Cargo 工程，不是
 Claude Skill）：管理因子/策略片段库，跑 Longbridge 回测，看图，持续跟踪同一个因子在
 不同时间点测出来的表现。跟 `../auto-trader` 是两个独立工具——auto-trader 负责
 "研究→回测→模拟交易"的自动化循环，quant-studio 负责"人工浏览因子、跑图、看效果"，
@@ -66,7 +66,7 @@ cargo run
     `today_orders()` 查 Longbridge 账户当前真实持仓和今日委托——auto-trader 里
     `executor.confirm_order()` 只能手动调，没有自动路径产生"实盘成交记录"这种本地数据可读，
     所以换成直接问券商账户，这样"实盘交易"才是真实定义，不看是谁下的单。
-  - **公司分析 / 交易记录分析**：把 `../company-deep-dive` / `../trading-analyst` 这两个
+  - **公司分析 / 交易记录分析**：把 `../skills/company-deep-dive` / `../skills/trading-analyst` 这两个
     Claude Skill 接进页面——但**不会**在后台无人值守跑 `claude -p`。这两个 skill 要跑起来需要
     Bash/网络/子 agent 权限，没有 TTY 就没法逐条确认，唯一能不卡住的办法是
     `--permission-mode bypassPermissions`（完全绕过审批），让一个点了页面按钮就能触发的进程

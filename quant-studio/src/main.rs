@@ -48,8 +48,10 @@ async fn main() {
         auto_trader_config_path: auto_trader_root.join("config/strategies.json"),
         auto_trader_watchlist_dir: auto_trader_root.join("watchlist"),
         auto_trader_state_dir: auto_trader_root.join("state"),
-        company_deep_dive_skill_dir: trading_analyst_root.join("company-deep-dive"),
-        trading_analyst_skill_dir: trading_analyst_root.join("trading-analyst"),
+        // 三个 Claude Skill 都在 repo 根的 skills/ 下（auto-trader / quant-studio 是工具，
+        // 不是 Skill，所以留在根上）——这里是 repo 根，不是 skills/ 目录本身
+        company_deep_dive_skill_dir: trading_analyst_root.join("skills/company-deep-dive"),
+        trading_analyst_skill_dir: trading_analyst_root.join("skills/trading-analyst"),
         company_analysis_dir: root.join("data/company-analysis"),
         trade_review_dir: root.join("data/trade-review"),
         trading_analyst_root,

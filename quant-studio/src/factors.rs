@@ -1,6 +1,6 @@
 //! 策略片段库读取 + 渲染。
 //!
-//! 数据来自 data/strategy_kit.json（从 ../trading-analyst/auto-trader/strategy-kit/
+//! 数据来自 data/strategy_kit.json（从 ../auto-trader/strategy-kit/
 //! 复制的一份种子拷贝——quant-studio 是独立工具，不跨目录依赖那个 Python 项目，
 //! 两边各自维护，暂时靠手动同步）。渲染逻辑（dedupe setup 行、拼装 input 声明、
 //! 组合 entry/exit）和 strategy_kit.py 保持一致。

@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-LB_CLIENT_PY = REPO_ROOT / "trading-analyst" / "scripts" / "lb_client.py"
+LB_CLIENT_PY = REPO_ROOT / "skills" / "trading-analyst" / "scripts" / "lb_client.py"
 
 
 class ExecutionError(RuntimeError):
