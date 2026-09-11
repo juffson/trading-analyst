@@ -116,6 +116,9 @@ pub async fn run_backtest_range(
 }
 
 /// 从 report.performanceAll 里挑出用来记录"持续跟进效果"的关键指标。
+///
+/// 前 6 个是最早就在记的，jsonl 里的历史记录只有这几个字段——加字段只能往后追加，
+/// 不能改名/删旧的，否则老快照读出来是 null（前端按 null 跳过，不会崩，但那条历史就断了）。
 pub fn extract_metrics(report: &Value) -> Value {
     let perf = report.get("performanceAll").cloned().unwrap_or(Value::Null);
     json!({
@@ -125,6 +128,13 @@ pub fn extract_metrics(report: &Value) -> Value {
         "total_closed_trades": perf.get("totalClosedTrades"),
         "total_open_trades": perf.get("totalOpenTrades"),
         "net_profit_pct": perf.get("netProfitPercent"),
+        // 下面这些是后加的：只看 Sharpe + 净利判断不了"这次测出来的好是不是撞运气"，
+        // sortino 区分下行波动、profit_factor 看盈亏比、buy_hold 对照是"跑赢没跑赢躺平"，
+        // 都是判断因子漂移时真正会盯的。
+        "sortino_ratio": perf.get("sortinoRatio"),
+        "profit_factor": perf.get("profitFactor"),
+        "avg_trade_pct": perf.get("avgTradePercent"),
+        "buy_hold_return_pct": perf.get("buyHoldReturnPercent"),
     })
 }
 

@@ -140,15 +140,24 @@ curl -s -X POST 'https://openapi.longbridge.cn/v1/quant/run_script' \
   performanceLong:  { 同上 }
   performanceShort: { 同上 }
   closedTrades: [{
-    tradeNum, entryId, entrySide, entryPrice, entryTime,
-    exitPrice, exitTime, quantity, profit, profitPercent,
-    maxRunup, maxDrawdown, commission
+    tradeNum, entryId, entryComment, entrySide, entryPrice, entryTime, entryBar,
+    exitId, exitComment, exitPrice, exitTime, exitBar,
+    quantity, profit, profitPercent,
+    cumulativeProfit, cumulativeProfitPercent,
+    maxRunup, maxRunupPercent, maxDrawdown, maxDrawdownPercent,
+    commission
   }]
-  openTrades: [{ 同上 }]
+  openTrades: [{ 同上，但没有 exit* 字段 }]   // 持仓天数只有平仓的算得出来
   equityCurve:   [float]   每 bar 权益值
   drawdownCurve: [float]   每 bar 回撤值
   buyHoldCurve:  [float]   买入持有对照
   dailyReturns:  [{ date, returnPercent }]
+                 // ⚠️ 名字是骗人的：returnPercent 不是"当日收益率"，而是**累计已实现盈亏 %**
+                 // 的阶梯值——只在有平仓/开仓的那天写值，其余全是 0，同一个值还会在平仓日和
+                 // 下一次开仓日各出现一次。实测 AAPL.US 两年：632 条里只有 12 条非 0，值正好是
+                 // closedTrades[].cumulativeProfitPercent，最后一个 == performanceAll.netProfitPercent。
+                 // 当日收益率去求和/复利会算出 55% 这种离谱数字（真实 7.695%）。
+                 // 要按日/月统计收益，用 equityCurve（逐 bar 真实净值，含浮动盈亏）折算。
   tradingRange:  { startTime, endTime }   毫秒时间戳
 }
 ```
@@ -156,19 +165,24 @@ curl -s -X POST 'https://openapi.longbridge.cn/v1/quant/run_script' \
 ## chart_json 结构
 
 ```
+// ⚠️ 实测是驼峰，不是 snake_case——下面这些字段名都对着真实响应核过
 {
-  series_graphs: {
-    "0": { Plot: { title, series: [float], colors: [int], style, line_width, histbase } }
-    "1": { Plot: { ... } }
+  seriesGraphs: [
+    { plot: { id, title, series: [float], lineWidth, style, histbase, offset, ... } }
     ...
+  ]                                              // 是数组，不是 {"0": ...} 这种字典
+  filledOrders: {
+    "<barIndex>": [{ order_id, price, quantity }]   // 正数=买入, 负数=卖出
   }
-  filled_orders: {
-    "bar_index": [{ order_id, price, quantity }]   // 正数=买入, 负数=卖出
-  }
-  bar_colors: { colors: [int|null] }
+  barColors: { colors: [int|null] }
+  backgroundColor: ...
   graphs: dict|null
-  graph_id_counter: int
+  graphIdCounter: int
 }
+
+`seriesGraphs[].plot.series` 只是按 bar 序号排列的数值数组，**不带时间**——要用
+`events_json` 里 `barStart.barIndex` / `barStart.candlestick.time`（毫秒）对齐成时间序列。
+`exclude_chart: true` 时 `chart_json` 是空串（`longbridge quant run` CLI 默认就是这样）。
 ```
 
 ## inputs_json 示例

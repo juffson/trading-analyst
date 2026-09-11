@@ -103,6 +103,14 @@ async fn list_factors(State(state): State<SharedState>) -> impl IntoResponse {
                 .blocks
                 .iter()
                 .map(|(id, f)| {
+                    // 配对规则（_long/_short 后缀 vs pair_with）只在 factors.rs 里实现一份，
+                    // 这里直接把算好的规范 key 发给前端，省得前端再猜一遍。
+                    // 配不成对、或对家没实现的，就是 null——前端据此禁用 paired 模式。
+                    let paired_base = lib.resolve_pair(id).ok().and_then(|(l, s)| {
+                        let both_impl = lib.get(&l).map(|x| x.implemented).unwrap_or(false)
+                            && lib.get(&s).map(|x| x.implemented).unwrap_or(false);
+                        both_impl.then(|| l.strip_suffix("_long").unwrap_or(&l).to_string())
+                    });
                     json!({
                         "id": id,
                         "name": f.name,
@@ -110,6 +118,7 @@ async fn list_factors(State(state): State<SharedState>) -> impl IntoResponse {
                         "description": f.description,
                         "implemented": f.implemented,
                         "pair_with": f.pair_with,
+                        "paired_base": paired_base,
                     })
                 })
                 .collect();
@@ -170,8 +179,12 @@ async fn run_backtest(
                 Some(b) => b.clone(),
                 None => return err_response(anyhow::anyhow!("mode=paired 需要 base_name")).into_response(),
             };
+            let key = match lib.paired_key(&base) {
+                Ok(k) => k,
+                Err(e) => return err_response(e).into_response(),
+            };
             match lib.render_paired(&base, req.qty, req.capital) {
-                Ok(script) => (script, base),
+                Ok(script) => (script, key),
                 Err(e) => return err_response(e).into_response(),
             }
         }
