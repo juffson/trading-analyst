@@ -21,14 +21,51 @@ quant-studio/
     └── scheduling/        cron / launchd 示例
 ```
 
+## 配置自己的 Longbridge 账号
+
+仓库不含任何真实凭据。首次使用需要自己申请并配置，**不要**把真实 key/token 写进仓库任何文件
+（`.env` 和 `auto-trader/config/strategies.json` 已在 `.gitignore`）。
+
+1. **注册 / 登录 Longbridge 账户**（已开户则跳过），确保有要分析的市场行情权限。
+2. **申请 OpenAPI**：打开 [Longbridge 开发者平台](https://open.longbridge.com/docs)（open.longbridge.com），
+   按 Getting Started 创建应用、申请 OpenAPI 权限，拿到 `App Key` + `App Secret`。
+   行情（Quote）和交易（Trade）权限是**分开申请**的：只跑回测/看行情开 Quote 就够；
+   要用「实盘交易」页查持仓/委托，或 auto-trader 预览下单，再开 Trade。
+3. **生成 Access Token**：在开发者平台按文档用 App Key/Secret 换取 `Access Token`
+   （JWT，会过期，过期后重新生成再更新环境变量）。
+4. **写进本机环境**（二选一）：
+
+   ```bash
+   # 方式 A：写进 shell 配置（~/.zshrc 等）
+   export LONGPORT_APP_KEY="你的_app_key"
+   export LONGPORT_APP_SECRET="你的_app_secret"
+   export LONGPORT_ACCESS_TOKEN="你的_access_token"
+   # 国际站域名；本机解析不了 openapi.longport.cn 时必设
+   export LONGPORT_HTTP_URL="https://openapi.longportapp.com"
+
+   # 方式 B：项目下的 .env（不提交），每次手动 source 或写进启动脚本
+   cat > .env <<'EOF'
+   export LONGPORT_APP_KEY="你的_app_key"
+   export LONGPORT_APP_SECRET="你的_app_secret"
+   export LONGPORT_ACCESS_TOKEN="你的_access_token"
+   export LONGPORT_HTTP_URL="https://openapi.longportapp.com"
+   EOF
+   source .env
+   ```
+
+5. **验证**：
+
+   ```bash
+   python3 ../skills/trading-analyst/scripts/lb_client.py detect
+   # active_mode 应为 api；然后 cargo run，打开页面跑一次回测
+   ```
+
+凭证问题排查见 [`../skills/trading-analyst/references/longbridge-api.md`](../skills/trading-analyst/references/longbridge-api.md)。
+
 ## 跑起来
 
 ```bash
-export LONGPORT_APP_KEY=...
-export LONGPORT_APP_SECRET=...
-export LONGPORT_ACCESS_TOKEN=...
-# 国际站（本机 openapi.longport.cn 解析不了时必设）
-export LONGPORT_HTTP_URL=https://openapi.longportapp.com
+# 先完成上面的账号配置
 cargo run
 # 浏览器打开 http://127.0.0.1:4870
 ```

@@ -69,6 +69,13 @@ quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ au
 - 回退环境：[Longbridge Terminal](https://github.com/longbridge/longbridge-terminal) 已登录，或配置 LongPort OpenAPI 凭据
 - Python 3.10+
 
+### 配置 Longbridge 账号（跑本地工具 / OpenAPI 回退时需要）
+
+仓库不含真实凭据。到 [Longbridge 开发者平台](https://open.longbridge.com/docs) 创建应用、申请
+OpenAPI 权限，拿到 `App Key` / `App Secret` / `Access Token`，再 `export LONGPORT_APP_KEY`
+等环境变量。行情与交易权限分开申请；Access Token 会过期。完整步骤见
+[quant-studio/README.md](quant-studio/README.md) 的「配置自己的 Longbridge 账号」。
+
 ## 安装
 
 ### Codex / ChatGPT

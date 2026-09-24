@@ -71,13 +71,15 @@ python3 quant-studio/auto-trader/scripts/render_dashboard.py
 
 ## 依赖
 
-- Python 3.10+ + `pip install longport`（官方 OpenAPI SDK），且 `LONGPORT_APP_KEY` /
-  `LONGPORT_APP_SECRET` / `LONGPORT_ACCESS_TOKEN` 已配置。`scripts/signal_from_backtest.py`
+- Longbridge OpenAPI 凭据已配置（`LONGPORT_APP_KEY` / `LONGPORT_APP_SECRET` /
+  `LONGPORT_ACCESS_TOKEN`，申请步骤见 [../README.md](../README.md) 的「配置自己的 Longbridge 账号」）。
+- Python 3.10+ + `pip install longport`（官方 OpenAPI SDK）。`scripts/signal_from_backtest.py`
   用 `longport.openapi.HttpClient` 直接 POST `/v1/quant/run_script`，**不需要额外安装
   `longbridge-terminal` CLI 二进制**——纯 Python 依赖，部署更简单（不用操心 cron/launchd 的
   PATH），也不经过 `../../skills/quant-backtest/scripts/run_script.py`（原因见该文件顶部注释——
   那条路径实测有解析 bug）
-- `scripts/executor.py` 依赖 `../../skills/trading-analyst/scripts/lb_client.py` 能正常工作（下单预览用）
+- `scripts/executor.py` 依赖 `../../skills/trading-analyst/scripts/lb_client.py` 能正常工作（下单预览用，
+  需要 Trade 权限）
 
 ## 已知局限（v1 骨架，先跑通再补）
 
