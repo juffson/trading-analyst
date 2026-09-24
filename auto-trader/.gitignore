@@ -1,8 +1,0 @@
-# 个人数据——具体标的、持仓、模拟成交记录，不提交
-watchlist/
-state/
-logs/
-config/strategies.json
-dashboard.html
-
-.DS_Store

@@ -6,3 +6,12 @@
 /data/company-analysis/
 /data/trade-review/
 .env
+
+# auto-trader 个人数据——具体标的、持仓、模拟成交记录，不提交
+/auto-trader/watchlist/
+/auto-trader/state/
+/auto-trader/logs/
+/auto-trader/config/strategies.json
+/auto-trader/dashboard.html
+
+.DS_Store

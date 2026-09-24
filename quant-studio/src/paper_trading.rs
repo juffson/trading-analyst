@@ -1,8 +1,8 @@
-//! "模拟交易" 只读视图——直接读 `../auto-trader` 本地产出的文件，不重新实现它的逻辑。
+//! "模拟交易" 只读视图——直接读 `auto-trader/` 本地产出的文件，不重新实现它的逻辑。
 //!
-//! auto-trader 是本机另一个独立工具，这些文件都在同一台机器的文件系统上，quant-studio 直接读
-//! 文件就行，不用起 HTTP 调用。只读，这个模块不会写这些文件——写入逻辑始终留在 auto-trader
-//! 那边。字段语义照抄 auto-trader 对应脚本，是它们的读取镜像，不是重新设计：
+//! auto-trader 是同一个产品下的自动化运行器（Python cron），这些文件都在同一台机器的文件系统上，
+//! quant-studio 直接读文件就行，不用起 HTTP 调用。只读，这个模块不会写这些文件——写入逻辑
+//! 始终留在 auto-trader 那边。字段语义照抄 auto-trader 对应脚本，是它们的读取镜像，不是重新设计：
 //! - `config/strategies.json` → 哪些标的在跟踪 + `execution_mode`（`run_cycle.py`）
 //! - `watchlist/<symbol>/plans.jsonl` → 交易计划/信号，pending/rejected/executed（`plan_store.py`）
 //! - `watchlist/<symbol>/stage.json` → 研究→模拟→实盘的阶段流转（`pipeline/advance_stage.py`）

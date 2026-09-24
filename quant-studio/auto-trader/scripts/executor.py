@@ -9,7 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# auto-trader 已收进 quant-studio/ 下，skills/ 仍在仓库根：scripts → auto-trader → quant-studio → repo root
+REPO_ROOT = Path(__file__).resolve().parents[3]
 LB_CLIENT_PY = REPO_ROOT / "skills" / "trading-analyst" / "scripts" / "lb_client.py"
 
 

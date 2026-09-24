@@ -2,23 +2,50 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>Quant Studio</title>
+<title>Quant Lab · 量化研究工作台</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-  :root {
-    --bg-1: #0A0E19; --bg-2: #232630; --card: #232630;
-    --fg-1: #FFFFFF; --fg-2: #9D9FA3; --fg-3: #60626A;
-    --line: #3B3E47; --stroke: #2C3039; --stripe: #1A1E28;
-    --up: #00ADA2; --down: #FF3A75;
-    --chart-blue: #0CB6FF; --chart-green: #35C15C; --chart-orange: #FF7128;
-    --chart-purple: #5A74FF; --chart-pink: #EC54B8; --chart-red: #DE3150;
-    --chart-yellow: #FFA61F; --chart-grey: #C1D0E6;
-    --risk-safe: #00CC92; --risk-warning: #FF922D; --risk-danger: #FF3A3A;
-    --radius-sm: 6px; --radius-lg: 12px; --radius-xl: 18px; --radius-pill: 999px;
-    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
-    --shadow-card: 0 4px 12px 6px rgba(0,0,0,0.40);
-    --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-    --font-cn: "PingFang SC","Noto Sans SC","Heiti SC","Source Han Sans CN",sans-serif;
+  /* LBUS 5.0 Dark tokens — 来自设计稿量化研究工作台（Longbridge design system） */
+  :root, [data-theme="dark"] {
+    --lb-brand: #00F0C4; --lb-brand-2: #09252A; --lb-brand-3: #203A3F;
+    --lb-bg-1: #0A0E19; --lb-bg-2: #232630; --lb-card: #232630;
+    --lb-zebra: #1A1E28; --lb-bg-btn-secondary: #1A1E28; --lb-bg-chip: #181B26;
+    --lb-stroke: #2C3039; --lb-line: #3B3E47; --lb-stroke-btn: #3B3E47;
+    --lb-fg-1: #FFFFFF; --lb-fg-2: #9D9FA3; --lb-fg-3: #60626A; --lb-fg-invert: #0A0E19;
+    --lb-up: #00ADA2; --lb-down: #FF3A75;
+    --lb-chart-blue: #0CB6FF; --lb-chart-green: #35C15C; --lb-chart-orange: #FF7128;
+    --lb-chart-purple: #5A74FF; --lb-chart-pink: #EC54B8; --lb-chart-red: #DE3150;
+    --lb-chart-yellow: #FFA61F; --lb-chart-grey: #C1D0E6; --lb-chart-bg: #2C3039;
+    --lb-risk-safe: #00CC92; --lb-risk-warning: #CC7524; --lb-risk-danger: #F7415F;
+    --lb-risk-medium: #BB9F11;
+    --lb-radius-xs: 2px; --lb-radius-2xs: 4px; --lb-radius-sm: 6px;
+    --lb-radius-lg: 12px; --lb-radius-xl: 18px; --lb-radius-2xl: 20px; --lb-radius-pill: 999px;
+    --lb-sp-1: 4px; --lb-sp-2: 8px; --lb-sp-3: 12px; --lb-sp-4: 16px;
+    --lb-sp-5: 20px; --lb-sp-6: 24px; --lb-sp-8: 32px;
+    --lb-shadow-card: 0 4px 12px 6px rgba(0,0,0,0.40);
+    --lb-shadow-menu: 0 2px 9px 0 rgba(0,0,0,0.14);
+    --lb-font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --lb-font-cn: "PingFang SC","Noto Sans SC","Heiti SC","Source Han Sans CN",sans-serif;
+    --lb-font-mono: "SF Mono","JetBrains Mono",Menlo,monospace;
+
+    /* 短别名——现有样式/JS 继续用 */
+    --brand: var(--lb-brand); --brand-2: var(--lb-brand-2);
+    --bg-1: var(--lb-bg-1); --bg-2: var(--lb-bg-2); --card: var(--lb-card);
+    --fg-1: var(--lb-fg-1); --fg-2: var(--lb-fg-2); --fg-3: var(--lb-fg-3);
+    --line: var(--lb-line); --stroke: var(--lb-stroke); --stripe: var(--lb-zebra);
+    --up: var(--lb-up); --down: var(--lb-down);
+    --chart-blue: var(--lb-chart-blue); --chart-green: var(--lb-chart-green);
+    --chart-orange: var(--lb-chart-orange); --chart-purple: var(--lb-chart-purple);
+    --chart-pink: var(--lb-chart-pink); --chart-red: var(--lb-chart-red);
+    --chart-yellow: var(--lb-chart-yellow); --chart-grey: var(--lb-chart-grey);
+    --risk-safe: var(--lb-risk-safe); --risk-warning: var(--lb-risk-warning);
+    --risk-danger: var(--lb-risk-danger);
+    --radius-sm: var(--lb-radius-sm); --radius-lg: var(--lb-radius-lg);
+    --radius-xl: var(--lb-radius-xl); --radius-pill: var(--lb-radius-pill);
+    --sp-1: var(--lb-sp-1); --sp-2: var(--lb-sp-2); --sp-3: var(--lb-sp-3);
+    --sp-4: var(--lb-sp-4); --sp-5: var(--lb-sp-5); --sp-6: var(--lb-sp-6);
+    --shadow-card: var(--lb-shadow-card);
+    --font-sans: var(--lb-font-sans); --font-cn: var(--lb-font-cn);
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: var(--font-sans), var(--font-cn);
@@ -37,19 +64,19 @@
   .sidebar { background: var(--bg-2); border-right: 1px solid var(--stroke);
              display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-4) var(--sp-3); }
   .brand { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); }
-  .brand-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--up);
+  .brand-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--brand);
                 display: flex; align-items: center; justify-content: center; font-weight: 800;
-                color: #06121c; font-size: 15px; flex-shrink: 0; }
-  .brand-name { font-weight: 700; font-size: 14px; }
-  .brand-sub { font-size: 11px; color: var(--fg-2); margin-top: 1px; }
+                color: var(--lb-fg-invert); font-size: 15px; flex-shrink: 0; }
+  .brand-name { font-weight: 700; font-size: 15px; line-height: 17px; }
+  .brand-sub { font-size: 11px; color: var(--fg-3); margin-top: 1px; }
   .navlist { display: flex; flex-direction: column; gap: 2px; }
   .navitem { width: 100%; text-align: left; background: transparent; border: none; cursor: pointer;
              display: flex; align-items: center; gap: var(--sp-2); padding: 9px var(--sp-2);
              border-radius: var(--radius-sm); color: var(--fg-2); font-size: 13px; font-weight: 500;
              position: relative; }
   .navitem:hover { background: var(--stripe); color: var(--fg-1); }
-  .navitem.active { background: rgba(0,173,162,0.14); color: var(--fg-1); font-weight: 700; }
-  .navitem.active .navicon { color: var(--up); }
+  .navitem.active { background: var(--lb-brand-2); color: var(--fg-1); font-weight: 700; }
+  .navitem.active .navicon { color: var(--brand); }
   .navicon { width: 16px; text-align: center; font-size: 13px; color: var(--fg-3); flex-shrink: 0; }
   .navbadge { margin-left: auto; background: var(--down); color: #fff; font-size: 10px; font-weight: 700;
               border-radius: var(--radius-pill); min-width: 17px; height: 17px; display: flex;
@@ -58,7 +85,8 @@
   .pages { padding: var(--sp-5) var(--sp-6); overflow-x: hidden; }
   .page { display: none; }
   .page.active { display: block; }
-  .page-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-4); }
+  .page-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-4); flex-wrap: wrap; gap: var(--sp-2); }
+  .page-header h1 { white-space: nowrap; }
   .page-header .hint { font-size: 12px; color: var(--fg-2); }
 
   /* ---------- 因子库 page ---------- */
@@ -66,12 +94,12 @@
   .factor-toolbar input { flex: 1; }
   .mode-toggle { display: flex; gap: var(--sp-2); flex-shrink: 0; }
   .mode-toggle button { background: var(--bg-1); border: 1px solid var(--stroke); cursor: pointer; white-space: nowrap; }
-  .mode-toggle button.active { background: var(--chart-blue); border-color: var(--chart-blue); color: #06121c; font-weight: 600; }
+  .mode-toggle button.active { background: var(--brand); border-color: var(--brand); color: var(--lb-fg-invert); font-weight: 600; }
   .factor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-3); }
   .factor-card { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius-lg);
                  padding: var(--sp-3) var(--sp-4); cursor: pointer; transition: border-color 150ms; }
-  .factor-card:hover { border-color: var(--chart-blue); }
-  .factor-card.selected { border-color: var(--up); background: rgba(0,173,162,0.08); }
+  .factor-card:hover { border-color: var(--brand); }
+  .factor-card.selected { border-color: var(--brand); background: var(--lb-brand-2); }
   .factor-card .row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
   .factor-card .fid { font-weight: 600; font-size: 13px; }
   .factor-card .dir { font-size: 10px; padding: 1px 6px; border-radius: var(--radius-pill); font-weight: 700; }
@@ -79,11 +107,11 @@
   .dir.short { background: rgba(255,58,117,0.18); color: var(--down); }
   .factor-card .desc { font-size: 11px; color: var(--fg-2); margin-top: 5px; line-height: 1.5; }
   .selection-bar { position: sticky; bottom: var(--sp-4); margin-top: var(--sp-4); background: var(--card);
-                   border: 1px solid var(--up); border-radius: var(--radius-lg); padding: var(--sp-3) var(--sp-4);
+                   border: 1px solid var(--brand); border-radius: var(--radius-lg); padding: var(--sp-3) var(--sp-4);
                    display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-card); }
   .selection-bar .txt { font-size: 13px; }
-  .selection-bar .txt b { color: var(--up); }
-  #goBacktestBtn { background: var(--up); border-color: var(--up); color: #06121c; font-weight: 700;
+  .selection-bar .txt b { color: var(--brand); }
+  #goBacktestBtn { background: var(--brand); border-color: var(--brand); color: var(--lb-fg-invert); font-weight: 700;
                    cursor: pointer; padding: 8px 16px; }
   #goBacktestBtn:disabled { opacity: .4; cursor: default; }
 
@@ -92,7 +120,7 @@
   .run-panel { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius-xl);
                padding: var(--sp-4); box-shadow: var(--shadow-card); position: sticky; top: var(--sp-5); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
-  #runBtn { background: var(--chart-blue); border-color: var(--chart-blue); color: #06121c; width: 100%;
+  #runBtn { background: var(--brand); border-color: var(--brand); color: var(--lb-fg-invert); width: 100%;
             cursor: pointer; font-weight: 700; padding: 9px 8px; margin-top: var(--sp-3); }
   #runBtn:disabled { opacity: .5; cursor: default; }
   .status { font-size: 12px; color: var(--fg-2); min-height: 18px; margin-top: var(--sp-2); }
@@ -257,7 +285,7 @@
   /* ---------- 公司分析 / 交易记录分析（人工跑 skill 命令） ---------- */
   .skill-form { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); }
   .skill-form input { flex: 1; }
-  .skill-form button { background: var(--chart-blue); border-color: var(--chart-blue); color: #06121c;
+  .skill-form button { background: var(--brand); border-color: var(--brand); color: var(--lb-fg-invert);
                         font-weight: 700; cursor: pointer; padding: 8px 16px; white-space: nowrap; }
   .skill-form button:disabled { opacity: .5; cursor: default; }
   .command-box { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius-xl);
@@ -267,7 +295,7 @@
   .command-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
   .command-actions button { background: var(--bg-1); border: 1px solid var(--stroke); color: var(--fg-1);
                              cursor: pointer; padding: 7px 14px; }
-  .command-actions button.primary { background: var(--up); border-color: var(--up); color: #06121c; font-weight: 700; }
+  .command-actions button.primary { background: var(--brand); border-color: var(--brand); color: var(--lb-fg-invert); font-weight: 700; }
   .job-list { display: flex; flex-direction: column; gap: var(--sp-2); }
   .job-row { display: flex; align-items: center; gap: var(--sp-3); background: var(--card);
              border: 1px solid var(--stroke); border-radius: var(--radius-lg); padding: var(--sp-3) var(--sp-4);
@@ -288,8 +316,8 @@
     <div class="brand">
       <div class="brand-icon">Q</div>
       <div>
-        <div class="brand-name">Quant Studio</div>
-        <div class="brand-sub">因子回测与跟踪</div>
+        <div class="brand-name">Quant Lab</div>
+        <div class="brand-sub">量化研究工作台</div>
       </div>
     </div>
     <div class="navlist">

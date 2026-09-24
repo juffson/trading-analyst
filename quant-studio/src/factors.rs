@@ -1,9 +1,8 @@
 //! 策略片段库读取 + 渲染。
 //!
-//! 数据来自 data/strategy_kit.json（从 ../auto-trader/strategy-kit/
-//! 复制的一份种子拷贝——quant-studio 是独立工具，不跨目录依赖那个 Python 项目，
-//! 两边各自维护，暂时靠手动同步）。渲染逻辑（dedupe setup 行、拼装 input 声明、
-//! 组合 entry/exit）和 strategy_kit.py 保持一致。
+//! 数据来自 auto-trader/strategy-kit/strategy_kit.json（全仓唯一一份因子库，
+//! 和 Python CLI strategy_kit.py 共用，不再维护副本）。渲染逻辑（dedupe setup 行、
+//! 拼装 input 声明、组合 entry/exit）和 strategy_kit.py 保持一致。
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

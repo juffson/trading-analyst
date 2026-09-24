@@ -39,17 +39,18 @@ type SharedState = Arc<AppState>;
 #[tokio::main]
 async fn main() {
     let root = std::env::current_dir().expect("cwd");
-    let auto_trader_root = root.join("../auto-trader");
+    // auto-trader 已收进 quant-studio/，是同一个产品的自动化运行器
+    let auto_trader_root = root.join("auto-trader");
     let trading_analyst_root = std::fs::canonicalize(root.join(".."))
         .unwrap_or_else(|_| root.join(".."));
     let state = Arc::new(AppState {
-        factor_lib_path: root.join("data/strategy_kit.json"),
+        // 因子库只有一份：auto-trader/strategy-kit/strategy_kit.json（Python CLI 和本服务共用）
+        factor_lib_path: auto_trader_root.join("strategy-kit/strategy_kit.json"),
         perf: PerformanceLog::new(root.join("data/performance")),
         auto_trader_config_path: auto_trader_root.join("config/strategies.json"),
         auto_trader_watchlist_dir: auto_trader_root.join("watchlist"),
         auto_trader_state_dir: auto_trader_root.join("state"),
-        // 三个 Claude Skill 都在 repo 根的 skills/ 下（auto-trader / quant-studio 是工具，
-        // 不是 Skill，所以留在根上）——这里是 repo 根，不是 skills/ 目录本身
+        // 三个 Claude Skill 在 repo 根的 skills/ 下——这里是 repo 根，不是 skills/ 目录本身
         company_deep_dive_skill_dir: trading_analyst_root.join("skills/company-deep-dive"),
         trading_analyst_skill_dir: trading_analyst_root.join("skills/trading-analyst"),
         company_analysis_dir: root.join("data/company-analysis"),
@@ -509,7 +510,7 @@ mod tests {
 
     #[test]
     fn render_smoke() {
-        let lib = FactorLib::load("data/strategy_kit.json").unwrap();
+        let lib = FactorLib::load("auto-trader/strategy-kit/strategy_kit.json").unwrap();
         let script = lib.render_paired("rsi_14", 100, 100000.0).unwrap();
         println!("{script}");
         assert!(script.contains("plot(rsiValue"));

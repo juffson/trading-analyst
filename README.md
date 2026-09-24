@@ -9,13 +9,13 @@ skills/                  三个可独立安装的 Agent Skill（本仓库的主�
 ├── trading-analyst/       持有期交易操作
 ├── company-deep-dive/     买入前深度研究
 └── quant-backtest/        QuantScript 量化回测
-auto-trader/             本地工具：把三个 Skill 串成「研究→回测→模拟交易」的自动循环
-quant-studio/            本地工具：Rust web 应用，人工浏览因子、跑回测看图、跟踪因子表现
+quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ auto-trader 自动化循环
+├── src/ static/           因子浏览、回测看图、模拟/实盘视图、Skill 命令生成
+└── auto-trader/           「研究→回测→模拟交易」cron 流水线（Python）
 ```
 
-**`skills/` 下的是 Skill，根目录下的 `auto-trader/` 和 `quant-studio/` 是独立工具**，不是 Skill、不用装进
-`~/.claude/skills/`，各自有自己的 README 和运行方式。两个工具都会读 `skills/` 里的 Skill 目录，
-所以别把 `skills/` 挪走或改名。
+**`skills/` 下的是 Skill，`quant-studio/` 是本地工具**，不是 Skill、不用装进
+`~/.claude/skills/`。工具会读 `skills/` 里的 Skill 目录，所以别把 `skills/` 挪走或改名。
 
 ## 仓库包含的 Skill
 
@@ -55,14 +55,11 @@ quant-studio/            本地工具：Rust web 应用，人工浏览因子、�
 
 ## 本地工具（不是 Skill）
 
-### [`auto-trader/`](auto-trader/) — 自动化循环
-把三个 Skill 串成持续运转的流水线：`researching`（深度研究）→ `calibrating`（回测调参）→
-`paper_trading`（模拟交易）→ 周期性复盘。默认 `signal_only`：只生成交易计划，不碰风控也不下单；
-真实下单永远是手动调 `executor.confirm_order()`。详见 [auto-trader/README.md](auto-trader/README.md)。
-
-### [`quant-studio/`](quant-studio/) — 因子/回测工作台
-本地 Rust web 应用（`cargo run`，绑 `127.0.0.1:4870`）：浏览因子片段库、跑 Longbridge 回测看图、
-跟踪同一个因子在不同时间测出来的表现漂移，另外把模拟交易、实盘账户、两个分析 Skill 接进同一个页面。
+### [`quant-studio/`](quant-studio/) — Quant Lab 量化研究工作台
+本地 Rust web 应用（`cargo run`，绑 `127.0.0.1:4870`）+ 收在里面的 `auto-trader/`：
+浏览因子片段库、跑 Longbridge 回测看图、跟踪因子表现漂移，模拟交易 / 实盘账户 / 两个分析 Skill
+接进同一页面；auto-trader 负责 cron 流水线（`researching`→`calibrating`→`paper_trading`，
+默认 `signal_only`，真实下单永远手动 `executor.confirm_order()`）。
 详见 [quant-studio/README.md](quant-studio/README.md)。
 
 ## 前置依赖

@@ -1,11 +1,25 @@
-# Quant Studio
+# Quant Lab（quant-studio）
 
-本地 Rust web 应用，是本仓库根下的一个独立子项目（自己的 Cargo 工程，不是
-Claude Skill）：管理因子/策略片段库，跑 Longbridge 回测，看图，持续跟踪同一个因子在
-不同时间点测出来的表现。跟 `../auto-trader` 是两个独立工具——auto-trader 负责
-"研究→回测→模拟交易"的自动化循环，quant-studio 负责"人工浏览因子、跑图、看效果"，
-两边共用同一份因子定义（`data/strategy_kit.json` 是从
-`../auto-trader/strategy-kit/strategy_kit.json` 复制的种子拷贝，各自维护，暂时靠手动同步）。
+本地 Rust web 应用 + Python 自动化运行器，是本仓库根下的一个独立子项目（自己的 Cargo 工程，不是
+Claude Skill）。UI 按 LBUS 5.0 暗色设计系统（Quant Lab / 量化研究工作台）呈现，功能保持不变：
+管理因子/策略片段库，跑 Longbridge 回测，看图，持续跟踪同一个因子在不同时间点测出来的表现；
+`auto-trader/` 已收进本目录，负责「研究→回测→模拟交易」的 cron 循环。和 `../skills/` 是
+工具 vs Skill 的关系——工具读 Skill 的脚本/输出格式，不修改 Skill 目录。
+
+## 目录
+
+```
+quant-studio/
+├── src/                 Rust web 服务（axum + longport）
+├── static/              前端（vanilla JS + lightweight-charts）
+├── data/                运行时产出（performance / company-analysis / trade-review，不提交）
+└── auto-trader/         自动化运行器（Python，可单独 cron）
+    ├── scripts/           cron 入口：信号 → 计划 → 风控 → 预览下单
+    ├── pipeline/          阶段状态机（researching→calibrating→paper_trading）
+    ├── strategy-kit/      因子库唯一源 strategy_kit.json + Python CLI
+    ├── config/            标的配置（strategies.json 不提交）
+    └── scheduling/        cron / launchd 示例
+```
 
 ## 跑起来
 
@@ -13,19 +27,30 @@ Claude Skill）：管理因子/策略片段库，跑 Longbridge 回测，看图�
 export LONGPORT_APP_KEY=...
 export LONGPORT_APP_SECRET=...
 export LONGPORT_ACCESS_TOKEN=...
+# 国际站（本机 openapi.longport.cn 解析不了时必设）
+export LONGPORT_HTTP_URL=https://openapi.longportapp.com
 cargo run
 # 浏览器打开 http://127.0.0.1:4870
+```
+
+自动化循环（可选，独立 cron）：
+
+```bash
+cp auto-trader/config/strategies.example.json auto-trader/config/strategies.json
+python3 auto-trader/scripts/run_cycle.py
+python3 auto-trader/scripts/render_dashboard.py
 ```
 
 ## 架构
 
 - **后端**：`axum` web 服务，直接用官方 `longport` Rust crate 的
   `HttpClient::from_apikey_env()` 认证，POST `/v2/quant/run_script`（`language: 1` = Pine，
-  navi 目前没有策略语义，用不了——调研记录见 auto-trader 那边）。字段命名/鉴权和
-  `../auto-trader/scripts/signal_from_backtest.py`（Python 版）保持一致。
-- **因子库**：`src/factors.rs` 读 `data/strategy_kit.json`，`render_paired`/`compose`
-  逻辑照抄 Python 版的 `strategy_kit.py`。**多加了一步**：自动给每个 setup 变量加一行
-  `plot()`（Python 版没有，因为 auto-trader 不需要看图，只读 report_json）。
+  navi 目前没有策略语义，用不了——调研记录见 `auto-trader/`）。字段命名/鉴权和
+  `auto-trader/scripts/signal_from_backtest.py`（Python 版）保持一致。
+- **因子库**：全仓唯一一份 `auto-trader/strategy-kit/strategy_kit.json`。
+  `src/factors.rs` 的 `render_paired`/`compose` 逻辑和 Python CLI `strategy_kit.py` 一致。
+  **多加了一步**：自动给每个 setup 变量加一行 `plot()`（Python 版没有，因为 auto-trader
+  不需要看图，只读 report_json）。
 - **图表数据**：`/v2/quant/run_script` 返回的 `events_json` 里每根 bar 自带完整 OHLCV
   （`barStart.candlestick`），直接当真实K线用，不用额外接 QuoteContext/WebSocket。
   `chart_json.seriesGraphs` 给指标线数值（按 bar_index 排列，不带时间，要用 events 里的
@@ -39,8 +64,8 @@ cargo run
   当日收益率去求和/复利会算出 55% 这种离谱数字（真实 7.695%）。**月度收益一律从
   `equityCurve` 折算**（逐 bar 真实净值，含浮动盈亏，长度和 candles 一致）。
 - **前端**：`static/index.html`，vanilla JS + `lightweight-charts@4.1.3`（CDN），侧边栏导航
-  六个页面（因子库 / 回测 / 模拟交易 / 实盘交易 / 公司分析 / 交易记录分析），不是单页平铺——
-  因子库负责选因子，回测页负责跑图看结果：
+  六个页面（因子库 / 回测 / 模拟交易 / 实盘交易 / 公司分析 / 交易记录分析）。视觉套用
+  LBUS 5.0 暗色 token（`--lb-*`，品牌色 mint `#00F0C4`，绿涨红跌），信息架构保持原有功能：
   - **回测页**：左边 sticky 参数面板，右边结果区。6 个头条指标 tile **不进 tab**（切到哪一页
     都要能看见这次跑出来是好是坏），下面是二级 tab，一次只显示一块——东西全纵向堆在一页
     会把价格图挤到首屏外面去：
@@ -57,7 +82,7 @@ cargo run
     切 tab 时要重新量图表宽度：lightweight-charts 在 `display:none` 的容器里量到的宽度是 0，
     画出来是一条缝。同理 ResizeObserver 挂在一直可见的结果区上，**不能**挂图表自己的卡片——
     卡片在没激活的 tab 里宽度是 0，一次回调就能把所有图压成 0 宽再也回不来。
-  - **模拟交易**：读 `../auto-trader/config/strategies.json` + `watchlist/*/{plans.jsonl,
+  - **模拟交易**：读 `auto-trader/config/strategies.json` + `watchlist/*/{plans.jsonl,
     stage.json, backtest_report.json, trade_log.jsonl}` + `state/*.json`（本机文件，同一台
     机器直接读，不走 HTTP）——待处理信号统计、状态分布、每个标的的阶段流转历史、calibrating
     定的回测基线、模拟成交记录，跟 auto-trader 自己的 `render_dashboard.py` 是同一套数据源。
@@ -89,16 +114,14 @@ cargo run
 
 ## 已知限制 / 没做的事
 
-- **没有视觉验证**：这个环境里没有浏览器，前端只验了数据层——用 curl 核对过
-  `/api/backtest` 的 `candles`/`bar_times`/`chart.seriesGraphs` 能对齐；月度收益、成交明细、
-  全部指标这三块是把 index.html 里的纯函数（`monthlyReturns`/`normalizeTrades`/`PERF_FIELDS`）
-  抽出来在 node 里喂真实响应跑过的，交叉验到「月收益复利 == equityCurve 首末比 ==
-  已实现 + 浮动盈亏」三者完全相等。但**没有真人眼看过渲染结果**——排查 UI 问题时从这个假设开始。
+- **没有视觉验证**：开发环境里没有浏览器时只验了数据层；本机有浏览器后可打开
+  `http://127.0.0.1:4870` 验收。UI 是「保留现有功能只换皮」——套了 LBUS 视觉，
+  **没有**做成设计稿里那套 IC 质量监控 / 新建因子 / 发起回测任务流（那是另一套信息架构）。
 - **`longbridge` CLI 也能跑同一个接口**：`longbridge quant run <SYMBOL> --start .. --end .. --script ..
   --format json` 返回的就是同样的 `report_json`/`events_json`/`chart_json` 三件套（实测
   0.24.0 版；它默认不带 chart，`chart_json` 是空串）。核对字段命名、或者不想开服务就想看一眼
   某个脚本的回测结果时，用它比写 curl 快。
-- 因子库是从 auto-trader 复制的种子拷贝，两边手动同步，没有做自动同步机制。
 - 没做鉴权/多用户——就是本机单人用的本地工具，`127.0.0.1` 绑定，别暴露到公网。
 - Navi 脚本语言暂不支持（`language: 0`）——它没有 `strategy.entry`/`strategy.close` 语义，
   接不上现在这套"因子=开仓条件+平仓条件"的模型。
+- auto-trader 侧的已知局限见 `auto-trader/README.md`（当日亏损熔断的 mark-to-market 等）。
