@@ -416,10 +416,44 @@ def _get_api_adjust(adjust_str):
         fail("longport 未安装")
 
 
+# Longbridge OpenAPI 的站点地址（HTTP + 两个 WebSocket）。
+#
+# longport SDK 默认 endpoint 是 openapi.longportapp.com，但它会按账号 region 再路由到
+# openapi.longport.cn / openapi-quote.longport.cn / openapi-trade.longport.cn——这三个域名
+# **都已经停了，DNS 全解析不出来**（2026-10 实测）。于是请求连 TCP 都建不起来，报的是
+# "client error (Connect)" / "failed to lookup address information"，而不是鉴权失败，
+# 很容易误判成 token 过期或者以为要改走 OAuth。实际上 apikey + access_token 完全有效，
+# 只是品牌域迁到了 longbridge.*。`longbridge` CLI 一直打的就是新域，所以会出现
+# "CLI 好用、SDK 不好用"。
+#
+# 三个都要钉：QuoteContext / TradeContext 除了 HTTP 还会各开一条 WebSocket，
+# 只设 LONGPORT_HTTP_URL 的话照样挂在 WS 的 DNS 上。
+# 全球站 openapi.longbridge.com 对本账号实测返回 403，所以默认钉在 .cn；
+# 换账号/换站用对应的 LONGPORT_* 覆盖即可（setdefault 不会盖掉已设好的值）。
+LONGBRIDGE_ENDPOINTS = {
+    "LONGPORT_HTTP_URL": "https://openapi.longbridge.cn",
+    "LONGPORT_QUOTE_WS_URL": "wss://openapi-quote.longbridge.cn/v2",
+    "LONGPORT_TRADE_WS_URL": "wss://openapi-trade.longbridge.cn/v2",
+}
+
+
+def _ensure_openapi_endpoint() -> None:
+    """把 SDK 的三个 endpoint 钉到可用的 longbridge 站点，除非调用方已经自己指定。"""
+    for key, value in LONGBRIDGE_ENDPOINTS.items():
+        os.environ.setdefault(key, value)
+
+
 def _api_config():
     try:
         from longport.openapi import Config
-        return Config.from_env()
+        # SDK 版本差异：新版方法名为 from_apikey_env，旧版为 from_env。
+        # 当前装的版本只有 from_apikey_env，写死 from_env 会直接 AttributeError。
+        factory = getattr(Config, "from_apikey_env", None) or getattr(Config, "from_env", None)
+        if factory is None:
+            fail("当前 longport SDK 版本不支持从环境变量创建 Config",
+                 hint="尝试升级 longport: pip install -U longport")
+        _ensure_openapi_endpoint()
+        return factory()
     except ImportError:
         fail("longport 未安装，请 pip install longport")
     except Exception as e:
@@ -443,7 +477,7 @@ def _trade_ctx():
         return TradeContext(_api_config())
     except Exception as e:
         fail(f"TradeContext 初始化失败: {e}",
-             hint="请确认 token 已开启交易权限（在 https://open.longportapp.com 申请 Trade 权限）")
+             hint="请确认 token 已开启交易权限（在 https://open.longbridge.cn 开发者后台申请 Trade 权限）")
 
 
 def _fundamental_ctx():
@@ -895,7 +929,7 @@ def main():
             if not trade_ok:
                 result["api_trade_permission_hint"] = (
                     "交易权限未开启或 token 不包含 Trade 权限。"
-                    "请前往 https://open.longportapp.com 申请并重新生成 ACCESS_TOKEN。"
+                    "请前往 https://open.longbridge.cn 开发者后台申请并重新生成 ACCESS_TOKEN。"
                     f"错误详情: {trade_err}"
                 )
         out(result)

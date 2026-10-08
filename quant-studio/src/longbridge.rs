@@ -15,6 +15,10 @@ use longport::counter::symbol_to_counter_id;
 use longport::httpclient::{HttpClient, HttpClientConfig, Json, Method};
 use serde_json::{Value, json};
 
+/// 这个账号所在的 region 站点。`.com` 是全球站，实测对本账号返回 403；
+/// crate 自己路由到的 `openapi.longport.cn` 已退役（无 DNS）。
+const DEFAULT_HTTP_URL: &str = "https://openapi.longbridge.cn";
+
 pub struct BacktestResult {
     pub report: Value,
     pub chart: Value,
@@ -70,6 +74,15 @@ pub async fn run_backtest_range(
 
     let config = HttpClientConfig::from_apikey_env()
         .context("HttpClientConfig::from_apikey_env 失败——检查 LONGPORT_APP_KEY/APP_SECRET/ACCESS_TOKEN")?;
+    // crate 默认 endpoint 是 openapi.longportapp.com，但它会按账号 region 再路由到
+    // openapi.longport.cn——那个域名**已经停了，DNS 都解析不出来**（2026-10 实测），
+    // 于是请求连 TCP 都建不起来。品牌域迁到了 longbridge.*，CLI 一直打的就是这个，
+    // 所以 CLI 好用、SDK 不好用。这里显式钉死，不依赖 crate 的 region 路由。
+    // 需要换站（比如全球站 openapi.longbridge.com）就设 LONGPORT_HTTP_URL 覆盖。
+    let config = match std::env::var("LONGPORT_HTTP_URL") {
+        Ok(url) if !url.is_empty() => config.http_url(url),
+        _ => config.http_url(DEFAULT_HTTP_URL),
+    };
     let client = HttpClient::new(config);
 
     let body = json!({
@@ -96,7 +109,9 @@ pub async fn run_backtest_range(
         .response::<Json<RawResponse>>()
         .send()
         .await
-        .context("POST /v2/quant/run_script 失败")?
+        // 不要用 .context()——它只会显示这一句，把底下 reqwest 的真实原因
+        // （DNS 解析失败 / 连接拒绝 / 403）全吞掉。{e:?} 才能把错误链带出来。
+        .map_err(|e| anyhow::anyhow!("POST /v2/quant/run_script 失败: {e:?}"))?
         .0;
 
     let parse = |s: Option<String>| -> Result<Value> {

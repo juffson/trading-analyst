@@ -18,10 +18,37 @@
   不需要额外做 bar_index → 日期的映射。
 """
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from longport.openapi import HttpClient
+
+# Longbridge OpenAPI 的站点地址（HTTP + 两个 WebSocket）。
+#
+# longport SDK 默认 endpoint 是 openapi.longportapp.com，但它会按账号 region 再路由到
+# openapi.longport.cn / openapi-quote.longport.cn / openapi-trade.longport.cn——这三个域名
+# **都已经停了，DNS 全解析不出来**（2026-10 实测）。于是请求连 TCP 都建不起来，报的是
+# "client error (Connect)" / "failed to lookup address information"，而不是鉴权失败，
+# 很容易误判成 token 过期或者以为要改走 OAuth。实际上 apikey + access_token 完全有效，
+# 只是品牌域迁到了 longbridge.*。`longbridge` CLI 一直打的就是新域，所以会出现
+# "CLI 好用、SDK 不好用"。
+#
+# 三个都要钉：QuoteContext / TradeContext 除了 HTTP 还会各开一条 WebSocket，
+# 只设 LONGPORT_HTTP_URL 的话照样挂在 WS 的 DNS 上。
+# 全球站 openapi.longbridge.com 对本账号实测返回 403，所以默认钉在 .cn；
+# 换账号/换站用对应的 LONGPORT_* 覆盖即可（setdefault 不会盖掉已设好的值）。
+LONGBRIDGE_ENDPOINTS = {
+    "LONGPORT_HTTP_URL": "https://openapi.longbridge.cn",
+    "LONGPORT_QUOTE_WS_URL": "wss://openapi-quote.longbridge.cn/v2",
+    "LONGPORT_TRADE_WS_URL": "wss://openapi-trade.longbridge.cn/v2",
+}
+
+
+def _ensure_openapi_endpoint() -> None:
+    """把 SDK 的三个 endpoint 钉到可用的 longbridge 站点，除非调用方已经自己指定。"""
+    for key, value in LONGBRIDGE_ENDPOINTS.items():
+        os.environ.setdefault(key, value)
 
 _MARKET_MAP = {"US": "US", "HK": "HK", "SH": "SH", "SZ": "SZ", "SG": "SG"}
 _PERIOD_TO_LINE_TYPE = {
@@ -79,6 +106,7 @@ def run_rolling_backtest(script_path, symbol, lookback_days=90, period="day", in
     }
 
     try:
+        _ensure_openapi_endpoint()
         client = HttpClient.from_apikey_env()
         resp = client.request("post", "/v1/quant/run_script", body=body)
     except Exception as exc:  # longport 抛的是它自己的 OpenApiException，统一包装成 BacktestError
