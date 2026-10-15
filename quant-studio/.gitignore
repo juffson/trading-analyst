@@ -8,7 +8,11 @@
 .env
 
 # auto-trader 个人数据——具体标的、持仓、模拟成交记录，不提交
-/auto-trader/watchlist/
+# watchlist/ 下是具体标的的个人数据，不提交；但目录结构说明要留在版本库里，
+# 否则 git clean 一次就没了（这份 README 之前就是这么丢的）。
+# 用 /* 而不是 /，否则 git 根本不会进这个目录，下面的否定规则不生效。
+/auto-trader/watchlist/*
+!/auto-trader/watchlist/README.md
 /auto-trader/state/
 /auto-trader/logs/
 /auto-trader/config/strategies.json
