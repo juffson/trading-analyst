@@ -40,15 +40,15 @@ quant-studio/
    export LONGPORT_APP_KEY="你的_app_key"
    export LONGPORT_APP_SECRET="你的_app_secret"
    export LONGPORT_ACCESS_TOKEN="你的_access_token"
-   # 国际站域名；本机解析不了 openapi.longport.cn 时必设
-   export LONGPORT_HTTP_URL="https://openapi.longportapp.com"
+   # 本项目默认使用中国站；其他站点可按账户所属区域覆盖
+   export LONGPORT_HTTP_URL="https://openapi.longbridge.cn"
 
    # 方式 B：项目下的 .env（不提交），每次手动 source 或写进启动脚本
    cat > .env <<'EOF'
    export LONGPORT_APP_KEY="你的_app_key"
    export LONGPORT_APP_SECRET="你的_app_secret"
    export LONGPORT_ACCESS_TOKEN="你的_access_token"
-   export LONGPORT_HTTP_URL="https://openapi.longportapp.com"
+   export LONGPORT_HTTP_URL="https://openapi.longbridge.cn"
    EOF
    source .env
    ```

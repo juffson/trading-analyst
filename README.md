@@ -1,6 +1,6 @@
 # Trading Analyst
 
-个人交易分析工具集，支持 **OpenAI Codex / ChatGPT** 与 **Claude Code**。Codex/ChatGPT 优先直连 Longbridge connector/app；其他环境或连接器不可用时回退 CLI/OpenAPI。覆盖买入前研究、持有期操作和量化回测。
+个人交易分析工具集，支持 **OpenAI Codex / ChatGPT** 与 **Claude Code**。三个可独立安装的 Skill 覆盖买入前研究、持有期操作和量化回测；`quant-studio/` 提供本地研究工作台与自动化运行器。Codex/ChatGPT 优先使用 Longbridge connector/app，缺少接口时回退 CLI/OpenAPI。
 
 ## 仓库结构
 
@@ -36,7 +36,7 @@ quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ au
 
 - **11 维度价值评分** — 业务简单性 / 经济模型 / 商业模式 / 企业文化 / 护城河 / 管理团队 / PESTEL / 波特五力 / 安全边际 / 第二层思维 / 致命风险
 - **DCF 估值** — 乐观/中性/悲观三档，Python 精确计算
-- **数据源分层** — longbridge 优先（行情、PE/PB、EPS 预测、机构评级），爬取兜底（5 年历史三表从巨潮/SEC EDGAR 取）
+- **数据源分层** — Longbridge connector/app 优先获取行情、估值、评级预测及近 5 年核心财报；客户端通过 `FundamentalContext` 或 CLI 回退，详细科目与关键数字再用巨潮、港交所或 SEC EDGAR 等官方披露核对
 - **并行子代理架构** — 阶段 1 抓数据 2 个 Agent、阶段 2 分析 4 个 Agent、阶段 3 DCF 1 个 Agent，主代理综合打分
 - **HTML 决策仪表盘** — 雷达图 + 财务趋势 + DCF 横条 + 买入价格带
 
@@ -56,7 +56,7 @@ quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ au
 ## 本地工具（不是 Skill）
 
 ### [`quant-studio/`](quant-studio/) — Quant Lab 量化研究工作台
-本地 Rust web 应用（`cargo run`，绑 `127.0.0.1:4870`）+ 收在里面的 `auto-trader/`：
+本地 Rust web 应用（在 `quant-studio/` 运行 `cargo run`，监听 `127.0.0.1:4870`）+ 收在里面的 `auto-trader/`：
 浏览因子片段库、跑 Longbridge 回测看图、跟踪因子表现漂移，模拟交易 / 实盘账户 / 两个分析 Skill
 接进同一页面；auto-trader 负责 cron 流水线（`researching`→`calibrating`→`paper_trading`，
 默认 `signal_only`，真实下单永远手动 `executor.confirm_order()`）。
@@ -68,6 +68,7 @@ quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ au
 - Codex/ChatGPT：安装并授权 Longbridge plugin/connector
 - 回退环境：[Longbridge Terminal](https://github.com/longbridge/longbridge-terminal) 已登录，或配置 LongPort OpenAPI 凭据
 - Python 3.10+
+- 运行 Quant Lab 工作台另需 Rust 工具链（支持 Rust 2024 edition）
 
 ### 配置 Longbridge 账号（跑本地工具 / OpenAPI 回退时需要）
 
@@ -75,6 +76,14 @@ quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ au
 OpenAPI 权限，拿到 `App Key` / `App Secret` / `Access Token`，再 `export LONGPORT_APP_KEY`
 等环境变量。行情与交易权限分开申请；Access Token 会过期。完整步骤见
 [quant-studio/README.md](quant-studio/README.md) 的「配置自己的 Longbridge 账号」。
+
+使用本地工作台时，在仓库根目录运行：
+
+```bash
+cd quant-studio
+cargo run
+# 打开 http://127.0.0.1:4870
+```
 
 ## 安装
 
