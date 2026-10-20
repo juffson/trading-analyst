@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.feishu_api import AmbiguousWriteError
+from scripts.feishu_api import AmbiguousWriteError, FeishuAPIError
 from scripts.feishu_render import completed_notice, image_placeholder, managed_notice
 from scripts.publish_feishu import Config, PublishError, Publisher, canonical, main
 from scripts.validate_research import load_dataset
@@ -288,6 +288,93 @@ class PublishRecoveryTests(unittest.TestCase):
             Publisher(self.client, config, sleep=lambda _: None).publish(symbols, reports)
         self.assertEqual(self.client.docs[report_node["obj_token"]], original_report)
         self.assertFalse(any(w[1] == report_node["obj_token"] for w in self.client.writes))
+
+
+class PublishDiagnosticTests(unittest.TestCase):
+    def setUp(self):
+        symbols, reports = load_dataset(ROOT)
+        self.symbols = [s for s in symbols if s["symbol"] == "QCOM.US"]
+        self.reports = [r for r in reports if r["symbol"] == "QCOM.US"]
+        self.config = Config("private_app", "private_secret", "root",
+                             "https://private.feishu.cn", "private_title")
+
+    def run_cli(self, client):
+        with patch("scripts.publish_feishu.load_dataset", return_value=(self.symbols, self.reports)), \
+             patch("scripts.publish_feishu.Config.from_env", return_value=self.config), \
+             patch("scripts.publish_feishu.FeishuClient", return_value=client), \
+             patch("scripts.publish_feishu.trend_png", return_value=False), \
+             patch("scripts.publish_feishu.overview_png", return_value=False), \
+             patch("scripts.publish_feishu._summary") as summary:
+            result = main(["--root", str(ROOT), "--mode", "publish"])
+        self.assertEqual(result, 1)
+        summary.assert_called_once()
+        message = summary.call_args.args[0]
+        for private in ("private_app", "private_secret", "private_title", "private.feishu.cn"):
+            self.assertNotIn(private, message)
+        return message
+
+    def test_permission_failures_identify_fixed_hierarchy_stage_and_confirmed_count(self):
+        failure = FeishuAPIError(code=131006, status=400,
+                                 permission_category="node_permission_denied")
+        client = FakeClient()
+        with patch.object(client, "get_node", side_effect=failure):
+            message = self.run_cli(client)
+        self.assertIn("stage=entry_read", message)
+        self.assertIn("created_nodes=0, verified_reports=0", message)
+        for fail_at, stage in ((1, "overview_node_create"), (2, "symbol_node_create"),
+                               (3, "report_node_create")):
+            with self.subTest(stage=stage):
+                client = FakeClient()
+                original = client.create_node
+                calls = 0
+
+                def create_node(space, parent, title):
+                    nonlocal calls
+                    calls += 1
+                    if calls == fail_at:
+                        raise failure
+                    return original(space, parent, title)
+
+                with patch.object(client, "create_node", side_effect=create_node):
+                    message = self.run_cli(client)
+                self.assertIn("stage=" + stage, message)
+                self.assertIn(f"created_nodes={fail_at - 1}, verified_reports=0", message)
+                self.assertIn("permission_category=node_permission_denied", message)
+
+    def test_unexpected_index_failure_hides_raw_error_and_retains_verified_progress(self):
+        client = FakeClient()
+        original = client.append_blocks
+
+        def append_blocks(document, children, client_token=None):
+            if canonical(children[0]) == canonical(managed_notice("overview")):
+                raise RuntimeError("private_secret https://private.feishu.cn/wiki/root private_title")
+            return original(document, children, client_token=client_token)
+
+        with patch.object(client, "append_blocks", side_effect=append_blocks):
+            message = self.run_cli(client)
+        self.assertIn("stage=overview_index_sync", message)
+        self.assertIn("created_nodes=3, verified_reports=1", message)
+        self.assertIn("本次已确认", message)
+
+    def test_ambiguous_committed_report_write_keeps_original_exception_and_stage(self):
+        client = FakeClient()
+        publisher = Publisher(client, self.config, sleep=lambda _: None)
+        original = client.append_blocks
+        failure = AmbiguousWriteError(status=503)
+
+        def append_blocks(document, children, client_token=None):
+            original(document, children, client_token=client_token)
+            raise failure
+
+        with patch.object(client, "append_blocks", side_effect=append_blocks), \
+             patch("scripts.publish_feishu.trend_png", return_value=False), \
+             self.assertRaises(AmbiguousWriteError) as caught:
+            publisher.publish(self.symbols, self.reports)
+        self.assertIs(caught.exception, failure)
+        self.assertEqual(publisher.stage, "report_sync")
+        self.assertEqual(publisher.stats.created_nodes, 3)
+        self.assertEqual(publisher.stats.verified_reports, 0)
+        self.assertEqual(sum(write[0] == "append" for write in client.writes), 1)
 
 
 class ConfigurationTests(unittest.TestCase):

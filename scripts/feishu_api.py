@@ -66,6 +66,13 @@ _SCOPE = re.compile(r"(?:wiki|docx|docs|drive|board):[a-z][a-z0-9_]*(?:[.:][a-z0
 _MAX_SCOPE_LENGTH = 128
 _MAX_REQUIRED_SCOPES = 16
 _MAX_PERMISSION_VIOLATIONS = 32
+_WIKI_PERMISSION_MESSAGES = {
+    "wiki space permission denied": "wiki_space_permission_denied",
+    "node permission denied": "node_permission_denied",
+    "no source parent node permission": "no_source_parent_node_permission",
+    "no destination parent node permission": "no_destination_parent_node_permission",
+}
+_PERMISSION_CATEGORIES = frozenset(_WIKI_PERMISSION_MESSAGES.values()) | {"unknown"}
 
 
 def _operation_context(method, path):
@@ -118,17 +125,34 @@ def _required_any_scope(payload, code, protected=()):
     return _safe_scopes(candidates, protected)
 
 
+def _permission_category(payload, code):
+    """Classify only known 131006 messages; never preserve free-form text."""
+    if code != 131006:
+        return None
+    message = payload.get("msg") if isinstance(payload, dict) else None
+    if not isinstance(message, str) or len(message) > 128:
+        return "unknown"
+    return _WIKI_PERMISSION_MESSAGES.get(message.strip().lower(), "unknown")
+
+
 class FeishuError(RuntimeError):
     """Public base class; errors contain no remote message, URL, or identifiers."""
 
 
 class FeishuAPIError(FeishuError):
-    def __init__(self, reason="api_error", *, status=None, code=None, operation=None, required_any_scope=None):
+    def __init__(self, reason="api_error", *, status=None, code=None, operation=None, required_any_scope=None,
+                 permission_category=None):
         self.reason = reason if reason in _SAFE_REASONS else "api_error"
         self.status = status if type(status) is int else None
         self.code = code if type(code) is int else None
         self.operation = operation if isinstance(operation, str) and operation in _OPERATIONS else None
         self.required_any_scope = _safe_scopes(required_any_scope) if self.code == 99991672 else []
+        self.permission_category = None
+        if self.code == 131006:
+            self.permission_category = (
+                permission_category if isinstance(permission_category, str) and permission_category in _PERMISSION_CATEGORIES
+                else "unknown"
+            )
         message = (
             f"Feishu {self.reason} (HTTP {self.status if self.status is not None else 'unknown'}, "
             f"code {self.code if self.code is not None else 'unknown'})"
@@ -137,15 +161,17 @@ class FeishuAPIError(FeishuError):
             message += " operation=" + self.operation
         if self.code == 99991672:
             message += " required_any_scope=" + json.dumps(self.required_any_scope, separators=(",", ":"))
+        if self.permission_category is not None:
+            message += " permission_category=" + self.permission_category
         super().__init__(message)
 
 
 class AmbiguousWriteError(FeishuAPIError):
     """A write may have succeeded. Reconcile remote state before another write."""
 
-    def __init__(self, *, status=None, code=None, operation=None, required_any_scope=None):
+    def __init__(self, *, status=None, code=None, operation=None, required_any_scope=None, permission_category=None):
         super().__init__("ambiguous_write", status=status, code=code, operation=operation,
-                         required_any_scope=required_any_scope)
+                         required_any_scope=required_any_scope, permission_category=permission_category)
 
 
 class _TransportFailure(Exception):
@@ -342,6 +368,7 @@ class FeishuClient:
                 code = _code(payload)
                 details = {
                     "status": status, "code": code, "operation": operation,
+                    "permission_category": _permission_category(payload, code),
                     "required_any_scope": _required_any_scope(
                         payload, code, (self._app_id, self._app_secret, token, *resource_ids, *query.values())
                     ),

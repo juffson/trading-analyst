@@ -202,12 +202,40 @@ class Stats:
     verified_reports: int = 0
 
 
+DIAGNOSTIC_STAGES = {
+    "unknown": "未知阶段",
+    "dataset_validation": "研究数据校验",
+    "render_validation": "离线渲染校验",
+    "configuration": "配置校验",
+    "entry_read": "入口读取",
+    "overview_node_create": "总览节点查找／创建",
+    "symbol_node_create": "标的节点查找／创建",
+    "report_node_create": "报告节点查找／创建",
+    "report_sync": "报告渲染／同步核对",
+    "symbol_index_sync": "标的索引同步核对",
+    "overview_index_sync": "总览索引同步核对",
+}
+
+
+def _failure_context(stage: str, stats: Stats | None = None) -> str:
+    """Only fixed stages and confirmed integer counters may enter diagnostics."""
+    if not isinstance(stage, str) or stage not in DIAGNOSTIC_STAGES:
+        stage = "unknown"
+    created = stats.created_nodes if stats is not None else 0
+    verified = stats.verified_reports if stats is not None else 0
+    created = created if type(created) is int and created >= 0 else 0
+    verified = verified if type(verified) is int and verified >= 0 else 0
+    return (f"stage={stage}（{DIAGNOSTIC_STAGES[stage]}）；"
+            f"本次已确认 created_nodes={created}, verified_reports={verified}")
+
+
 class Publisher:
     def __init__(self, client: FeishuClient, config: Config, *, sleep=None):
         import time
         self.client, self.config = client, config
         self.sleep = sleep or time.sleep
         self.stats = Stats()
+        self.stage = "unknown"
         self._cache: dict[tuple[str, str], list[dict]] = {}
 
     def children(self, space: str, parent: str, *, refresh: bool = False) -> list[dict]:
@@ -250,6 +278,7 @@ class Publisher:
         return created
 
     def check(self) -> dict:
+        self.stage = "entry_read"
         root = _node(self.client.get_node(self.config.root_token), docx=False)
         if root["node_token"] != self.config.root_token:
             raise PublishError("返回的 Wiki 入口与配置不一致。")
@@ -366,6 +395,7 @@ class Publisher:
     def publish(self, symbols: list[dict], reports: list[dict], *, selected: str | None = None) -> Stats:
         parent = self.check()
         space = parent["space_id"]
+        self.stage = "overview_node_create"
         overview = self.ensure_child(space, parent["node_token"], self.config.root_title)
         self.assert_managed_or_empty(overview, "overview")
         overview_url = self.config.wiki_url(overview)
@@ -380,6 +410,7 @@ class Publisher:
                 code = symbol["symbol"]
                 title = code + " · " + symbol["name"]
                 active = selected is None or selected == code
+                self.stage = "symbol_node_create"
                 home = (self.ensure_child(space, overview["node_token"], title, symbol=code) if active else
                         self.find_child(space, overview["node_token"], title, symbol=code))
                 if home is None:
@@ -387,6 +418,7 @@ class Publisher:
                 self.assert_managed_or_empty(home, "symbol:" + code)
                 homes[code] = home
                 symbol_url = self.config.wiki_url(home)
+                self.stage = "report_node_create"
                 local_versions = {(r["trade_date"], r["revision"]) for r in by_symbol[code]}
                 for child in self.children(space, home["node_token"]):
                     match = REPORT_TITLE.fullmatch(str(child.get("title", "")))
@@ -394,10 +426,12 @@ class Publisher:
                         raise PublishError("远端含本地缺失的日期或修订；请先更新到最新 main，发布不会回退历史目录。")
                 for report in by_symbol[code]:
                     title = report["trade_date"] + " · v" + str(report["revision"])
+                    self.stage = "report_node_create"
                     node = (self.ensure_child(space, home["node_token"], title) if active else
                             self.find_child(space, home["node_token"], title))
                     if node is None:
                         continue
+                    self.stage = "report_sync"
                     chart = work / (symbol["slug"] + "-" + report["trade_date"] + "-v" + str(report["revision"]) + ".png")
                     picture = chart if trend_png(symbol, [report], chart) else None
                     wanted = _with_chart(render_report(symbol, report, symbol_url=symbol_url, overview_url=overview_url,
@@ -417,6 +451,7 @@ class Publisher:
                 code = symbol["symbol"]
                 if code not in homes:
                     continue
+                self.stage = "symbol_index_sync"
                 symbol_reports = [r for r in verified if r["symbol"] == code]
                 urls = {(day, revision): url for (item, day, revision), url in report_urls.items() if item == code}
                 chart = work / (symbol["slug"] + "-history.png")
@@ -429,6 +464,7 @@ class Publisher:
                 elif self.complete(homes[code], wanted):
                     ready_homes[code] = homes[code]
 
+            self.stage = "overview_index_sync"
             chart = work / "overview.png"
             picture = chart if overview_png(symbols, verified, chart) else None
             wanted = _with_chart(render_overview(symbols, verified, symbol_urls={code: self.config.wiki_url(node) for code, node in ready_homes.items()},
@@ -490,14 +526,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=("validate", "check", "publish"), default="validate")
     parser.add_argument("--symbol", help="只发布一个已登记标的；默认全部。")
     args = parser.parse_args(argv)
+    publisher = None
+    stage = "dataset_validation"
     try:
         symbols, reports = load_dataset(args.root)
         if args.symbol and args.symbol not in {s["symbol"] for s in symbols}:
             raise PublishError("--symbol 必须是 research/symbols.json 中已登记的代码。")
         if args.mode == "validate":
+            stage = "render_validation"
             result = validate_rendering(symbols, reports, args.symbol)
             _summary("飞书本地验证通过：{symbols} 个标的、{reports} 份分析、{blocks} 个正文块、{charts} 张趋势图；未调用飞书 API。".format(**result))
             return 0
+        stage = "configuration"
         config = Config.from_env()
         publisher = Publisher(FeishuClient(config.app_id, config.app_secret), config)
         if args.mode == "check":
@@ -510,11 +550,13 @@ def main(argv: list[str] | None = None) -> int:
     except (PublishError, ValidationError, FeishuAPIError) as error:
         # These types deliberately contain only safe messages, not raw service
         # responses, Wiki URLs, request bodies, credentials, or document IDs.
-        _summary("飞书发布未完成：" + str(error))
+        context = _failure_context(publisher.stage, publisher.stats) if publisher is not None else _failure_context(stage)
+        _summary("飞书发布未完成：" + str(error) + "；" + context)
         return 1
     except Exception:
         # Never include repr/tracebacks with request objects or environment data.
-        _summary("飞书发布未完成：发生未预期错误，已停止；请先运行 validate 并检查依赖和配置。")
+        context = _failure_context(publisher.stage, publisher.stats) if publisher is not None else _failure_context(stage)
+        _summary("飞书发布未完成：发生未预期错误，已停止；请先运行 validate 并检查依赖和配置。" + context)
         return 1
 
 
