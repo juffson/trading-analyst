@@ -1,0 +1,975 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/juffson/trading-analyst/main/research/schema.json",
+  "title": "Public trading research v1",
+  "description": "Strict structural schema for either a symbol catalog or a public analysis report. scripts/validate_research.py enforces additional privacy, identity, date, revision and price invariants.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/catalog"
+    },
+    {
+      "$ref": "#/$defs/report"
+    }
+  ],
+  "$defs": {
+    "symbol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "name",
+        "market",
+        "currency",
+        "slug"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^(?:[0-9]{6}\\.(?:SZ|SH)|[0-9]{4,5}\\.HK|[A-Z][A-Z0-9.-]{0,14}\\.US)$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "market": {
+          "enum": [
+            "CN",
+            "HK",
+            "US"
+          ]
+        },
+        "currency": {
+          "enum": [
+            "CNY",
+            "HKD",
+            "USD"
+          ]
+        },
+        "slug": {
+          "type": "string",
+          "maxLength": 100,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "market": {
+                "const": "CN"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "currency": {
+                "const": "CNY"
+              },
+              "symbol": {
+                "pattern": "\\.S[HZ]$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "market": {
+                "const": "HK"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "currency": {
+                "const": "HKD"
+              },
+              "symbol": {
+                "pattern": "\\.HK$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "market": {
+                "const": "US"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "currency": {
+                "const": "USD"
+              },
+              "symbol": {
+                "pattern": "\\.US$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "symbols"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "symbols": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/symbol"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "close",
+        "previous_close",
+        "change_pct",
+        "open",
+        "high",
+        "low"
+      ],
+      "properties": {
+        "close": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_close": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "open": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "high": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "low": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "indicator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "note"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "direction",
+        "evidence",
+        "source_ids"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "direction": {
+          "enum": [
+            "positive",
+            "negative",
+            "mixed",
+            "neutral",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30000,
+          "pattern": "\\S"
+        },
+        "source_ids": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "priceLevels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_low",
+        "entry_high",
+        "target",
+        "stop",
+        "take_profit_1",
+        "take_profit_2",
+        "target_type",
+        "target_horizon",
+        "entry_valid_until",
+        "status",
+        "trigger",
+        "invalidation",
+        "basis"
+      ],
+      "properties": {
+        "entry_low": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry_high": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "take_profit_1": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "take_profit_2": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_type": {
+          "enum": [
+            "technical",
+            "fundamental",
+            "model",
+            null
+          ]
+        },
+        "target_horizon": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry_valid_until": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "active",
+            "conditional",
+            "expired",
+            "unavailable"
+          ]
+        },
+        "trigger": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "invalidation": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "price",
+        "condition",
+        "horizon"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "price": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30000,
+          "pattern": "\\S"
+        },
+        "horizon": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30000,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "heading",
+        "body"
+      ],
+      "properties": {
+        "heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30000,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_trade_date",
+        "narrative"
+      ],
+      "properties": {
+        "previous_trade_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "narrative": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30000,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "url",
+        "published_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 4000,
+          "pattern": "^https://"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date",
+        "close"
+      ],
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "close": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "note"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "fresh_analysis",
+            "historical_backfill",
+            "validation"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "\\S"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30000,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "symbol",
+        "trade_date",
+        "revision",
+        "data_as_of",
+        "generated_at",
+        "report_kind",
+        "outlook",
+        "analysis_quality",
+        "headline",
+        "summary",
+        "market_snapshot",
+        "indicators",
+        "drivers",
+        "price_levels",
+        "scenarios",
+        "sections",
+        "comparison",
+        "sources",
+        "limitations",
+        "price_history",
+        "provenance"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "symbol": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^(?:[0-9]{6}\\.(?:SZ|SH)|[0-9]{4,5}\\.HK|[A-Z][A-Z0-9.-]{0,14}\\.US)$"
+        },
+        "trade_date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "data_as_of": {
+          "description": "行情截止时间（带时区），独立于报告生成时间；收盘后资讯另以来源 published_at 注明，不回写行情截止时间。",
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "report_kind": {
+          "const": "closing"
+        },
+        "outlook": {
+          "enum": [
+            "Strong Bullish",
+            "Bullish",
+            "Neutral",
+            "Bearish",
+            "Strong Bearish",
+            "Unknown"
+          ]
+        },
+        "analysis_quality": {
+          "enum": [
+            "pass",
+            "degraded",
+            "blocked"
+          ]
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30000,
+          "pattern": "\\S"
+        },
+        "market_snapshot": {
+          "$ref": "#/$defs/snapshot"
+        },
+        "indicators": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/indicator"
+          }
+        },
+        "drivers": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/driver"
+          }
+        },
+        "price_levels": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/priceLevels"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scenarios": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/scenario"
+          }
+        },
+        "sections": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/comparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30000,
+            "pattern": "\\S"
+          }
+        },
+        "price_history": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/history"
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "analysis_quality": {
+                "enum": [
+                  "degraded",
+                  "blocked"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitations": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysis_quality": {
+                "const": "blocked"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outlook": {
+                "const": "Unknown"
+              },
+              "price_levels": {
+                "type": "null"
+              },
+              "scenarios": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "market_snapshot": {
+                "properties": {
+                  "close": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "analysis_quality": {
+                "const": "blocked"
+              },
+              "outlook": {
+                "const": "Unknown"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysis_quality": {
+                "const": "pass"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outlook": {
+                "not": {
+                  "const": "Unknown"
+                }
+              },
+              "sources": {
+                "minItems": 1
+              },
+              "data_as_of": {
+                "description": "行情截止时间（带时区）；收盘后资讯使用来源自己的 published_at。",
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+              },
+              "market_snapshot": {
+                "properties": {
+                  "close": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "kind": {
+                    "const": "validation"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "analysis_quality": {
+                "const": "blocked"
+              },
+              "outlook": {
+                "const": "Unknown"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

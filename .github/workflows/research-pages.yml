@@ -1,0 +1,71 @@
+name: Research Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research/**'
+      - 'scripts/build_research_site.py'
+      - 'scripts/validate_research.py'
+      - 'tests/test_research.py'
+      - '.github/workflows/research-pages.yml'
+  pull_request:
+    paths:
+      - 'research/**'
+      - 'scripts/build_research_site.py'
+      - 'scripts/validate_research.py'
+      - 'tests/test_research.py'
+      - '.github/workflows/research-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-pages-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Test report contract
+        run: python3 -m unittest discover -s tests -p 'test_research.py'
+      - name: Validate public research data
+        env:
+          RESEARCH_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$RESEARCH_BASE_REF" ] && [ "$RESEARCH_BASE_REF" != "0000000000000000000000000000000000000000" ]; then
+            python3 scripts/validate_research.py --root . --base-ref "$RESEARCH_BASE_REF"
+          else
+            python3 scripts/validate_research.py --root .
+          fi
+      - name: Build hierarchical research site
+        run: python3 scripts/build_research_site.py --root . --output _site --base-path /trading-analyst
+      - name: Upload generated site only
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Deploy research site
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -12,10 +12,39 @@ skills/                  三个可独立安装的 Agent Skill（本仓库的主�
 quant-studio/            本地工具：Quant Lab 工作台（Rust web UI）+ auto-trader 自动化循环
 ├── src/ static/           因子浏览、回测看图、模拟/实盘视图、Skill 命令生成
 └── auto-trader/           「研究→回测→模拟交易」cron 流水线（Python）
+research/                公开研究站：标的登记、纯分析 JSON 与静态页面资源
+├── reports/              按标的和交易日归档，修订保留原版
+└── CONTRACT.md           Task 写入合同
+scripts/                 研究校验、静态站生成器与飞书 Wiki 发布器
+.github/workflows/       校验、GitHub Pages 发布与飞书自动同步
 ```
 
 **`skills/` 下的是 Skill，`quant-studio/` 是本地工具**，不是 Skill、不用装进
 `~/.claude/skills/`。工具会读 `skills/` 里的 Skill 目录，所以别把 `skills/` 挪走或改名。
+
+## 公开研究站（GitHub Pages）
+
+部署后的[研究总览](https://juffson.github.io/trading-analyst/)采用“总览 → 标的 → 交易日报告”三级结构，保存最新判断、真实历史行情及每次报告的分析价位。每份报告都有独立地址，历史原版和后续修订可分别查看。
+
+数据入口是 `research/reports/<symbol>/YYYY-MM-DD.json`。ChatGPT Task 通过 GitHub 插件提交一份符合合同的纯分析 JSON 后，GitHub Actions 自动校验、重建索引并部署网页，无需 Task 操作网页或修改 HTML。报告格式与任务提示见 [research/README.md](research/README.md)，完整字段规则见 [research/CONTRACT.md](research/CONTRACT.md)。
+
+首次部署需要在仓库 **Settings → Pages → Source** 选择 **GitHub Actions**。本地预览使用 Python 3.10+：
+
+```bash
+python3 scripts/validate_research.py --root .
+python3 scripts/build_research_site.py --root . --output _site --base-path ''
+python3 -m http.server 8000 --directory _site
+```
+
+公开站只接收市场和公司分析；个人账户、持仓与交易记录不进入报告。现有 Skill 与 Quant Studio 继续使用原来的路径和运行方式。
+
+## 飞书 Wiki 自动发布
+
+工作流 **Publish research to Feishu** 读取同一份纯分析 JSON，在配置的 Wiki 入口下建立独立的“总览 → 标的 → 日期与修订报告”分支，并上传真实历史价格趋势图。每日提交 `research/` 数据即可触发同步；相同报告重跑跳过，部分失败可按已写内容恢复，日期报告保留原版。
+
+在仓库 **Settings → Secrets and variables → Actions** 配置 `FEISHU_APP_ID`、`FEISHU_APP_SECRET`、`FEISHU_WIKI_ROOT_TOKEN`。第三项推荐填写完整 Wiki 入口链接。进入 **Actions → Publish research to Feishu → Run workflow**，先运行 `check` 只读检查，再运行 `publish` 写入。使用长期 App ID/Secret，每次运行自行获取应用身份凭证，无需手工保存两小时 Token。
+
+未配置凭据时可运行 `validate` 检查渲染和图表，不调用飞书；自动 push 则提示配置缺失并跳过同步。飞书发布与 Pages 部署相互独立。完整权限、变量、首次运行和故障恢复说明见 **[research/FEISHU.md](research/FEISHU.md)**。
 
 ## 仓库包含的 Skill
 

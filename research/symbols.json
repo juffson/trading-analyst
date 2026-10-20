@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "symbols": [
+    {
+      "symbol": "002463.SZ",
+      "name": "沪电股份",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "002463-sz"
+    },
+    {
+      "symbol": "002594.SZ",
+      "name": "比亚迪",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "002594-sz"
+    },
+    {
+      "symbol": "513130.SH",
+      "name": "恒生科技ETF",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "513130-sh"
+    },
+    {
+      "symbol": "9988.HK",
+      "name": "阿里巴巴",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "9988-hk"
+    },
+    {
+      "symbol": "1810.HK",
+      "name": "小米集团",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "1810-hk"
+    },
+    {
+      "symbol": "3032.HK",
+      "name": "恒生科技ETF",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "3032-hk"
+    },
+    {
+      "symbol": "QCOM.US",
+      "name": "高通",
+      "market": "US",
+      "currency": "USD",
+      "slug": "qcom-us"
+    },
+    {
+      "symbol": "GOOG.US",
+      "name": "Alphabet",
+      "market": "US",
+      "currency": "USD",
+      "slug": "goog-us"
+    },
+    {
+      "symbol": "LASE.US",
+      "name": "Laser Photonics",
+      "market": "US",
+      "currency": "USD",
+      "slug": "lase-us"
+    }
+  ]
+}
