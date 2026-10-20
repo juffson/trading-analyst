@@ -84,6 +84,34 @@
       "market": "US",
       "currency": "USD",
       "slug": "mcd-us"
+    },
+    {
+      "symbol": "300476.SZ",
+      "name": "胜宏科技",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "300476-sz"
+    },
+    {
+      "symbol": "2476.HK",
+      "name": "胜宏科技",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "2476-hk"
+    },
+    {
+      "symbol": "603588.SH",
+      "name": "高能环境",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "603588-sh"
+    },
+    {
+      "symbol": "688322.SH",
+      "name": "奥比中光-W",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "688322-sh"
     }
   ]
 }
