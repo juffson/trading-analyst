@@ -26,9 +26,11 @@ scripts/                 研究校验、静态站生成器与飞书 Wiki 发布�
 
 部署后的[研究总览](https://juffson.github.io/trading-analyst/)采用“总览 → 标的 → 交易日报告”三级结构，保存最新判断、真实历史行情及每次报告的分析价位。每份报告都有独立地址，历史原版和后续修订可分别查看。
 
-数据入口是 `research/reports/<symbol>/YYYY-MM-DD.json`。ChatGPT Task 通过 GitHub 插件提交一份符合合同的纯分析 JSON 后，GitHub Actions 自动校验、重建索引并部署网页，无需 Task 操作网页或修改 HTML。报告格式与任务提示见 [research/README.md](research/README.md)，完整字段规则见 [research/CONTRACT.md](research/CONTRACT.md)。
+数据入口是 `research/reports/<symbol>/YYYY-MM-DD.json`。启用 Pages 后，ChatGPT Task 通过 GitHub 插件提交一份符合合同的纯分析 JSON，GitHub Actions 自动校验、重建索引并部署网页，无需 Task 操作网页或修改 HTML。报告格式与任务提示见 [research/README.md](research/README.md)，完整字段规则见 [research/CONTRACT.md](research/CONTRACT.md)。
 
-首次部署需要在仓库 **Settings → Pages → Source** 选择 **GitHub Actions**。本地预览使用 Python 3.10+：
+Pages 默认关闭，工作流的构建和部署作业均跳过。首次部署需要在仓库 **Settings → Pages → Source** 选择 **GitHub Actions**，并在 **Settings → Secrets and variables → Actions → Variables** 设置 Repository variable `ENABLE_RESEARCH_PAGES=true`。仅使用飞书时，保持该变量未设置或设为 `false`。
+
+本地预览使用 Python 3.10+：
 
 ```bash
 python3 scripts/validate_research.py --root .

@@ -27,6 +27,8 @@ concurrency:
 
 jobs:
   build:
+    # Leave unset for Feishu-only publishing; Pages requires explicit opt-in.
+    if: vars.ENABLE_RESEARCH_PAGES == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -53,7 +55,7 @@ jobs:
           path: _site
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: vars.ENABLE_RESEARCH_PAGES == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
