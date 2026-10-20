@@ -18,6 +18,7 @@ https://open.feishu.cn/document/server-docs/docs/docs/docx-v1/document-block/bat
 https://open.feishu.cn/document/server-docs/docs/docs/docx-v1/document-block/patch
 https://open.feishu.cn/document/server-docs/docs/drive-v1/media/upload_all
 https://open.feishu.cn/document/docs/docs/faq
+https://open.feishu.cn/document/faq/trouble-shooting/how-to-fix-the-99991672-error
 """
 
 from __future__ import annotations
@@ -47,6 +48,74 @@ _SAFE_REASONS = {
     "api_error", "authentication_error", "invalid_response", "invalid_pagination",
     "transport_error", "rate_limited", "ambiguous_write", "redirect_rejected",
 }
+# Never derive a log label by formatting a request path, URL, or query.
+_RESOURCE_PART = r"([A-Za-z0-9_-]{1,512})"
+_OPERATION_ROUTES = (
+    ("GET", re.compile(r"/open-apis/wiki/v2/spaces/get_node"), "wiki.get_node"),
+    ("GET", re.compile(r"/open-apis/wiki/v2/spaces/" + _RESOURCE_PART + r"/nodes"), "wiki.list_nodes"),
+    ("POST", re.compile(r"/open-apis/wiki/v2/spaces/" + _RESOURCE_PART + r"/nodes"), "wiki.create_node"),
+    ("GET", re.compile(r"/open-apis/docx/v1/documents/" + _RESOURCE_PART + r"/blocks"), "docx.list_blocks"),
+    ("GET", re.compile(r"/open-apis/docx/v1/documents/" + _RESOURCE_PART + r"/blocks/" + _RESOURCE_PART + r"/children"), "docx.list_children"),
+    ("POST", re.compile(r"/open-apis/docx/v1/documents/" + _RESOURCE_PART + r"/blocks/" + _RESOURCE_PART + r"/children"), "docx.append_blocks"),
+    ("DELETE", re.compile(r"/open-apis/docx/v1/documents/" + _RESOURCE_PART + r"/blocks/" + _RESOURCE_PART + r"/children/batch_delete"), "docx.delete_children"),
+    ("PATCH", re.compile(r"/open-apis/docx/v1/documents/" + _RESOURCE_PART + r"/blocks/" + _RESOURCE_PART), "docx.replace_image"),
+    ("POST", re.compile(r"/open-apis/drive/v1/medias/upload_all"), "drive.upload_image"),
+)
+_OPERATIONS = frozenset(route[2] for route in _OPERATION_ROUTES) | {"unknown"}
+_SCOPE = re.compile(r"(?:wiki|docx|docs|drive|board):[a-z][a-z0-9_]*(?:[.:][a-z0-9_]+)*\Z", re.ASCII)
+_MAX_SCOPE_LENGTH = 128
+_MAX_REQUIRED_SCOPES = 16
+_MAX_PERMISSION_VIOLATIONS = 32
+
+
+def _operation_context(method, path):
+    for expected_method, pattern, operation in _OPERATION_ROUTES:
+        if method == expected_method:
+            match = pattern.fullmatch(path)
+            if match:
+                return operation, match.groups()
+    return "unknown", ()
+
+
+def _safe_scopes(values, protected=()):
+    """Bounded public scope identifiers only, never arbitrary response strings."""
+    if not isinstance(values, (list, tuple)):
+        return []
+    result = []
+    # Real app/resource/access tokens are long; short test identifiers can also
+    # be ordinary scope words and must not suppress an entire API namespace.
+    protected = tuple(value for value in protected if isinstance(value, str) and len(value) >= 8)
+    for value in values[:_MAX_PERMISSION_VIOLATIONS]:
+        if (
+            not isinstance(value, str) or not 1 <= len(value) <= _MAX_SCOPE_LENGTH
+            or not _SCOPE.fullmatch(value) or any(secret in value for secret in protected)
+        ):
+            continue
+        if value not in result:
+            result.append(value)
+        if len(result) == _MAX_REQUIRED_SCOPES:
+            break
+    return result
+
+
+def _required_any_scope(payload, code, protected=()):
+    if code != 99991672 or not isinstance(payload, dict):
+        return []
+    error = payload.get("error")
+    violations = error.get("permission_violations") if isinstance(error, dict) else None
+    if not isinstance(violations, list):
+        return []
+    candidates = []
+    for violation in violations[:_MAX_PERMISSION_VIOLATIONS]:
+        if not isinstance(violation, dict):
+            continue
+        if violation.get("type") == "action_scope_required":
+            candidates.append(violation.get("subject"))
+        elif "type" not in violation:
+            # The older official schema has scope/url instead of type/subject.
+            # Never inspect url, msg, helps, log_id, or other free-form fields.
+            candidates.append(violation.get("scope"))
+    return _safe_scopes(candidates, protected)
 
 
 class FeishuError(RuntimeError):
@@ -54,21 +123,29 @@ class FeishuError(RuntimeError):
 
 
 class FeishuAPIError(FeishuError):
-    def __init__(self, reason="api_error", *, status=None, code=None):
+    def __init__(self, reason="api_error", *, status=None, code=None, operation=None, required_any_scope=None):
         self.reason = reason if reason in _SAFE_REASONS else "api_error"
         self.status = status if type(status) is int else None
         self.code = code if type(code) is int else None
-        super().__init__(
+        self.operation = operation if isinstance(operation, str) and operation in _OPERATIONS else None
+        self.required_any_scope = _safe_scopes(required_any_scope) if self.code == 99991672 else []
+        message = (
             f"Feishu {self.reason} (HTTP {self.status if self.status is not None else 'unknown'}, "
             f"code {self.code if self.code is not None else 'unknown'})"
         )
+        if self.operation:
+            message += " operation=" + self.operation
+        if self.code == 99991672:
+            message += " required_any_scope=" + json.dumps(self.required_any_scope, separators=(",", ":"))
+        super().__init__(message)
 
 
 class AmbiguousWriteError(FeishuAPIError):
     """A write may have succeeded. Reconcile remote state before another write."""
 
-    def __init__(self, *, status=None, code=None):
-        super().__init__("ambiguous_write", status=status, code=code)
+    def __init__(self, *, status=None, code=None, operation=None, required_any_scope=None):
+        super().__init__("ambiguous_write", status=status, code=code, operation=operation,
+                         required_any_scope=required_any_scope)
 
 
 class _TransportFailure(Exception):
@@ -236,6 +313,7 @@ class FeishuClient:
 
     def _request(self, method, path, *, query=None, body=None, content_type="application/json; charset=utf-8"):
         query = dict(query or {})
+        operation, resource_ids = _operation_context(method, path)
         url = _API_ORIGIN + path + ("?" + urlencode(query) if query else "")
         write = method != "GET"
         retry_safe = not write or bool(query.get("client_token"))
@@ -247,7 +325,7 @@ class FeishuClient:
                     token = self._get_access_token()
                 except FeishuAPIError as error:
                     if may_have_applied:
-                        raise AmbiguousWriteError(status=error.status, code=error.code) from None
+                        raise AmbiguousWriteError(status=error.status, code=error.code, operation=operation) from None
                     raise
                 try:
                     status, payload = self._transmit(
@@ -259,16 +337,22 @@ class FeishuClient:
                         self._backoff(attempt)
                         continue
                     if write:
-                        raise AmbiguousWriteError() from None
-                    raise FeishuAPIError("transport_error") from None
+                        raise AmbiguousWriteError(operation=operation) from None
+                    raise FeishuAPIError("transport_error", operation=operation) from None
                 code = _code(payload)
+                details = {
+                    "status": status, "code": code, "operation": operation,
+                    "required_any_scope": _required_any_scope(
+                        payload, code, (self._app_id, self._app_secret, token, *resource_ids, *query.values())
+                    ),
+                }
                 if 200 <= status < 300 and code == 0:
                     data = payload.get("data")
                     if isinstance(data, dict):
                         return data
                     if write:
-                        raise AmbiguousWriteError(status=status, code=code)
-                    raise FeishuAPIError("invalid_response", status=status, code=code)
+                        raise AmbiguousWriteError(**details)
+                    raise FeishuAPIError("invalid_response", **details)
                 if (status == 401 or code == 99991663) and not refreshed and attempt + 1 < self.MAX_ATTEMPTS:
                     # An explicit auth rejection cannot have applied the operation.
                     self._access_token = None
@@ -283,12 +367,12 @@ class FeishuClient:
                         self._backoff(attempt)
                         continue
                     if may_have_applied:
-                        raise AmbiguousWriteError(status=status, code=code)
-                    raise FeishuAPIError("rate_limited" if rate_limited else "api_error", status=status, code=code)
+                        raise AmbiguousWriteError(**details)
+                    raise FeishuAPIError("rate_limited" if rate_limited else "api_error", **details)
                 if may_have_applied or (write and 200 <= status < 300 and code is None):
-                    raise AmbiguousWriteError(status=status, code=code)
-                raise FeishuAPIError("api_error", status=status, code=code)
-        raise FeishuAPIError("api_error")
+                    raise AmbiguousWriteError(**details)
+                raise FeishuAPIError("api_error", **details)
+        raise FeishuAPIError("api_error", operation=operation)
 
     def _pages(self, path, query):
         result, seen = [], set()

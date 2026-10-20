@@ -350,6 +350,136 @@ class FeishuClientTests(unittest.TestCase):
             self.assertEqual(stdout.getvalue() + stderr.getvalue(), "")
             self.assertEqual(len(transport.api_requests), 1)
 
+    def test_scope_denial_reports_static_operation_and_modern_permission_fields(self):
+        payload = {"code": 99991672, "error": {"permission_violations": [
+            {"type": "action_scope_required", "subject": "wiki:node:read"},
+            {"type": "action_scope_required", "subject": "wiki:wiki"},
+            {"type": "action_scope_required", "subject": "wiki:node:read"},
+        ]}}
+        client, transport = self.client(auth(), (400, payload))
+        with self.assertRaises(FeishuAPIError) as caught:
+            client.get_node("private-node-fixture")
+        error = caught.exception
+        self.assertEqual((error.reason, error.status, error.code), ("api_error", 400, 99991672))
+        self.assertEqual(error.operation, "wiki.get_node")
+        self.assertEqual(error.required_any_scope, ["wiki:node:read", "wiki:wiki"])
+        self.assertIn('operation=wiki.get_node required_any_scope=["wiki:node:read","wiki:wiki"]', str(error))
+        self.assertNotIn("private-node-fixture", str(error))
+        self.assertEqual(len(transport.api_requests), 1)
+
+    def test_legacy_scope_fields_and_all_public_operations_have_safe_labels(self):
+        payload = {"code": 99991672, "error": {"permission_violations": [
+            {"scope": "wiki:wiki", "url": "https://tenant.feishu.cn/wiki/private-node"},
+        ]}}
+        with tempfile.TemporaryDirectory() as directory:
+            png = Path(directory) / "trend.png"
+            png.write_bytes(PNG)
+            calls = [
+                ("wiki.get_node", lambda c: c.get_node("private-node")),
+                ("wiki.list_nodes", lambda c: c.list_nodes("private-space", "private-node")),
+                ("wiki.create_node", lambda c: c.create_node("private-space", "private-node", "private title")),
+                ("docx.list_blocks", lambda c: c.list_blocks("private-document")),
+                ("docx.list_children", lambda c: c.list_children("private-document")),
+                ("docx.append_blocks", lambda c: c.append_blocks("private-document", [{"block_type": 2}], "batch")),
+                ("docx.delete_children", lambda c: c.delete_children("private-document", 0, 1)),
+                ("docx.replace_image", lambda c: c.replace_image("private-document", "private-image", "private-media")),
+                ("drive.upload_image", lambda c: c.upload_image("private-document", "private-image", png)),
+            ]
+            for operation, call in calls:
+                with self.subTest(operation=operation):
+                    client, transport = self.client(auth(), (400, payload))
+                    with self.assertRaises(FeishuAPIError) as caught:
+                        call(client)
+                    self.assertEqual(caught.exception.operation, operation)
+                    self.assertEqual(caught.exception.required_any_scope, ["wiki:wiki"])
+                    self.assertNotIsInstance(caught.exception, AmbiguousWriteError)
+                    self.assertNotIn("private", str(caught.exception))
+                    self.assertNotIn("https://", str(caught.exception))
+                    self.assertEqual(len(transport.api_requests), 1)
+
+    def test_scope_diagnostics_reject_credentials_private_ids_and_non_scope_fields(self):
+        payload = {
+            "code": 99991672,
+            "msg": "clifixture credentialfixture bearerfixture privatefixture https://tenant.feishu.cn/wiki/privatefixture",
+            "error": {
+                "permission_violations": [
+                    {"type": "action_scope_required", "subject": "wiki:clifixture"},
+                    {"type": "action_scope_required", "subject": "wiki:credentialfixture"},
+                    {"type": "action_scope_required", "subject": "wiki:bearerfixture"},
+                    {"type": "action_scope_required", "subject": "wiki:privatefixture"},
+                    {"type": "action_scope_required", "subject": "https://tenant.feishu.cn/wiki/privatefixture"},
+                    {"type": "action_scope_required", "subject": "im:message"},
+                    {"type": "action_scope_required", "subject": "wiki:node:read\ncredentialfixture"},
+                    {"type": "action_scope_required", "subject": "wiki:读取"},
+                    {"type": "action_scope_required", "subject": "wiki:" + "x" * 128},
+                    {"type": "action_privilege_required", "subject": "wiki:ignored", "scope": "wiki:ignored"},
+                    {"type": "action_scope_required", "subject": {"value": "wiki:ignored"}},
+                    {"scope": ["wiki:ignored"]},
+                    {"url": "wiki:ignored", "description": "wiki:ignored"},
+                    {"type": "action_scope_required", "subject": "docs:document.media:upload"},
+                    {"scope": "drive:drive"},
+                    {"scope": "board:scope_fixture"},
+                ],
+                "helps": [{"url": "wiki:ignored", "description": "wiki:ignored"}],
+                "log_id": "wiki:ignored", "message": "wiki:ignored",
+            },
+        }
+        transport = Transport(self.clock, [auth("bearerfixture"), (400, payload)])
+        client = FeishuClient("clifixture", "credentialfixture", opener=transport, sleep=self.clock.sleep)
+        with self.assertRaises(FeishuAPIError) as caught:
+            client.get_node("privatefixture")
+        error = caught.exception
+        self.assertEqual(error.required_any_scope, ["docs:document.media:upload", "drive:drive", "board:scope_fixture"])
+        rendered = str(error) + repr(error) + json.dumps(error.__dict__)
+        for forbidden in ("clifixture", "credentialfixture", "bearerfixture", "privatefixture", "https://", "im:message", "ignored", "读取"):
+            self.assertNotIn(forbidden, rendered)
+
+    def test_scope_diagnostics_are_bounded_and_never_fall_back_to_message_or_url(self):
+        violations = [{"scope": f"wiki:scope_{i}"} for i in range(50)]
+        client, transport = self.client(auth(), (400, {"code": 99991672, "error": {"permission_violations": violations}}))
+        with self.assertRaises(FeishuAPIError) as caught:
+            client.get_node("root")
+        self.assertEqual(caught.exception.required_any_scope, [f"wiki:scope_{i}" for i in range(16)])
+        for invalid in (None, "wiki:wiki", {"scope": "wiki:wiki"}, [None, "wiki:wiki"]):
+            payload = {"code": 99991672, "msg": "wiki:wiki", "error": {
+                "permission_violations": invalid, "helps": [{"url": "wiki:wiki"}], "log_id": "wiki:wiki",
+            }}
+            client, transport = self.client(auth(), (400, payload))
+            with self.assertRaises(FeishuAPIError) as caught:
+                client.get_node("root")
+            self.assertEqual(caught.exception.required_any_scope, [])
+            self.assertNotIn("wiki:wiki", str(caught.exception))
+
+    def test_other_errors_do_not_emit_scopes_and_unknown_routes_do_not_emit_paths(self):
+        payload = {"code": 131006, "error": {"permission_violations": [{"scope": "wiki:wiki"}]}}
+        client, transport = self.client(auth(), (400, payload))
+        with self.assertRaises(FeishuAPIError) as caught:
+            client.get_node("private-node")
+        self.assertEqual(caught.exception.operation, "wiki.get_node")
+        self.assertEqual(caught.exception.required_any_scope, [])
+        self.assertNotIn("required_any_scope", str(caught.exception))
+        payload["code"] = 99991672
+        client, transport = self.client(auth(), (400, payload))
+        with self.assertRaises(FeishuAPIError) as caught:
+            client._request("GET", "/open-apis/unknown/private-node", query={"token": "private-token"})
+        self.assertEqual(caught.exception.operation, "unknown")
+        self.assertNotIn("private", str(caught.exception))
+        self.assertNotIn("/open-apis/", str(caught.exception))
+
+    def test_scope_diagnosis_does_not_downgrade_an_earlier_uncertain_write(self):
+        payload = {"code": 99991672, "error": {"permission_violations": [
+            {"type": "action_scope_required", "subject": "docx:document"},
+        ]}}
+        client, transport = self.client(auth(), TimeoutError(), (400, payload))
+        with self.assertRaises(AmbiguousWriteError) as caught:
+            client.append_blocks("private-document", [{"block_type": 2}], "persistent-key")
+        self.assertEqual((caught.exception.reason, caught.exception.status, caught.exception.code),
+                         ("ambiguous_write", 400, 99991672))
+        self.assertEqual(caught.exception.operation, "docx.append_blocks")
+        self.assertEqual(caught.exception.required_any_scope, ["docx:document"])
+        self.assertEqual(len(transport.api_requests), 2)
+        self.assertEqual({query(r)["client_token"][0] for r in transport.api_requests}, {"persistent-key"})
+
     def test_default_transport_blocks_redirects_without_contacting_destination(self):
         client = FeishuClient("fixture", "fixture")
         handlers = client._open.__self__.handlers
