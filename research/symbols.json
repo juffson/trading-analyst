@@ -70,6 +70,13 @@
       "market": "US",
       "currency": "USD",
       "slug": "lase-us"
+    },
+    {
+      "symbol": "601138.SH",
+      "name": "工业富联",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "601138-sh"
     }
   ]
 }
