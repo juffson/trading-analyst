@@ -188,7 +188,8 @@ class NativeBlocksTests(unittest.TestCase):
         self.assertIn("第二修订独立标题", text_of(blocks))
         self.assertIn("当日最新修订", text_of(blocks))
         goog = next(symbol for symbol in self.symbols if symbol["symbol"] == "GOOG.US")
-        empty = render.render_symbol(goog, self.reports, report_urls={}, overview_url=self.overview_url)
+        # Empty-state coverage must not depend on GOOG having no live reports.
+        empty = render.render_symbol(goog, [], report_urls={}, overview_url=self.overview_url)
         self.assertIn("等待首份研究", text_of(empty))
         self.assertIn("不生成方向", text_of(empty))
         self.assertNotIn("当时目标：", text_of(empty))
@@ -202,7 +203,9 @@ class NativeBlocksTests(unittest.TestCase):
         for symbol in self.symbols:
             self.assertIn(symbol["symbol"], text)
             self.assertIn(symbol_urls[symbol["symbol"]], all_links(blocks))
-        self.assertIn("等待首份研究", text)
+        # Keep the full-data checks above and exercise an explicit empty dataset.
+        empty_blocks = render.render_overview(self.symbols, [], symbol_urls=symbol_urls, report_urls={})
+        self.assertIn("等待首份研究", text_of(empty_blocks))
         self.assertIn("A股 / CNY", text)
         self.assertIn("港股 / HKD", text)
         self.assertIn("美股 / USD", text)

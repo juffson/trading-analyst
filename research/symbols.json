@@ -77,6 +77,13 @@
       "market": "CN",
       "currency": "CNY",
       "slug": "601138-sh"
+    },
+    {
+      "symbol": "MCD.US",
+      "name": "麦当劳",
+      "market": "US",
+      "currency": "USD",
+      "slug": "mcd-us"
     }
   ]
 }
