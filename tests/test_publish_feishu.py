@@ -214,7 +214,10 @@ class PublishRecoveryTests(unittest.TestCase):
     def test_full_hierarchy_preserves_original_and_reruns_without_writes(self):
         symbols, reports = load_dataset(ROOT)
         symbols = [s for s in symbols if s["symbol"] in {"QCOM.US", "GOOG.US"}]
-        reports = [r for r in reports if r["symbol"] == "QCOM.US"]
+        # This scenario has one report; archive growth must not change its fixture.
+        reports = [next(r for r in reports
+                        if (r["symbol"], r["trade_date"], r["revision"]) ==
+                        ("QCOM.US", "2026-10-19", 1))]
         original = deepcopy(self.client.docs["rootdoc"])
         with patch("scripts.publish_feishu.trend_png", return_value=False), patch("scripts.publish_feishu.overview_png", return_value=False):
             result = self.publisher.publish(symbols, reports)
@@ -294,7 +297,10 @@ class PublishDiagnosticTests(unittest.TestCase):
     def setUp(self):
         symbols, reports = load_dataset(ROOT)
         self.symbols = [s for s in symbols if s["symbol"] == "QCOM.US"]
-        self.reports = [r for r in reports if r["symbol"] == "QCOM.US"]
+        # Keep diagnostic progress counts tied to the original one-report fixture.
+        self.reports = [next(r for r in reports
+                             if (r["symbol"], r["trade_date"], r["revision"]) ==
+                             ("QCOM.US", "2026-10-19", 1))]
         self.config = Config("private_app", "private_secret", "root",
                              "https://private.feishu.cn", "private_title")
 
