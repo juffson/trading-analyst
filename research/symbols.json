@@ -112,6 +112,13 @@
       "market": "CN",
       "currency": "CNY",
       "slug": "688322-sh"
+    },
+    {
+      "symbol": "000636.SZ",
+      "name": "风华高科",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "000636-sz"
     }
   ]
 }
