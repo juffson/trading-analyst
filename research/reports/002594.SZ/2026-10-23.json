@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "symbol": "002594.SZ",
+  "trade_date": "2026-10-23",
+  "revision": 1,
+  "data_as_of": "2026-10-23T07:00:00Z",
+  "generated_at": "2026-10-26T03:27:20.419Z",
+  "report_kind": "closing",
+  "outlook": "Neutral",
+  "analysis_quality": "degraded",
+  "headline": "放量反弹，但日内新低78.49，尚不足确认反转",
+  "summary": "比亚迪在2026-10-23正式收盘81.42CNY，较前收+1.75%；放量反弹，但日内新低78.49，尚不足确认反转。本次于2026-10-26补录历史收盘，不能看作当日实时形成的判断。尚无证据充分的完整新买入和风险退出计划。",
+  "market_snapshot": {
+    "close": 81.42,
+    "previous_close": 80.02,
+    "change_pct": 1.74956261,
+    "open": 79.5,
+    "high": 81.65,
+    "low": 78.49
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 81.648,
+      "unit": "CNY",
+      "note": "前复权常规日K计算，目标日不含未来日线"
+    },
+    {
+      "name": "MA20",
+      "value": 83.153,
+      "unit": "CNY",
+      "note": "前复权常规日K，最近20个交易日收盘平均"
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 42.3,
+      "unit": "0–100",
+      "note": "根据约300根前复权日线计算，截取展示到两位"
+    },
+    {
+      "name": "相对20日均量",
+      "value": 1.49,
+      "unit": "倍",
+      "note": "当天成交量相对前20日均量，分母不含当天"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "量价结构",
+      "direction": "mixed",
+      "evidence": "开79.5，高81.65，低78.49，收81.42，收盘涨跌1.75%，MA5 81.648，MA20 83.153，量比约1.49。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "经营与风险线索",
+      "direction": "mixed",
+      "evidence": "公司和行业基本面沿用已披露的历史经营资料，缺乏足以单独证明当天涨跌因果的新增正式业绩。",
+      "source_ids": [
+        "company"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": null,
+    "invalidation": null,
+    "basis": "重点观察该交易日高点81.65与低点78.49，但趋势、基本面和风险预算未形成足以同时设置入场、止损与目标的结构，故全部新交易价位留空；不续期过期方案。"
+  },
+  "scenarios": [
+    {
+      "name": "改善观察",
+      "price": 81.65,
+      "condition": "未来交易日站稳历史日高且量能改善后重新评估；不是买入指令",
+      "horizon": "未来5–10个交易日"
+    },
+    {
+      "name": "走弱观察",
+      "price": 78.49,
+      "condition": "未来交易日跌破历史日低，应重评下行风险；不是实际订单",
+      "horizon": "未来1–5个交易日"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "量价与趋势",
+      "body": "2026-10-23：开79.5、高81.65、低78.49、收81.42，前收80.02；涨跌1.75%。MA5 81.648、MA20 83.153，RSI14约42.3，相对前20日均量约1.49倍。技术指标为本轮计算及展示舍入值。"
+    },
+    {
+      "heading": "经营、行业与反证",
+      "body": "公司和行业基本面沿用已披露的历史经营资料，缺乏足以单独证明当天涨跌因果的新增正式业绩。 单日价格走势不能单独证明基本面改善或恶化，未核实的传闻不作为投资判断依据。"
+    },
+    {
+      "heading": "后续观察",
+      "body": "放量反弹，但日内新低78.49，尚不足确认反转 未来仅将78.49及81.65视为历史结构参考。新的风险收益计划需单独验证目标、失效线、滑点费用和持续经营/基金净值信息。"
+    },
+    {
+      "heading": "时间和数据质量",
+      "body": "2026-10-23是市场本地交易日；行情截止北京时间15:00。实际生成于2026-10-26T03:27:20.419Z，属于事后补录。内地日K的UTC时间戳为周期起点，必须换算Asia/Shanghai日期；美股按美东交易日识别。无个人仓位、账户、成本或交易字段。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-10-22",
+    "narrative": "2026-10-22收盘80.02，2026-10-23收盘81.42（1.75%）。旧公开报告及价位不覆盖；本次不将新观察倒填旧报告。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge历史交易日常规日K（网页为行情入口）",
+      "url": "https://longbridge.com/zh-CN/quote/002594.SZ",
+      "published_at": null
+    },
+    {
+      "id": "company",
+      "label": "发行人/监管部门/基金公开资料（历史背景或盘后披露）",
+      "url": "https://www.byd.com/",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "补录报告生成时间晚于目标交易日，不可倒填历史预测。",
+    "未充分核实最新正式财务报告、事件完整全文和公司正常化估值，分析质量降级。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-10-22",
+      "close": 80.02
+    },
+    {
+      "date": "2026-10-23",
+      "close": 81.42
+    }
+  ],
+  "provenance": {
+    "kind": "historical_backfill",
+    "source": "Longbridge按目标交易日历史常规日K和公开披露",
+    "note": "2026-10-26补录2026-10-23，公开研究与私人Notion持仓隔离。"
+  }
+}

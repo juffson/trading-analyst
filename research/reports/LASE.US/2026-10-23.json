@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "symbol": "LASE.US",
+  "trade_date": "2026-10-23",
+  "revision": 1,
+  "data_as_of": "2026-10-23T20:00:00Z",
+  "generated_at": "2026-10-26T03:27:20.419Z",
+  "report_kind": "closing",
+  "outlook": "Bearish",
+  "analysis_quality": "degraded",
+  "headline": "走势弱，盘后8-K披露Nasdaq最低股价合规通知",
+  "summary": "Laser Photonics在2026-10-23正式收盘0.6832USD，较前收-0.51%；走势弱，盘后8-K披露Nasdaq最低股价合规通知。本次于2026-10-26补录历史收盘，不能看作当日实时形成的判断。尚无证据充分的完整新买入和风险退出计划。",
+  "market_snapshot": {
+    "close": 0.6832,
+    "previous_close": 0.6867,
+    "change_pct": -0.509684,
+    "open": 0.68,
+    "high": 0.69,
+    "low": 0.665
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 0.69514,
+      "unit": "USD",
+      "note": "前复权常规日K计算，目标日不含未来日线"
+    },
+    {
+      "name": "MA20",
+      "value": 0.761665,
+      "unit": "USD",
+      "note": "前复权常规日K，最近20个交易日收盘平均"
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 35.57,
+      "unit": "0–100",
+      "note": "根据约300根前复权日线计算，截取展示到两位"
+    },
+    {
+      "name": "相对20日均量",
+      "value": 0.53,
+      "unit": "倍",
+      "note": "当天成交量相对前20日均量，分母不含当天"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "量价结构",
+      "direction": "negative",
+      "evidence": "开0.68，高0.69，低0.665，收0.6832，收盘涨跌-0.51%，MA5 0.69514，MA20 0.761665，量比约0.53。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "经营与风险线索",
+      "direction": "negative",
+      "evidence": "10月23日美股收盘后公布的SEC Form 8-K披露10月20日收到Nasdaq最低买价不合规通知，初始宽限期至2027年4月19日。不是当日盘中价格原因，也不等同立即退市。",
+      "source_ids": [
+        "company"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": null,
+    "invalidation": null,
+    "basis": "重点观察该交易日高点0.69与低点0.665，但趋势、基本面和风险预算未形成足以同时设置入场、止损与目标的结构，故全部新交易价位留空；不续期过期方案。"
+  },
+  "scenarios": [
+    {
+      "name": "改善观察",
+      "price": 0.69,
+      "condition": "未来交易日站稳历史日高且量能改善后重新评估；不是买入指令",
+      "horizon": "未来5–10个交易日"
+    },
+    {
+      "name": "走弱观察",
+      "price": 0.665,
+      "condition": "未来交易日跌破历史日低，应重评下行风险；不是实际订单",
+      "horizon": "未来1–5个交易日"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "量价与趋势",
+      "body": "2026-10-23：开0.68、高0.69、低0.665、收0.6832，前收0.6867；涨跌-0.51%。MA5 0.69514、MA20 0.761665，RSI14约35.57，相对前20日均量约0.53倍。技术指标为本轮计算及展示舍入值。"
+    },
+    {
+      "heading": "经营、行业与反证",
+      "body": "10月23日美股收盘后公布的SEC Form 8-K披露10月20日收到Nasdaq最低买价不合规通知，初始宽限期至2027年4月19日。不是当日盘中价格原因，也不等同立即退市。 单日价格走势不能单独证明基本面改善或恶化，未核实的传闻不作为投资判断依据。"
+    },
+    {
+      "heading": "后续观察",
+      "body": "走势弱，盘后8-K披露Nasdaq最低股价合规通知 未来仅将0.665及0.69视为历史结构参考。新的风险收益计划需单独验证目标、失效线、滑点费用和持续经营/基金净值信息。"
+    },
+    {
+      "heading": "时间和数据质量",
+      "body": "2026-10-23是市场本地交易日；行情截止美东16:00。实际生成于2026-10-26T03:27:20.419Z，属于事后补录。内地日K的UTC时间戳为周期起点，必须换算Asia/Shanghai日期；美股按美东交易日识别。无个人仓位、账户、成本或交易字段。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-10-22",
+    "narrative": "2026-10-22收盘0.6867，2026-10-23收盘0.6832（-0.51%）。旧公开报告及价位不覆盖；本次不将新观察倒填旧报告。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge历史交易日常规日K（网页为行情入口）",
+      "url": "https://longbridge.com/zh-CN/quote/LASE.US",
+      "published_at": null
+    },
+    {
+      "id": "company",
+      "label": "发行人/监管部门/基金公开资料（历史背景或盘后披露）",
+      "url": "https://www.sec.gov/Archives/edgar/data/1807887/000149315226048238/form8-k.htm",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "补录报告生成时间晚于目标交易日，不可倒填历史预测。",
+    "未充分核实最新正式财务报告、事件完整全文和公司正常化估值，分析质量降级。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-10-22",
+      "close": 0.6867
+    },
+    {
+      "date": "2026-10-23",
+      "close": 0.6832
+    }
+  ],
+  "provenance": {
+    "kind": "historical_backfill",
+    "source": "Longbridge按目标交易日历史常规日K和公开披露",
+    "note": "2026-10-26补录2026-10-23，公开研究与私人Notion持仓隔离。"
+  }
+}
