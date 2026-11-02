@@ -98,6 +98,48 @@ class ResearchValidationTests(unittest.TestCase):
                 report["provenance"]["note"] = text
                 self.assert_invalid(report)
 
+    def test_exact_public_privacy_notice_is_accepted_without_changing_text(self):
+        for text in (
+            "公开报告不含私人持仓。",
+            "基金同日NAV尚未核完，公开报告不含私人持仓。继续核验公开数据。",
+            "风险仍需观察。公开报告不含私人持仓。",
+            "公开报告不含私人持仓。公开报告不含私人持仓。",
+        ):
+            with self.subTest(text=text):
+                report = sample_report()
+                report["summary"] = text
+                report["drivers"][0]["evidence"] = text
+                report["sections"][0]["body"] = text
+                report["provenance"]["note"] = text
+                original = deepcopy(report)
+                self.assertIs(validate_report(report, SYMBOLS), report)
+                self.assertEqual(report, original)
+
+    def test_public_notice_does_not_hide_private_data_or_unsafe_content(self):
+        notice = "公开报告不含私人持仓。"
+        for text in (
+            "私人持仓为900股。" + notice,
+            notice + "私人持仓为900股。",
+            notice + "持仓数量为900。",
+            notice + "账户余额：10000。",
+            notice + "我当前持有比亚迪900股。",
+            notice + "My portfolio contains 900 shares.",
+            notice + "ghp_" + "a" * 30,
+            notice + "https://www.szse.cn/report?access_token=private",
+            notice + '<img src=x onerror="alert(1)">',
+            "公开报告不含私人持仓：900股。",
+            "公开报告不含私人持仓",
+            "非公开报告不含私人持仓。",
+        ):
+            with self.subTest(text=text):
+                for field in ("summary", "provenance"):
+                    report = sample_report()
+                    if field == "summary":
+                        report[field] = text
+                    else:
+                        report[field]["note"] = text
+                    self.assert_invalid(report)
+
     def test_links_are_checked_even_in_unrendered_plain_text(self):
         for url in (
             "https://app.notion.com/secret-page",

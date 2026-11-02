@@ -59,6 +59,7 @@ PRIVATE_DOMAINS = {
 SECRET_QUERY = re.compile(r"(?:token|secret|password|passwd|auth|api[-_]?key|session|signature|credential|x-amz-|x-goog-)", re.I)
 HTML_PATTERN = re.compile(r"<\s*(?:/?\s*[A-Za-z][^>]*>|!|\?)|&lt;\s*/?\s*(?:script|img|svg|iframe|object|embed|style)\b", re.I)
 URL_IN_TEXT = re.compile(r"(?:https?://|(?:javascript|data|file|vbscript)\s*:)[^\s<>\"'，。；）】]+", re.I)
+PUBLIC_PRIVACY_NOTICE = re.compile(r"(?:^|(?<=[，。；！？\n]))公开报告不含(?P<term>私人持仓)。")
 PRIVATE_TEXT = [
     re.compile(r"(?:持仓(?:数量|成本|市值|比例|股数|金额|明细|盈亏|信息)|仓位(?:占比|比例|金额|成本)|(?:账户|账号|帐号)(?:资产|余额|资金|净值|编号|号码)|浮动盈亏|浮盈|浮亏|累计盈亏|持仓盈亏|成交记录|交割单|交易流水|实盘持仓|私人持仓|个人持仓|成本价)"),
     re.compile(r"(?:我(?:们|的)?|本人|本账户|个人账户)[^。\n!?！？]{0,40}(?:持仓|仓位|持有|买入|卖出|成本|盈亏|余额|资金)"),
@@ -215,7 +216,11 @@ def _scan_public_text(value: Any, where: str = "report") -> None:
         compact = re.sub(r"[\s\x00-\x1f]+", "", value).lower()
         if any(protocol in compact for protocol in ("javascript:", "vbscript:", "data:text/html", "file://")):
             _fail(where, "active or local URL schemes are not allowed")
-        if any(pattern.search(value) for pattern in PRIVATE_TEXT):
+        # Exempt only the matched term in this exact public disclaimer clause.
+        # Every other match is checked, including later matches of the same rule.
+        notice_spans = {match.span("term") for match in PUBLIC_PRIVACY_NOTICE.finditer(value)}
+        if any(match.span() not in notice_spans
+               for pattern in PRIVATE_TEXT for match in pattern.finditer(value)):
             _fail(where, "appears to contain private account, position, trade, or credential data")
         for match in URL_IN_TEXT.finditer(value):
             # Plain-text URLs may be wrapped in Markdown punctuation.
