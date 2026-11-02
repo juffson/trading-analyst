@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "symbol": "LASE.US",
+  "trade_date": "2026-11-02",
+  "revision": 1,
+  "data_as_of": "2026-11-02T21:00:00Z",
+  "generated_at": "2026-11-02T23:40:00Z",
+  "report_kind": "closing",
+  "outlook": "Bearish",
+  "analysis_quality": "degraded",
+  "headline": "缩量回落至0.65前低附近，产品叙事尚不能抵消合规与融资风险",
+  "summary": "收0.6524美元，跌4.35%；接近0.65的20日低点，低于全部主要均线，量比约0.51。观察0.65、0.679–0.6898及0.71973；高波动、最低买价不合规及潜在稀释限制新方案。 should_execute=false。",
+  "market_snapshot": {
+    "open": 0.672,
+    "high": 0.6898,
+    "low": 0.65,
+    "close": 0.6524,
+    "previous_close": 0.6821,
+    "change_pct": -4.35420026
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 0.70068,
+      "unit": "USD",
+      "note": "300根Intraday日K独立计算"
+    },
+    {
+      "name": "MA10",
+      "value": 0.69829,
+      "unit": "USD",
+      "note": "300根Intraday日K独立计算"
+    },
+    {
+      "name": "MA20",
+      "value": 0.71973,
+      "unit": "USD",
+      "note": "300根Intraday日K独立计算"
+    },
+    {
+      "name": "MA60",
+      "value": 0.974855,
+      "unit": "USD",
+      "note": "300根Intraday日K独立计算"
+    },
+    {
+      "name": "MA200",
+      "value": 1.1766245,
+      "unit": "USD",
+      "note": "300根Intraday日K独立计算"
+    },
+    {
+      "name": "MACD DIF",
+      "value": -0.05445345,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "MACD DEA",
+      "value": -0.06298983,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "MACD histogram",
+      "value": 0.01707277,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "Previous MACD histogram",
+      "value": 0.02360466,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 35.77300094,
+      "unit": "0-100",
+      "note": null
+    },
+    {
+      "name": "Wilder ATR14",
+      "value": 0.05649666,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "20D high",
+      "value": 0.815,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "20D low",
+      "value": 0.65,
+      "unit": "USD",
+      "note": null
+    },
+    {
+      "name": "Regular volume",
+      "value": 445565,
+      "unit": "shares",
+      "note": "复权/不复权Intraday日量核对一致"
+    },
+    {
+      "name": "Volume ratio",
+      "value": 0.51484826,
+      "unit": "x",
+      "note": "当日量/前20日均量，不含当日"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "常规盘价格结构与动量",
+      "direction": "negative",
+      "evidence": "开0.672、最高0.6898、最低0.65，收盘仅比日低高0.0024；未延续10月28日反弹。RSI35.77，MACD正柱虽仍在但由0.02360缩至0.01707，DIF进一步转负，价格和动量总体偏弱。ATR14约0.05650，占收盘8.66%；缩量不能证明抛压已经耗尽。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "截止前公开经营与事件证据",
+      "direction": "mixed",
+      "evidence": "10月23日8-K确认公司10月20日收到Nasdaq最低买价不合规通知；不是已经退市，仍须跟进整改。10月28日公司发布反无人机平台及11月30日至12月3日展会计划，未等于已获订单或确认收入。公司融资公告正文载9月14日完成1050万股及配套两类权证、组合价0.75美元、募资总额约790万美元；网站列表显示10月22日而正文为9月15日，本报告作为历史融资背景并披露日期差异，不包装为11月2日新融资。",
+      "source_ids": [
+        "compliance",
+        "product",
+        "offering"
+      ]
+    },
+    {
+      "title": "常规盘市场代理对照",
+      "direction": "negative",
+      "evidence": "同日SPY从755.72至752.10，跌0.48%；QQQ从690.49至681.04，跌1.37%。这是两个ETF代理，不代表全市场广度、资金流或个股因果。",
+      "source_ids": [
+        "spy",
+        "qqq"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": "should_execute=false；需新的研究确认，不自动续期旧候选。",
+    "invalidation": "观察位失守或证据缺口扩大时重新研究，不移动历史边界。",
+    "basis": "前低附近未形成确认结构，合规及稀释风险未解除、ATR占比高，无法给出可靠风险收益组合。观察价位见独立章节与三情景，不能据此拼凑入场或盈亏比。"
+  },
+  "scenarios": [
+    {
+      "name": "保守：前低失守",
+      "price": 0.65,
+      "condition": "若完整常规盘跌破0.65且不能收复，偏空结构延续；不编造下方整数支撑。",
+      "horizon": "未来1–5个已完成交易日；较远MA200修复情景为5–20日"
+    },
+    {
+      "name": "基准：弱反抽",
+      "price": 0.679,
+      "condition": "若守住0.65后反抽0.679–0.6898但不能站稳，仍属弱势整理。",
+      "horizon": "未来1–5个已完成交易日；较远MA200修复情景为5–20日"
+    },
+    {
+      "name": "乐观：重新筑底",
+      "price": 0.71973,
+      "condition": "需先站稳0.6898，再收复MA10/MA5与MA20并复核持续量能，才重新评估筑底。",
+      "horizon": "未来1–5个已完成交易日；较远MA200修复情景为5–20日"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "收盘结论与执行边界",
+      "body": "分析锚价0.6524 USD；方向Bearish；should_execute=false。前低附近未形成确认结构，合规及稀释风险未解除、ATR占比高，无法给出可靠风险收益组合。 driver_strength=null（没有供应商强度或异常检验）；confidence=70/100为主观证据把握，不是胜率。行情可用，资料质量degraded反映独立证据缺口。"
+    },
+    {
+      "heading": "观察价位与适用范围",
+      "body": "风险观察0.6500（本日及20日低点）；初步修复0.6790–0.6898（前日低、本日前收附近及本日高）；较强修复0.69829–0.71973（MA10、MA5及MA20）；0.75仅为历史融资相关价格，不能当作必回目标。"
+    },
+    {
+      "heading": "新候选状态",
+      "body": "入场：未启用；存量持有判断不适用本次公开研究；退出：仅以观察结构失效重新评估，不生成实际指令；sizing不计算个人数量；止损、目标与盈亏比没有完整依据时保持空值。"
+    },
+    {
+      "heading": "多空分歧与六维研究评分",
+      "body": "strategy_fit_score=18/100；趋势与相对强弱3/25（日线与相对ETF证据，未完整周线验证）；技术确认4/20（动量与价格位置，尚缺后续确认）；量价与资金3/15（未调用私人资金数据；日量冲突或流动性限制）；驱动质量与时效6/15（一手来源为主，未来事件尚未发生）；基本面与估值1/10（没有完整估值或一致预期模型）；风险收益与可执行性1/15（完整风控与含费赔率硬门槛未通过）。分数为当前研究框架主观判断，不能代替方向或回测；总分不足80且硬门槛未通过。多方观察修复证据，空方观察破位、事件与估值缺口；冲突在三情景中保留，不用票数推算收益概率。"
+    },
+    {
+      "heading": "截止、时区与真实生成时间",
+      "body": "交易日2026-11-02，Longbridge交易日历确认为全日市。America/New_York夏令时已结束，美东16:00为EST UTC−5，对应2026-11-02T21:00:00Z及北京时间11月3日05:00。取数时Longbridge当前时间2026-11-02T23:36:48.342460088Z、US为Post-Market，常规盘已经结束；不使用盘后报价。所有历史行情显式trade_sessions=intraday、forward_adjust=true、end=2026-11-02，300根样本从2025-08-25起，返回会话全部Intraday；原始日K的OHLC另以不复权固定日期核对。日K timestamp为交易日本地零点05:00Z，是日期标签而非收盘时刻。资讯只用本日21:00Z之前已公开资料，不含此后消息。实际生成2026-11-02T23:40:00Z，当期收盘后新研究，不冒充收盘即时发布。"
+    },
+    {
+      "heading": "独立计算口径",
+      "body": "MA为简单均值。EMA12/26从首收盘价初始化；DIF=EMA12−EMA26，DEA为DIF的EMA9，柱=2×(DIF−DEA)。RSI14首14个涨跌初始化后Wilder递推；ATR14用首14个真实波幅均值后Wilder递推，第一根TR=高−低。量比为当日量/前20日均量、分母排除当日；存在返回冲突时留空。仅展示最近30个已完成交易日真实收盘，未补造历史观点。"
+    },
+    {
+      "heading": "情景口径与再评估",
+      "body": "三种情景是基于可核验高低点、前收或均线的条件路径，价格不是收益预测，也不是到价必交易承诺。不输出没有校准依据的概率。一般观察未来1–5个交易日；更远均线情景按其注明5–20日观察，事件变化时提前重新研究。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-10-30",
+    "narrative": "10月30日已失守短均线，记录0.679及0.65风险观察。11月2日收盘跌破0.679并触及0.65，弱势延续。新增核验SEC最低买价通知和历史融资条款，风险证据比前次仅产品背景更完整，未修改前次结论。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge LASE.US Intraday固定日期日K，前复权300根；链接为行情入口而非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/LASE.US",
+      "published_at": null
+    },
+    {
+      "id": "spy",
+      "label": "SPY 11月2日Intraday常规日K",
+      "url": "https://longbridge.com/zh-CN/quote/SPY.US",
+      "published_at": null
+    },
+    {
+      "id": "qqq",
+      "label": "QQQ 11月2日Intraday常规日K",
+      "url": "https://longbridge.com/zh-CN/quote/QQQ.US",
+      "published_at": null
+    },
+    {
+      "id": "hours",
+      "label": "NYSE官方常规时段与收盘竞价",
+      "url": "https://www.nyse.com/markets/hours-calendars",
+      "published_at": null
+    },
+    {
+      "id": "compliance",
+      "label": "SEC 10月23日8-K，最低买价不合规通知",
+      "url": "https://www.sec.gov/Archives/edgar/data/1807887/000149315226048238/form8-k.htm",
+      "published_at": "2026-10-23T20:15:40Z"
+    },
+    {
+      "id": "product",
+      "label": "公司10月28日反无人机产品与展会计划",
+      "url": "https://laserphotonics.com/news/investor-news/lase-introduces-quantum-bullettm-anti-drone-platform-at-i-itsec-conference-in-november-2026/",
+      "published_at": null
+    },
+    {
+      "id": "offering",
+      "label": "公司历史融资公告；正文9月15日、目录10月22日存在日期差异",
+      "url": "https://laserphotonics.com/news/investor-news/laser-photonics-announces-closing-of-7-9-million-public-offering/",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "单一行情供应商，复权/不复权核对不构成独立第二数据源；历史K线可能被修订。",
+    "未完成策略回测、分钟触发顺序及全部交易摩擦验证；研究观察不证明发生任何委托或成交。",
+    "未完成最新现金流、全部潜在稀释证券及后续上市合规状态的全面审阅；最低买价为收盘买价规则，不能用单笔成交价代替合规判定。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-09-22",
+      "close": 0.8722
+    },
+    {
+      "date": "2026-09-23",
+      "close": 0.8482
+    },
+    {
+      "date": "2026-09-24",
+      "close": 0.8892
+    },
+    {
+      "date": "2026-09-25",
+      "close": 0.8625
+    },
+    {
+      "date": "2026-09-28",
+      "close": 0.8677
+    },
+    {
+      "date": "2026-09-29",
+      "close": 0.8423
+    },
+    {
+      "date": "2026-09-30",
+      "close": 0.852
+    },
+    {
+      "date": "2026-10-01",
+      "close": 0.8296
+    },
+    {
+      "date": "2026-10-02",
+      "close": 0.8329
+    },
+    {
+      "date": "2026-10-05",
+      "close": 0.797
+    },
+    {
+      "date": "2026-10-06",
+      "close": 0.765
+    },
+    {
+      "date": "2026-10-07",
+      "close": 0.7608
+    },
+    {
+      "date": "2026-10-08",
+      "close": 0.7435
+    },
+    {
+      "date": "2026-10-09",
+      "close": 0.7404
+    },
+    {
+      "date": "2026-10-12",
+      "close": 0.7186
+    },
+    {
+      "date": "2026-10-13",
+      "close": 0.801
+    },
+    {
+      "date": "2026-10-14",
+      "close": 0.755
+    },
+    {
+      "date": "2026-10-15",
+      "close": 0.73
+    },
+    {
+      "date": "2026-10-16",
+      "close": 0.7218
+    },
+    {
+      "date": "2026-10-19",
+      "close": 0.6756
+    },
+    {
+      "date": "2026-10-20",
+      "close": 0.706
+    },
+    {
+      "date": "2026-10-21",
+      "close": 0.7242
+    },
+    {
+      "date": "2026-10-22",
+      "close": 0.6867
+    },
+    {
+      "date": "2026-10-23",
+      "close": 0.6832
+    },
+    {
+      "date": "2026-10-26",
+      "close": 0.6794
+    },
+    {
+      "date": "2026-10-27",
+      "close": 0.6865
+    },
+    {
+      "date": "2026-10-28",
+      "close": 0.7424
+    },
+    {
+      "date": "2026-10-29",
+      "close": 0.74
+    },
+    {
+      "date": "2026-10-30",
+      "close": 0.6821
+    },
+    {
+      "date": "2026-11-02",
+      "close": 0.6524
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge Intraday and issuer/regulatory public records",
+    "note": "本次本地后台美股任务真实生成于2026-11-02T23:40:00Z；美东11月2日常规收盘后研究，行情和资讯均截止21:00Z。仅新增本日初版，未恢复旧任务、未更改历史报告。发布状态以GitHub Actions及各端实际回读为准。"
+  }
+}
