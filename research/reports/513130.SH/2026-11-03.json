@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "symbol": "513130.SH",
+  "trade_date": "2026-11-03",
+  "revision": 1,
+  "data_as_of": "2026-11-03T07:00:00Z",
+  "generated_at": "2026-11-03T07:42:07Z",
+  "report_kind": "closing",
+  "outlook": "Neutral",
+  "analysis_quality": "degraded",
+  "headline": "微涨并勉强站回10日线，负动量收敛但港股最终收盘未纳入",
+  "summary": "A股场内常规收盘0.473元，上涨0.21%；略高于MA10约0.4724、MA5约0.4684，MACD负柱继续收敛，但RSI仅35.84、20日线约0.49145仍在上方。观察0.471、0.4684、0.479与0.49145；不据此推算基金净值或折溢价。 should_execute=false。",
+  "market_snapshot": {
+    "close": 0.473,
+    "previous_close": 0.472,
+    "change_pct": 0.21186441,
+    "open": 0.473,
+    "high": 0.479,
+    "low": 0.471
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 0.4684,
+      "unit": "CNY",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA10",
+      "value": 0.4724,
+      "unit": "CNY",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA20",
+      "value": 0.49145,
+      "unit": "CNY",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA60",
+      "value": 0.54233333,
+      "unit": "CNY",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA200",
+      "value": 0.60607,
+      "unit": "CNY",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD DIF",
+      "value": -0.01916973,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "MACD DEA",
+      "value": -0.01900446,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "MACD histogram",
+      "value": -0.00033054,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "Previous MACD histogram",
+      "value": -0.0022933,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 35.8355925,
+      "unit": "0-100",
+      "note": null
+    },
+    {
+      "name": "Wilder ATR14",
+      "value": 0.01212314,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "Volume ratio",
+      "value": 1.00130453,
+      "unit": "x",
+      "note": null
+    },
+    {
+      "name": "Raw regular volume",
+      "value": 40056112,
+      "unit": "供应商原始量单位",
+      "note": "量纲未独立核验，不换算成资金流或跨证券比较"
+    },
+    {
+      "name": "20D high",
+      "value": 0.527,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "20D low",
+      "value": 0.456,
+      "unit": "CNY",
+      "note": null
+    },
+    {
+      "name": "60D low",
+      "value": 0.456,
+      "unit": "CNY",
+      "note": null
+    }
+  ],
+  "drivers": [
+    {
+      "title": "已完成常规盘量价与动量",
+      "direction": "mixed",
+      "evidence": "高0.479、低0.471，开盘与收盘同为0.473，盘中冲高没有延伸至收盘；成交量约为前20日均量1.00倍。价格刚回到10日线上，负柱接近零但DIF仍略低于DEA，短期修复与中期弱势并存，采用中性而非确认反转。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "公开事件、方法背景与证据缺口",
+      "direction": "unknown",
+      "evidence": "仅使用A股15:00已结束的场内交易。香港同日最终收盘及适用收市竞价尚未完成，不能引入之后港股价格或消息。未取得截至该时点可核验的同日NAV、IOPV和申赎状态，不计算折溢价、套利空间或跟踪误差，也不把A股/创业板基准当作恒生科技指数的替代。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "同日市场基准对照",
+      "direction": "negative",
+      "evidence": "同日上证指数跌0.82%，创业板指数跌2.73%，后者相对前者落后1.90个百分点。本标的相对上证指数的单日涨跌幅差为+1.03个百分点；并非风险调整后超额收益或因果证据。",
+      "source_ids": [
+        "sse",
+        "chinext"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": "should_execute=false；下一次研究需独立核验，不因到价自动激活。",
+    "invalidation": "旧候选到期不续期；结构失效时重新研究，不移动历史边界。",
+    "basis": "没有同时通过趋势、触发、失效、交易摩擦与风险收益联合门槛的新方案；观察锚点不能自动转换成入场或目标。"
+  },
+  "scenarios": [
+    {
+      "name": "保守：修复失效",
+      "price": 0.4684,
+      "condition": "若失守0.471并完整收盘跌破MA5约0.4684，修复减弱，再观察0.456历史低点。",
+      "horizon": "后续1–5个实际交易日；条件情景，不自动执行"
+    },
+    {
+      "name": "基准：窄幅整理",
+      "price": 0.473,
+      "condition": "维持0.471–0.479范围且未形成量价确认时，0.473仅是本次收盘锚，不是入场指令。",
+      "horizon": "后续1–5个实际交易日；条件情景，不自动执行"
+    },
+    {
+      "name": "乐观：扩大修复",
+      "price": 0.49145,
+      "condition": "需先完整站稳0.479，再检验MA20约0.49145，同时独立核查基金净值和申赎信息。",
+      "horizon": "后续1–5个实际交易日；条件情景，不自动执行"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "观察价位与适用范围",
+      "body": "结构观察0.471（本日低）；次级观察0.4684（MA5）；短期确认0.479（本日高）；较强修复0.49145（MA20）；20日低0.456仅为更远风险锚。"
+    },
+    {
+      "heading": "结论、证据评分与执行边界",
+      "body": "分析锚价0.473CNY；outlook=Neutral；should_execute=false。strategy_fit_score=35/100；趋势与相对强弱11/25；技术确认10/20；量价与资金8/15；驱动质量与时效3/15；基本面与估值1/10；风险收益与可执行性2/15。趋势/技术扣分来自未通过的价格结构与后续确认；量价不推断私人资金；驱动和基本面扣分来自时效、估值或证据缺口；指数不适用直接执行的两个维度记0，不能据此否定其基准研究价值。confidence=58/100为主观证据把握，不是胜率；driver_strength=null，未提供异常显著性或供应商强度。没有同时通过趋势、触发、失效、交易摩擦与风险收益联合门槛的新方案；观察锚点不能自动转换成入场或目标。"
+    },
+    {
+      "heading": "常规盘截止与独立计算方法",
+      "body": "本篇实际生成于2026-11-03T07:42:07Z，为当期收盘后新研究。交易日历确认2026-11-03为CN全日市；Longbridge取数当前时间2026-11-03T07:34:35.889345196Z，CN状态Closed，15:00常规收盘已经完成。行情和资讯均截止北京时间15:00，即2026-11-03T07:00:00Z；未使用此后资讯或尚未完成的港股收盘。历史请求显式trade_sessions=intraday、forward_adjust=true、end=2026-11-03，300根自2025-08-06起全部Intraday；先转Asia/Shanghai交易日再检查排序、唯一和截断，当日及前日OHLCV另与不复权固定日期日K核对一致。日K时间戳为前日16:00Z，属本地日标签，不冒充收盘时刻。MA为简单均值；EMA12/26以首收盘价初始化，DIF为其差、DEA为DIF的EMA9、柱=2×(DIF−DEA)。RSI14首14个涨跌均值初始化后Wilder递推；ATR14首14个TR均值初始化后Wilder递推，首TR为高−低。量比=当日原始量/前20日均量、不含当日；原始量纲未独立换算，不将其当资金净流入。"
+    },
+    {
+      "heading": "情景与有效期边界",
+      "body": "下列保守、基准和乐观情景均以真实历史高低点、前收或均线为条件锚，观察未来1–5个实际交易日。没有校准依据，不给出情景概率、保证收益或自动执行规则。入场未启用，持有/实际退出不作个人判断，不计算数量。未设定新的入场有效期，旧模型各按原到期日结束。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-11-02",
+    "narrative": "11月2日0.472、方向Bearish，10日线0.4752尚未收复。11月3日收0.473、当前10日线下降至0.4724，价格勉强站回；负柱由−0.00229收敛至−0.00033，故降为中性观察。该变化不代表NAV或折溢价已经核实。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge 513130.SH固定日期Intraday日K，前复权300根、当日/前日另与不复权逐项核对；网页为公开行情入口非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/513130.SH",
+      "published_at": null
+    },
+    {
+      "id": "sse",
+      "label": "Longbridge上证指数000001.SH当日/前日Intraday日K",
+      "url": "https://longbridge.com/zh-CN/quote/000001.SH",
+      "published_at": null
+    },
+    {
+      "id": "chinext",
+      "label": "Longbridge创业板指数399006.SZ当日/前日Intraday日K",
+      "url": "https://longbridge.com/zh-CN/quote/399006.SZ",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "单一行情供应商；复权和不复权核对不是独立第二行情源，数据可能被后续修订。",
+    "缺少完整估值、策略回测、分钟路径及交易摩擦核验；价格/点位观察不证明发生任何委托或成交。",
+    "同日NAV、IOPV和申赎信息未核实，跨市场时段不一致；不能把场内收盘当基金公允净值。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-09-15",
+      "close": 0.534
+    },
+    {
+      "date": "2026-09-16",
+      "close": 0.537
+    },
+    {
+      "date": "2026-09-17",
+      "close": 0.533
+    },
+    {
+      "date": "2026-09-18",
+      "close": 0.546
+    },
+    {
+      "date": "2026-09-21",
+      "close": 0.545
+    },
+    {
+      "date": "2026-09-22",
+      "close": 0.549
+    },
+    {
+      "date": "2026-09-23",
+      "close": 0.542
+    },
+    {
+      "date": "2026-09-24",
+      "close": 0.539
+    },
+    {
+      "date": "2026-09-28",
+      "close": 0.533
+    },
+    {
+      "date": "2026-09-29",
+      "close": 0.527
+    },
+    {
+      "date": "2026-09-30",
+      "close": 0.526
+    },
+    {
+      "date": "2026-10-08",
+      "close": 0.507
+    },
+    {
+      "date": "2026-10-09",
+      "close": 0.516
+    },
+    {
+      "date": "2026-10-12",
+      "close": 0.514
+    },
+    {
+      "date": "2026-10-13",
+      "close": 0.51
+    },
+    {
+      "date": "2026-10-14",
+      "close": 0.518
+    },
+    {
+      "date": "2026-10-15",
+      "close": 0.501
+    },
+    {
+      "date": "2026-10-16",
+      "close": 0.507
+    },
+    {
+      "date": "2026-10-19",
+      "close": 0.505
+    },
+    {
+      "date": "2026-10-20",
+      "close": 0.501
+    },
+    {
+      "date": "2026-10-21",
+      "close": 0.493
+    },
+    {
+      "date": "2026-10-22",
+      "close": 0.468
+    },
+    {
+      "date": "2026-10-23",
+      "close": 0.479
+    },
+    {
+      "date": "2026-10-26",
+      "close": 0.475
+    },
+    {
+      "date": "2026-10-27",
+      "close": 0.467
+    },
+    {
+      "date": "2026-10-28",
+      "close": 0.473
+    },
+    {
+      "date": "2026-10-29",
+      "close": 0.463
+    },
+    {
+      "date": "2026-10-30",
+      "close": 0.461
+    },
+    {
+      "date": "2026-11-02",
+      "close": 0.472
+    },
+    {
+      "date": "2026-11-03",
+      "close": 0.473
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge completed Intraday daily candles; public issuer/regulatory records",
+    "note": "实际生成2026-11-03T07:42:07Z；行情和信息均截止2026-11-03T07:00:00Z。仅新增最近已完成交易日初版，不改写旧报告、不新造更早缺口。指数为用户11月3日新增覆盖，首次归档不回填历史观点。是否发布以各端实际回读为准。"
+  }
+}
