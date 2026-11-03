@@ -453,6 +453,11 @@ def _read_json(path: Path) -> Any:
         _fail(str(path), "invalid UTF-8 JSON")
 
 
+def quote_unit(symbol: dict) -> str:
+    """Known CN benchmark indices are quoted in points, not cash prices."""
+    return "点" if symbol["symbol"] in {"000001.SH", "399006.SZ"} else symbol["currency"]
+
+
 def load_watchlist(root: str | Path, symbols: list[dict]) -> list[dict]:
     """Current observation scope; the full catalog still owns all archives."""
     root = Path(root)

@@ -26,7 +26,7 @@ from urllib.parse import unquote, urlsplit
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT))
-from scripts.validate_research import ValidationError, load_dataset, load_watchlist  # noqa: E402
+from scripts.validate_research import ValidationError, load_dataset, load_watchlist, quote_unit  # noqa: E402
 
 
 MARKETS = {"CN": "A股", "HK": "港股", "US": "美股"}
@@ -308,7 +308,7 @@ class Site:
         reports = self.by_symbol[symbol["symbol"]]
         latest = latest_research(reports)
         stock_url = self.symbol_url(symbol)
-        header = f'<div class="security-card-top"><div><a class="security-name" href="{e(stock_url)}">{e(symbol["name"])}</a><div class="security-code">{e(symbol["symbol"])}<span class="market-tag">{e(MARKETS[symbol["market"]])} · {e(symbol["currency"])}</span></div></div>{outlook_badge(latest) if latest else badge("等待研究")}</div>'
+        header = f'<div class="security-card-top"><div><a class="security-name" href="{e(stock_url)}">{e(symbol["name"])}</a><div class="security-code">{e(symbol["symbol"])}<span class="market-tag">{e(MARKETS[symbol["market"]])} · {e(quote_unit(symbol))}</span></div></div>{outlook_badge(latest) if latest else badge("等待研究")}</div>'
         attributes = f'data-security-card data-market="{e(symbol["market"])}" data-search="{e(symbol["symbol"] + " " + symbol["name"] + " " + symbol["slug"])}"'
         if not latest:
             return f'<article class="security-card card-empty" {attributes}>{header}<div class="empty-card-body"><p>已纳入观察目录，尚无分析归档。</p><small>收盘趋势、研究价位与日报将在真实报告写入后显示。</small></div><div class="card-footer"><span>尚无报告</span><a class="text-link" href="{e(stock_url)}">进入标的 ↗</a></div></article>'
@@ -317,7 +317,7 @@ class Site:
         tone = "positive" if change is not None and change >= 0 else "negative" if change is not None else "quiet"
         history = history_report(reports)
         levels = latest["price_levels"] or {}
-        currency = symbol["currency"]
+        currency = quote_unit(symbol)
         mini_levels = "".join(f'<div><span class="level-mini-label">{label} · {e(currency)}</span><span class="level-mini-value">{e(price(levels.get(field)))}</span></div>' for label, field in (("当时目标", "target"), ("当时失效线", "stop")))
         return f'''<article class="security-card" {attributes}>
 {header}
@@ -330,10 +330,10 @@ class Site:
 
     def comparison(self) -> str:
         groups = []
-        for currency in ("CNY", "HKD", "USD"):
+        for currency in ("CNY", "HKD", "USD", "点"):
             histories = []
             for symbol in self.observed:
-                if symbol["currency"] != currency:
+                if quote_unit(symbol) != currency:
                     continue
                 report = history_report(self.by_symbol[symbol["symbol"]])
                 if report and len(report["price_history"]) > 1:
@@ -413,11 +413,11 @@ class Site:
         else:
             history = report["price_history"]
             series = [{"label": "收盘价", "color": COLORS[0], "points": [{"date": p["date"], "value": p["close"]} for p in history]}]
-            content = chart(series, unit=symbol["currency"], title=f'{symbol["name"]} 真实收盘历史')
+            content = chart(series, unit=quote_unit(symbol), title=f'{symbol["name"]} 真实收盘历史')
             content += f'<div class="chart-note"><span>{e(history[0]["date"])} — {e(history[-1]["date"])} · {len(history)} 个已记录交易日</span><span>来源：<a class="text-link" href="{e(self.report_url(symbol, report, True))}">{e(report["trade_date"])} / v{report["revision"]}</a></span></div>'
             rows = "".join(f'<tr><td class="mono">{e(p["date"])}</td><td class="numeric mono">{e(price(p["close"]))}</td></tr>' for p in reversed(history))
-            content += f'<details><summary>查看真实收盘记录（{symbol["currency"]}）</summary><div class="table-scroll history-details"><table><thead><tr><th>交易日期</th><th class="numeric">收盘价 · {symbol["currency"]}</th></tr></thead><tbody>{rows}</tbody></table></div></details>'
-        return f'<section class="panel" id="price-history"><div class="panel-heading"><div><h2>行情历史</h2><p>真实收盘价，单位 {e(symbol["currency"])}。悬停或使用方向键查看日期与价格。</p></div><span class="panel-title-meta">收盘价序列</span></div>{content}</section>'
+            content += f'<details><summary>查看真实收盘记录（{quote_unit(symbol)}）</summary><div class="table-scroll history-details"><table><thead><tr><th>交易日期</th><th class="numeric">收盘价 · {quote_unit(symbol)}</th></tr></thead><tbody>{rows}</tbody></table></div></details>'
+        return f'<section class="panel" id="price-history"><div class="panel-heading"><div><h2>行情历史</h2><p>真实收盘价，单位 {e(quote_unit(symbol))}。悬停或使用方向键查看日期与价格。</p></div><span class="panel-title-meta">收盘价序列</span></div>{content}</section>'
 
     def level_history_panel(self, symbol: dict, reports: list[dict]) -> str:
         daily = [r for r in daily_latest(reports) if r["provenance"]["kind"] != "validation"]
@@ -435,9 +435,9 @@ class Site:
                 if points:
                     series.append({"label": label, "color": color, "points": points})
             content = '<div class="chart-legend"><span class="legend-item"><span class="legend-dot slate"></span>报告日收盘</span><span class="legend-item"><span class="legend-dot"></span>当时目标</span><span class="legend-item"><span class="legend-dot amber"></span>当时失效线</span></div>'
-            content += chart(series, unit=symbol["currency"], title=f'{symbol["name"]} 历史报告记录的研究价位', draw_lines=False, report_links={r["trade_date"]: self.report_url(symbol, r) for r in recorded})
+            content += chart(series, unit=quote_unit(symbol), title=f'{symbol["name"]} 历史报告记录的研究价位', draw_lines=False, report_links={r["trade_date"]: self.report_url(symbol, r) for r in recorded})
             content += f'<p class="chart-note">仅显示 {len(recorded)} 个有价位记录的研究日期；点之间不连线，不向未记录日期延伸。同日以最新修订展示，原版保留在日报中。</p>'
-        return f'<section class="panel" id="level-history"><div class="panel-heading"><div><h2>历史研究价位</h2><p>与行情历史分开展示，保留判断形成时的日期。</p></div><span class="panel-title-meta">单位 {e(symbol["currency"])}</span></div>{content}</section>'
+        return f'<section class="panel" id="level-history"><div class="panel-heading"><div><h2>历史研究价位</h2><p>与行情历史分开展示，保留判断形成时的日期。</p></div><span class="panel-title-meta">单位 {e(quote_unit(symbol))}</span></div>{content}</section>'
 
     def archive_panel(self, symbol: dict, reports: list[dict]) -> str:
         daily = list(reversed(daily_latest(reports)))
@@ -456,7 +456,7 @@ class Site:
         reports = self.by_symbol[symbol["symbol"]]
         latest = latest_research(reports)
         latest_button = f'<a class="button" href="{e(self.report_url(symbol, latest))}">阅读最新分析 ↗</a>' if latest else ""
-        heading = f'<div class="page-heading security-heading"><div><p class="eyebrow">Research / {e(symbol["market"])}</p><h1>{e(symbol["name"])}<span class="title-code">{e(symbol["symbol"])}</span></h1><div class="inline-meta"><span>{e(MARKETS[symbol["market"]])} · {e(symbol["currency"])}</span><span>{len(daily_latest(reports))} 个研究日期</span><span>最新交易日：{e(latest["trade_date"]) if latest else "—"}</span></div></div><div class="button-row"><a class="button button-secondary" href="{e(self.url())}">← 返回总览</a>{latest_button}</div></div>'
+        heading = f'<div class="page-heading security-heading"><div><p class="eyebrow">Research / {e(symbol["market"])}</p><h1>{e(symbol["name"])}<span class="title-code">{e(symbol["symbol"])}</span></h1><div class="inline-meta"><span>{e(MARKETS[symbol["market"]])} · {e(quote_unit(symbol))}</span><span>{len(daily_latest(reports))} 个研究日期</span><span>最新交易日：{e(latest["trade_date"]) if latest else "—"}</span></div></div><div class="button-row"><a class="button button-secondary" href="{e(self.url())}">← 返回总览</a>{latest_button}</div></div>'
         if latest:
             snapshot = f'<section class="panel"><div class="inline-meta">{outlook_badge(latest)}{quality_badge(latest)}{badge(PROVENANCE[latest["provenance"]["kind"]])}<span>{e(latest["trade_date"])} · v{latest["revision"]}</span></div><h2 class="snapshot-headline">{e(latest["headline"])}</h2><p class="snapshot-summary">{e(latest["summary"])}</p><a class="text-link small" href="{e(self.report_url(symbol, latest))}">打开完整结论、条件与来源 →</a></section>'
         else:
@@ -471,7 +471,7 @@ class Site:
         for field, label in (("close", "收盘价"), ("change_pct", "日涨跌幅"), ("previous_close", "前收盘"), ("open", "开盘价"), ("high", "最高价"), ("low", "最低价")):
             value = snapshot[field]
             rendered = percentage(value) if field == "change_pct" else price(value)
-            unit = "" if field == "change_pct" or value is None else symbol["currency"]
+            unit = "" if field == "change_pct" or value is None else quote_unit(symbol)
             tone = ("positive" if value >= 0 else "negative") if field == "change_pct" and value is not None else ""
             missing = '<span class="missing-reason">该项未记录；见数据限制</span>' if value is None else ""
             items.append(f'<div class="snapshot-item"><span class="snapshot-label">{label}</span><span class="snapshot-value {tone}">{e(rendered)}</span><span class="snapshot-unit">{e(unit)}</span>{missing}</div>')
@@ -512,14 +512,14 @@ class Site:
             cards = []
             for label, value, tone, reason in (("原条件区间", entries, "", "原报告未记录区间"), ("当时目标", price(levels["target"]), "target", "原报告未记录目标"), ("当时失效线", price(levels["stop"]), "stop", "原报告未记录失效价格")):
                 missing = f'<span class="missing-reason">{e(reason)}</span>' if value == "—" else ""
-                cards.append(f'<div class="level-detail {tone}"><span class="snapshot-label">{label} · {e(symbol["currency"])}</span><div class="snapshot-value">{e(value)}{missing}</div></div>')
+                cards.append(f'<div class="level-detail {tone}"><span class="snapshot-label">{label} · {e(quote_unit(symbol))}</span><div class="snapshot-value">{e(value)}{missing}</div></div>')
             status = {"active": "报告当日有效", "conditional": "附条件", "expired": "原报告已标记失效", "unavailable": "未记录"}[levels["status"]]
             target_type = {"technical": "技术情景", "fundamental": "基本面估值", "model": "模型结果", None: "未记录"}[levels["target_type"]]
             values = (
                 ("当时状态", status), ("目标类型", target_type), ("目标期限", levels["target_horizon"] or "—（未记录期限）"),
                 ("原有效期", levels["entry_valid_until"] or "—（未记录截止日期）"),
-                ("第一观察位", price(levels["take_profit_1"]) + (" " + symbol["currency"] if levels["take_profit_1"] is not None else "（未记录）")),
-                ("第二观察位", price(levels["take_profit_2"]) + (" " + symbol["currency"] if levels["take_profit_2"] is not None else "（未记录）")),
+                ("第一观察位", price(levels["take_profit_1"]) + (" " + quote_unit(symbol) if levels["take_profit_1"] is not None else "（未记录）")),
+                ("第二观察位", price(levels["take_profit_2"]) + (" " + quote_unit(symbol) if levels["take_profit_2"] is not None else "（未记录）")),
                 ("触发条件", levels["trigger"] or "—（未记录触发条件）"),
                 ("失效条件", levels["invalidation"] or "—（未记录失效条件）"),
                 ("价位依据", levels["basis"] or "—（未记录价位依据）"),
@@ -533,7 +533,7 @@ class Site:
         else:
             cards = []
             for scenario in report["scenarios"]:
-                missing = '<span class="missing-reason">该情景未给出价格</span>' if scenario["price"] is None else f'<span class="snapshot-unit">{e(symbol["currency"])}</span>'
+                missing = '<span class="missing-reason">该情景未给出价格</span>' if scenario["price"] is None else f'<span class="snapshot-unit">{e(quote_unit(symbol))}</span>'
                 cards.append(f'<article class="scenario-card"><h3>{e(scenario["name"])}</h3><div class="scenario-price">{e(price(scenario["price"]))}{missing}</div><p>{e(scenario["condition"])}</p><span class="scenario-horizon">期限：{e(scenario["horizon"] or "未记录")}</span></article>')
             content = '<div class="scenario-grid">' + "".join(cards) + '</div>'
         return f'<section class="panel" id="scenarios"><div class="panel-heading"><div><h2>情景路径</h2><p>条件成立后的可能路径；价格触及本身不等于确认。</p></div></div>{content}</section>'
@@ -588,7 +588,7 @@ class Site:
         times = "".join(f'<div><span class="timestamp-label">{label}</span><span class="timestamp-value">{e(value)}</span></div>' for label, value in (("交易日期", report["trade_date"]), ("数据截止时间", time_label(report["data_as_of"])), ("实际生成时间", time_label(report["generated_at"]))))
         sections = self.snapshot_panel(symbol, report) + self.indicators_panel(report) + self.drivers_panel(report) + self.levels_panel(symbol, report) + self.scenarios_panel(symbol, report) + self.analysis_panel(report) + self.prior_comparison_panel(symbol, report) + self.sources_panel(report)
         nav = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in (("snapshot", "结论与收盘快照"), ("indicators", "指标快照"), ("drivers", "驱动与多空证据"), ("levels", "关键价位与条件"), ("scenarios", "情景路径"), ("analysis", "分析正文"), ("comparison", "前次对比"), ("sources", "来源与数据限制")))
-        body = f'''<div class="page-heading daily-heading"><div><p class="eyebrow">Daily Research / Closing</p><h1>{e(symbol["name"])} · 收盘分析</h1><div class="inline-meta"><span class="mono">{e(symbol["symbol"])}</span><span>{e(report["trade_date"])}</span><span>{e(MARKETS[symbol["market"]])} · {e(symbol["currency"])}</span></div></div><a class="button button-secondary" href="{e(self.symbol_url(symbol))}">← 返回标的历史</a></div>
+        body = f'''<div class="page-heading daily-heading"><div><p class="eyebrow">Daily Research / Closing</p><h1>{e(symbol["name"])} · 收盘分析</h1><div class="inline-meta"><span class="mono">{e(symbol["symbol"])}</span><span>{e(report["trade_date"])}</span><span>{e(MARKETS[symbol["market"]])} · {e(quote_unit(symbol))}</span></div></div><a class="button button-secondary" href="{e(self.symbol_url(symbol))}">← 返回标的历史</a></div>
 <div class="notice{" validation-notice" if report["provenance"]["kind"] == "validation" else ""}"><span class="notice-mark" aria-hidden="true">◷</span><p>{notice_text}</p></div>
 <div class="timestamps">{times}</div>
 <div class="revision-bar"><span>修订版本</span>{revision_links}<span>·</span>{latest_link}</div>{warning}

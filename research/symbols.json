@@ -119,6 +119,20 @@
       "market": "CN",
       "currency": "CNY",
       "slug": "000636-sz"
+    },
+    {
+      "symbol": "000001.SH",
+      "name": "上证指数",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "000001-sh"
+    },
+    {
+      "symbol": "399006.SZ",
+      "name": "创业板指数",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "399006-sz"
     }
   ]
 }

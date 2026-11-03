@@ -26,6 +26,8 @@ import re
 from typing import Iterable
 from urllib.parse import quote, urlsplit
 
+from scripts.validate_research import quote_unit
+
 
 MAX_TEXT_RUN = 1500
 MANAGED_NOTICE_PREFIX = (
@@ -186,7 +188,7 @@ def image_placeholder() -> dict:
 def _report_metadata(blocks: list[dict], symbol: dict, report: dict, *, immutable: bool = False) -> None:
     fields = (
         ("标的", symbol["symbol"] if immutable else symbol["name"] + " · " + symbol["symbol"]),
-        ("市场 / 货币", _MARKETS[symbol["market"]] + " / " + symbol["currency"]),
+        ("市场 / 单位" if quote_unit(symbol) == "点" else "市场 / 货币", _MARKETS[symbol["market"]] + " / " + quote_unit(symbol)),
         ("交易日期", report["trade_date"]),
         ("行情截止时间", _value(report["data_as_of"], "原报告未记录行情截止时间")),
         ("实际生成时间", report["generated_at"]),
@@ -204,7 +206,7 @@ def _snapshot(blocks: list[dict], symbol: dict, report: dict) -> None:
     _add(blocks, "收盘行情快照", 4)
     for key, label in (("close", "收盘价"), ("previous_close", "前收盘"), ("change_pct", "日涨跌幅"), ("open", "开盘价"), ("high", "最高价"), ("low", "最低价")):
         value = report["market_snapshot"][key]
-        _field(blocks, label, _percent(value) if key == "change_pct" else _price(value, symbol["currency"]))
+        _field(blocks, label, _percent(value) if key == "change_pct" else _price(value, quote_unit(symbol)))
 
 
 def _price_levels(blocks: list[dict], symbol: dict, report: dict) -> None:
@@ -214,7 +216,7 @@ def _price_levels(blocks: list[dict], symbol: dict, report: dict) -> None:
     if levels is None:
         _add(blocks, "—（本报告未形成可发布的研究价位、条件区间或失效线。）")
         return
-    currency = symbol["currency"]
+    currency = quote_unit(symbol)
     low, high = levels["entry_low"], levels["entry_high"]
     interval = "—（未记录条件区间）" if low is None else _price(low, currency) + " — " + _price(high, currency)
     fields = (
@@ -291,7 +293,7 @@ def render_report(symbol: dict, report: dict, *, symbol_url: str, overview_url: 
         _add(blocks, "—（本报告未形成可发布的价格情景。）")
     for scenario in report["scenarios"]:
         _add(blocks, scenario["name"], 5)
-        _field(blocks, "情景价格", _price(scenario["price"], symbol["currency"]))
+        _field(blocks, "情景价格", _price(scenario["price"], quote_unit(symbol)))
         _field(blocks, "成立条件", scenario["condition"])
         _field(blocks, "情景期限", _value(scenario["horizon"], "未记录期限"))
 
@@ -323,11 +325,11 @@ def render_report(symbol: dict, report: dict, *, symbol_url: str, overview_url: 
     _field(blocks, "归档说明", report["provenance"]["note"])
 
     _add(blocks, "原报告收盘数据序列", 4)
-    _add(blocks, "以下只包含该版本实际记录的历史收盘价，单位 " + symbol["currency"] + "。不拼接其他版本，不把目标或失效价当作历史行情。")
+    _add(blocks, "以下只包含该版本实际记录的历史收盘价，单位 " + quote_unit(symbol) + "。不拼接其他版本，不把目标或失效价当作历史行情。")
     if not report["price_history"]:
         _add(blocks, "—（本报告没有记录可核验的收盘价序列。）")
     for point in report["price_history"]:
-        _field(blocks, point["date"], _price(point["close"], symbol["currency"]))
+        _field(blocks, point["date"], _price(point["close"], quote_unit(symbol)))
     blocks.append(completed_notice(key))
     return blocks
 
@@ -355,7 +357,7 @@ def _trend_note(blocks: list[dict], symbol: dict, reports: list[dict]) -> None:
     if len(history) < 2:
         _add(blocks, "走势图片未生成：最新正式报告不足两个实际收盘记录；不回退到更早报告，也不补造走势。")
         return
-    _add(blocks, "真实收盘区间：" + history[0]["date"] + " — " + history[-1]["date"] + "；" + str(len(history)) + " 条记录；单位 " + symbol["currency"] + "。")
+    _add(blocks, "真实收盘区间：" + history[0]["date"] + " — " + history[-1]["date"] + "；" + str(len(history)) + " 条记录；单位 " + quote_unit(symbol) + "。")
     _add(blocks, "序列来源：" + report["trade_date"] + " / v" + str(report["revision"]) + "；行情截止：" + _value(report["data_as_of"]) + "。仅使用这一版本的最近120条以内记录，沿用原系列口径，不拼接复权方式不同的其他记录。")
 
 
@@ -367,7 +369,7 @@ def render_symbol(symbol: dict, reports: list[dict], *,
     blocks = [managed_notice("symbol:" + symbol["symbol"])]
     _add(blocks, symbol["name"] + " · " + symbol["symbol"] + " 研究档案", 3)
     _navigation(blocks, [("返回研究总览", overview_url)], page_url)
-    _field(blocks, "市场 / 货币", _MARKETS[symbol["market"]] + " / " + symbol["currency"])
+    _field(blocks, "市场 / 单位" if quote_unit(symbol) == "点" else "市场 / 货币", _MARKETS[symbol["market"]] + " / " + quote_unit(symbol))
     _field(blocks, "研究记录", str(len({r["trade_date"] for r in matching})) + " 个交易日期，" + str(len(matching)) + " 个独立版本")
     _add(blocks, "历史档案不代表实时信号。行情历史与研究价位历史分开；每次判断保留原交易日和版本。")
     if latest is None:
@@ -393,8 +395,8 @@ def render_symbol(symbol: dict, reports: list[dict], *,
         _add(blocks, "—（尚无历史研究价位记录。）")
     for report in reversed(levels_recorded):
         levels = report["price_levels"]
-        line = ("；当时目标 " + _price(levels["target"], symbol["currency"])
-                + "；当时失效线 " + _price(levels["stop"], symbol["currency"])
+        line = ("；当时目标 " + _price(levels["target"], quote_unit(symbol))
+                + "；当时失效线 " + _price(levels["stop"], quote_unit(symbol))
                 + "；原截止 " + _value(levels["entry_valid_until"], "未记录日期"))
         _link(blocks, report["trade_date"] + " / v" + str(report["revision"]), report_urls.get(_sort_key(report)), line, 12)
 
@@ -416,7 +418,7 @@ def render_symbol(symbol: dict, reports: list[dict], *,
 def _comparison_groups(symbols: list[dict], reports: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for symbol in symbols:
-        grouped[(symbol["market"], symbol["currency"])].append(symbol)
+        grouped[(symbol["market"], quote_unit(symbol))].append(symbol)
     market_order = {"CN": 0, "HK": 1, "US": 2}
     result = []
     for (market, currency), catalog in sorted(grouped.items(), key=lambda item: (market_order.get(item[0][0], 9), item[0][1])):
@@ -491,7 +493,7 @@ def render_overview(symbols: list[dict], reports: list[dict], *,
             continue
         _add(blocks, _MARKETS[market] + "观察标的", 4)
         for symbol in catalog:
-            _add(blocks, symbol["name"] + " · " + symbol["symbol"] + " · " + symbol["currency"], 5)
+            _add(blocks, symbol["name"] + " · " + symbol["symbol"] + " · " + quote_unit(symbol), 5)
             _link(blocks, "进入 " + symbol["name"] + " 标的档案", symbol_urls.get(symbol["symbol"]))
             matching = _for_symbol(symbol, reports)
             latest = _latest(symbol, matching)
@@ -503,9 +505,9 @@ def render_overview(symbols: list[dict], reports: list[dict], *,
             _field(blocks, "行情截止 / 实际生成", _value(latest["data_as_of"]) + " / " + latest["generated_at"])
             _add(blocks, latest["headline"])
             _add(blocks, latest["summary"])
-            _field(blocks, "收盘 / 日涨跌", _price(latest["market_snapshot"]["close"], symbol["currency"]) + " / " + _percent(latest["market_snapshot"]["change_pct"]))
+            _field(blocks, "收盘 / 日涨跌", _price(latest["market_snapshot"]["close"], quote_unit(symbol)) + " / " + _percent(latest["market_snapshot"]["change_pct"]))
             levels = latest["price_levels"]
-            _field(blocks, "当时目标 / 失效线", _price(levels["target"] if levels else None, symbol["currency"]) + " / " + _price(levels["stop"] if levels else None, symbol["currency"]))
+            _field(blocks, "当时目标 / 失效线", _price(levels["target"] if levels else None, quote_unit(symbol)) + " / " + _price(levels["stop"] if levels else None, quote_unit(symbol)))
             key = (symbol["symbol"], latest["trade_date"], latest["revision"])
             _link(blocks, "阅读 " + latest["trade_date"] + " / v" + str(latest["revision"]) + " 日报", report_urls.get(key))
             if latest["limitations"]:
@@ -552,24 +554,25 @@ def trend_png(symbol: dict, reports: list[dict], destination: Path) -> bool:
     report, history = _series(symbol, reports)
     if len(history) < 2:
         return False
+    unit = "points" if quote_unit(symbol) == "点" else quote_unit(symbol)
     plt, mdates = _plot_modules()
     figure, axis = plt.subplots(figsize=(11.2, 4.8), dpi=160, facecolor="#09121f")
     try:
         dates = [datetime.strptime(point["date"], "%Y-%m-%d") for point in history]
         closes = [point["close"] for point in history]
-        _style_axes(axis, mdates, symbol["currency"])
+        _style_axes(axis, mdates, unit)
         axis.plot(dates, closes, color=_COLORS[0], linewidth=2.2, label="Observed close")
         axis.scatter([dates[-1]], [closes[-1]], s=28, color=_COLORS[0], zorder=3)
-        axis.annotate(_price(closes[-1], symbol["currency"]), (dates[-1], closes[-1]), xytext=(-8, 12), textcoords="offset points", ha="right", color="#e8edf4", fontsize=9)
+        axis.annotate(_price(closes[-1], unit), (dates[-1], closes[-1]), xytext=(-8, 12), textcoords="offset points", ha="right", color="#e8edf4", fontsize=9)
         figure.subplots_adjust(left=.09, right=.97, top=.73, bottom=.21)
-        figure.text(.07, .935, symbol["symbol"] + " | Historical close (" + symbol["currency"] + ")", color="#e8edf4", fontsize=17, weight="semibold")
+        figure.text(.07, .935, symbol["symbol"] + " | Historical close (" + unit + ")", color="#e8edf4", fontsize=17, weight="semibold")
         figure.text(.07, .875, "Source report: " + report["trade_date"] + " / v" + str(report["revision"]) + " | Data as of: " + _value(report["data_as_of"]), color="#9baec4", fontsize=9)
         figure.text(.07, .825, history[0]["date"] + " to " + history[-1]["date"] + " | " + str(len(history)) + " observed trading dates", color="#9baec4", fontsize=9)
         figure.text(.07, .075, "One report series; original price basis retained. No series splicing, targets or reconstructed forecasts.", color="#9baec4", fontsize=9)
         figure.text(.07, .035, "Historical archive, not a live market signal. Source generation: " + report["generated_at"], color="#9baec4", fontsize=8)
         destination = Path(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        figure.savefig(destination, format="png", facecolor=figure.get_facecolor(), metadata={"Title": symbol["symbol"] + " historical close", "Description": "Currency: " + symbol["currency"] + "; report: " + report["trade_date"] + "; revision: " + str(report["revision"]) + "; data_as_of: " + str(report["data_as_of"])})
+        figure.savefig(destination, format="png", facecolor=figure.get_facecolor(), metadata={"Title": symbol["symbol"] + " historical close", "Description": "Currency: " + unit + "; report: " + report["trade_date"] + "; revision: " + str(report["revision"]) + "; data_as_of: " + str(report["data_as_of"])})
     finally:
         plt.close(figure)
     return True
@@ -588,7 +591,7 @@ def overview_png(symbols: list[dict], reports: list[dict], destination: Path) ->
     try:
         for row, group in enumerate(usable):
             axis = axes[row][0]
-            _style_axes(axis, mdates, group["currency"], percent=True)
+            _style_axes(axis, mdates, "points" if group["currency"] == "点" else group["currency"], percent=True)
             days = group["dates"]
             dates = [datetime.strptime(day, "%Y-%m-%d") for day in days]
             cutoff_labels = []
@@ -597,7 +600,7 @@ def overview_png(symbols: list[dict], reports: list[dict], destination: Path) ->
                 changes = [(history[day] / initial - 1) * 100 for day in days]
                 axis.plot(dates, changes, label=symbol["symbol"], color=_COLORS[index % len(_COLORS)], linewidth=1.9)
                 cutoff_labels.append(symbol["symbol"] + ": " + report["trade_date"] + " v" + str(report["revision"]))
-            axis.set_title(group["market"] + " / " + group["currency"] + " | " + days[0] + " - " + days[-1] + " | " + str(len(days)) + " common trading dates", loc="left", color="#e8edf4", fontsize=11, pad=12)
+            axis.set_title(group["market"] + " / " + ("points" if group["currency"] == "点" else group["currency"]) + " | " + days[0] + " - " + days[-1] + " | " + str(len(days)) + " common trading dates", loc="left", color="#e8edf4", fontsize=11, pad=12)
             axis.legend(loc="best", frameon=True, facecolor="#111d2d", edgecolor="#33455b", labelcolor="#c1cfde", fontsize=9)
             axis.text(0, -.23, "Source reports: " + "; ".join(cutoff_labels), transform=axis.transAxes, color="#9baec4", fontsize=8)
         # Reserve space below the final panel for its source line and the
