@@ -596,6 +596,8 @@ function el(id) { return document.getElementById(id); }
 
 /* ---------------- page switching ---------------- */
 function showPage(name) {
+  if (!['factors', 'backtest', 'paper', 'live', 'company', 'trade-review'].includes(name)) name = 'factors';
+  if (location.hash !== `#${name}`) location.hash = name;
   document.querySelectorAll('.navitem').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${name}`));
   if (name === 'paper' && !loadedPages.has('paper')) { loadedPages.add('paper'); loadPaperTrading(); }
@@ -608,6 +610,7 @@ function showPage(name) {
   }
 }
 document.querySelectorAll('.navitem').forEach(b => b.addEventListener('click', () => showPage(b.dataset.page)));
+window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 el('pickFactorLink').addEventListener('click', () => showPage('factors'));
 
 function setStatus(msg, isError) {
@@ -691,8 +694,18 @@ async function loadFactors() {
   factorsById = Object.fromEntries((data.factors || []).map(f => [f.id, f]));
   const bases = pairedBaseNames(Object.values(factorsById));
   if (bases.length && !selection.pairedBase) selection.pairedBase = bases[0];
-  renderFactorList();
-  updateSelectionSummary();
+  const requested = factorsById[new URLSearchParams(location.search).get('factor')];
+  if (requested?.implemented) {
+    if (requested.paired_base) {
+      selection.mode = 'paired';
+      selection.pairedBase = requested.paired_base;
+    } else {
+      selection.mode = 'compose';
+      if (requested.direction === 'long') selection.entryId = requested.id;
+      else selection.exitId = requested.id;
+    }
+  }
+  setMode(selection.mode);
 }
 
 function setMode(mode) {
@@ -1502,6 +1515,7 @@ el('runBtn').addEventListener('click', runBacktest);
 el('goBacktestBtn').addEventListener('click', () => showPage('backtest'));
 
 initCharts();
+showPage(location.hash.slice(1) || 'factors');
 loadFactors().catch(e => setStatus(String(e.message || e), true));
 </script>
 </body>

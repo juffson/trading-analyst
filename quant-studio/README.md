@@ -62,6 +62,11 @@ quant-studio/
 
 凭证问题排查见 [`../skills/trading-analyst/references/longbridge-api.md`](../skills/trading-analyst/references/longbridge-api.md)。
 
+## 桌面版迁移
+
+GPUI Kit 桌面入口现支持因子库浏览，启动方式及迁移范围见 [desktop/README.md](desktop/README.md)。
+其余功能暂时继续使用下方 Web 工作台。
+
 ## 跑起来
 
 ```bash
