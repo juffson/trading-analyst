@@ -306,6 +306,7 @@ class PublishDiagnosticTests(unittest.TestCase):
 
     def run_cli(self, client):
         with patch("scripts.publish_feishu.load_dataset", return_value=(self.symbols, self.reports)), \
+             patch("scripts.publish_feishu.load_watchlist", return_value=self.symbols), \
              patch("scripts.publish_feishu.Config.from_env", return_value=self.config), \
              patch("scripts.publish_feishu.FeishuClient", return_value=client), \
              patch("scripts.publish_feishu.trend_png", return_value=False), \

@@ -445,19 +445,23 @@ def _comparison_groups(symbols: list[dict], reports: list[dict]) -> list[dict]:
 def render_overview(symbols: list[dict], reports: list[dict], *,
                     symbol_urls: dict[str, str],
                     report_urls: dict[tuple[str, str, int], str],
-                    page_url: str | None = None) -> list[dict]:
+                    page_url: str | None = None,
+                    observed_symbols: list[dict] | None = None) -> list[dict]:
     blocks = [managed_notice("overview")]
     _add(blocks, "研究总览", 3)
     if page_url:
         _link(blocks, "打开网页归档总览", page_url)
     _add(blocks, "研究路径：总览 → 标的档案 → 交易日日报及修订版本。所有价格和判断均为历史归档，不能视为实时信号。")
+    observed = symbols if observed_symbols is None else observed_symbols
+    observed_codes = {symbol["symbol"] for symbol in observed}
+    archived = [symbol for symbol in symbols if symbol["symbol"] not in observed_codes]
     actual = [report for report in reports if report["provenance"]["kind"] != "validation"]
-    covered = sum(_latest(symbol, actual, research_only=True) is not None for symbol in symbols)
-    _field(blocks, "观察目录", str(len(symbols)) + " 只标的；已有正式研究 " + str(covered) + " 只")
+    covered = sum(_latest(symbol, actual, research_only=True) is not None for symbol in observed)
+    _field(blocks, "观察目录", str(len(observed)) + " 只标的；已有正式研究 " + str(covered) + " 只；另保留 " + str(len(archived)) + " 只历史档案")
     _field(blocks, "研究日报", str(len({(r["symbol"], r["trade_date"]) for r in actual})) + " 个标的交易日；" + str(len(actual)) + " 个正式研究版本")
     _field(blocks, "最新归档交易日", max((report["trade_date"] for report in actual), default="—（尚无正式研究）"))
     counts = {"偏多": 0, "中性": 0, "偏空": 0, "未形成判断": 0}
-    for symbol in symbols:
+    for symbol in observed:
         latest = _latest(symbol, actual, research_only=True)
         if latest is None or latest["outlook"] == "Unknown":
             counts["未形成判断"] += 1
@@ -472,7 +476,7 @@ def render_overview(symbols: list[dict], reports: list[dict], *,
 
     _add(blocks, "同市场、同币种走势", 4)
     _add(blocks, "每个市场 / 币种独立分图。仅取各标的最新正式报告的一条价格序列，在共同真实交易日上对齐；共同首日归零后比较收盘涨跌幅。不同币种价格不混绘，目标和失效价不画成历史曲线。")
-    for group in _comparison_groups(symbols, reports):
+    for group in _comparison_groups(observed, reports):
         label = _MARKETS[group["market"]] + " / " + group["currency"]
         if group["reason"]:
             _field(blocks, label, "不绘制对比图：" + group["reason"] + "。")
@@ -482,7 +486,7 @@ def render_overview(symbols: list[dict], reports: list[dict], *,
             _field(blocks, label + " 缺少足够行情", "、".join(group["missing"]))
 
     for market in ("CN", "HK", "US"):
-        catalog = [symbol for symbol in symbols if symbol["market"] == market]
+        catalog = [symbol for symbol in observed if symbol["market"] == market]
         if not catalog:
             continue
         _add(blocks, _MARKETS[market] + "观察标的", 4)
@@ -508,6 +512,11 @@ def render_overview(symbols: list[dict], reports: list[dict], *,
                 _add(blocks, "该版本的数据限制：")
                 for limitation in latest["limitations"]:
                     _add(blocks, limitation, 12)
+    if archived:
+        _add(blocks, "历史档案（已停止日常跟踪）", 4)
+        _add(blocks, "以下标的保留全部历史日报和修订，不列入当前观察目录、方向统计或走势对比。")
+        for symbol in archived:
+            _link(blocks, symbol["name"] + " · " + symbol["symbol"] + " · 历史档案", symbol_urls.get(symbol["symbol"]))
     return blocks
 
 

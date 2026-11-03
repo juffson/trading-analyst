@@ -35,7 +35,7 @@ from scripts.feishu_render import (
     render_symbol,
     trend_png,
 )
-from scripts.validate_research import ValidationError, _public_url, load_dataset
+from scripts.validate_research import ValidationError, _public_url, load_dataset, load_watchlist
 
 
 class PublishError(ValueError):
@@ -392,7 +392,8 @@ class Publisher:
             raise PublishError("发布最终核对未通过。")
         self.stats.updated_documents += 1
 
-    def publish(self, symbols: list[dict], reports: list[dict], *, selected: str | None = None) -> Stats:
+    def publish(self, symbols: list[dict], reports: list[dict], *, selected: str | None = None,
+                observed_symbols: list[dict] | None = None) -> Stats:
         parent = self.check()
         space = parent["space_id"]
         self.stage = "overview_node_create"
@@ -466,9 +467,10 @@ class Publisher:
 
             self.stage = "overview_index_sync"
             chart = work / "overview.png"
-            picture = chart if overview_png(symbols, verified, chart) else None
+            observed = symbols if observed_symbols is None else observed_symbols
+            picture = chart if overview_png(observed, verified, chart) else None
             wanted = _with_chart(render_overview(symbols, verified, symbol_urls={code: self.config.wiki_url(node) for code, node in ready_homes.items()},
-                                                report_urls=report_urls, page_url=self.config.page_url()), picture)
+                                                report_urls=report_urls, page_url=self.config.page_url(), observed_symbols=observed), picture)
             self.sync(overview, "overview", wanted, image=picture)
         return self.stats
 
@@ -477,7 +479,8 @@ def report_key(report: dict) -> str:
     return "report:" + report["symbol"] + ":" + report["trade_date"] + ":" + str(report["revision"])
 
 
-def validate_rendering(symbols: list[dict], reports: list[dict], selected: str | None = None) -> dict:
+def validate_rendering(symbols: list[dict], reports: list[dict], selected: str | None = None,
+                       observed_symbols: list[dict] | None = None) -> dict:
     """Exercise every production renderer and PNG generation without network."""
     symbols = [s for s in symbols if selected is None or s["symbol"] == selected]
     reports = [r for r in reports if any(s["symbol"] == r["symbol"] for s in symbols)]
@@ -504,11 +507,13 @@ def validate_rendering(symbols: list[dict], reports: list[dict], selected: str |
                 canonical(block)
             blocks += len(rendered)
             images += bool(trend_png(symbol, group, work / "symbol.png"))
-        rendered = render_overview(symbols, reports, symbol_urls=symbol_urls, report_urls=report_urls)
+        observed_codes = {symbol["symbol"] for symbol in observed_symbols} if observed_symbols is not None else None
+        observed = [symbol for symbol in symbols if observed_codes is None or symbol["symbol"] in observed_codes]
+        rendered = render_overview(symbols, reports, symbol_urls=symbol_urls, report_urls=report_urls, observed_symbols=observed)
         for block in rendered:
             canonical(block)
         blocks += len(rendered)
-        images += bool(overview_png(symbols, reports, work / "overview.png"))
+        images += bool(overview_png(observed, reports, work / "overview.png"))
     return {"symbols": len(symbols), "reports": len(reports), "blocks": blocks, "charts": images}
 
 
@@ -530,11 +535,12 @@ def main(argv: list[str] | None = None) -> int:
     stage = "dataset_validation"
     try:
         symbols, reports = load_dataset(args.root)
+        observed = load_watchlist(args.root, symbols)
         if args.symbol and args.symbol not in {s["symbol"] for s in symbols}:
             raise PublishError("--symbol 必须是 research/symbols.json 中已登记的代码。")
         if args.mode == "validate":
             stage = "render_validation"
-            result = validate_rendering(symbols, reports, args.symbol)
+            result = validate_rendering(symbols, reports, args.symbol, observed_symbols=observed)
             _summary("飞书本地验证通过：{symbols} 个标的、{reports} 份分析、{blocks} 个正文块、{charts} 张趋势图；未调用飞书 API。".format(**result))
             return 0
         stage = "configuration"
@@ -544,7 +550,7 @@ def main(argv: list[str] | None = None) -> int:
             publisher.check()
             _summary("飞书入口读取与子节点列表检查通过；未创建或修改页面。创建、编辑及图片权限仍需通过 publish 验证。")
             return 0
-        result = publisher.publish(symbols, reports, selected=args.symbol)
+        result = publisher.publish(symbols, reports, selected=args.symbol, observed_symbols=observed)
         _summary(f"飞书发布并回读核对完成：新增 {result.created_nodes} 个节点，写入或更新 {result.updated_documents} 篇文档，跳过 {result.unchanged_documents} 篇相同文档，确认 {result.verified_reports} 份分析。")
         return 0
     except (PublishError, ValidationError, FeishuAPIError) as error:

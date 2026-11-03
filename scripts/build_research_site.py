@@ -26,7 +26,7 @@ from urllib.parse import unquote, urlsplit
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT))
-from scripts.validate_research import ValidationError, load_dataset  # noqa: E402
+from scripts.validate_research import ValidationError, load_dataset, load_watchlist  # noqa: E402
 
 
 MARKETS = {"CN": "A股", "HK": "港股", "US": "美股"}
@@ -243,6 +243,7 @@ class Site:
         self.output = output
         self.base = base_path
         self.symbols = symbols
+        self.observed = load_watchlist(root, symbols)
         self.reports = reports
         self.by_symbol: dict[str, list[dict]] = defaultdict(list)
         for report in reports:
@@ -331,7 +332,7 @@ class Site:
         groups = []
         for currency in ("CNY", "HKD", "USD"):
             histories = []
-            for symbol in self.symbols:
+            for symbol in self.observed:
                 if symbol["currency"] != currency:
                     continue
                 report = history_report(self.by_symbol[symbol["symbol"]])
@@ -370,32 +371,37 @@ class Site:
 
     def overview(self) -> None:
         actual = [r for r in self.reports if r["provenance"]["kind"] != "validation"]
-        covered = sum(any(r["provenance"]["kind"] != "validation" for r in self.by_symbol[s["symbol"]]) for s in self.symbols)
+        covered = sum(any(r["provenance"]["kind"] != "validation" for r in self.by_symbol[s["symbol"]]) for s in self.observed)
         last_date = max((r["trade_date"] for r in actual), default="尚无报告")
         days = len({(r["symbol"], r["trade_date"]) for r in actual})
         signals = defaultdict(int)
-        for symbol in self.symbols:
+        for symbol in self.observed:
             report = latest_research(self.by_symbol[symbol["symbol"]])
             if report and report["provenance"]["kind"] != "validation":
                 signals[OUTLOOKS[report["outlook"]][1]] += 1
         direction_text = f'偏多 {signals["up"]} · 中性 {signals["neutral"]} · 偏空 {signals["down"]}'
         stat_items = (
-            ("观察目录", str(len(self.symbols)), "只", "覆盖 A股 / 港股 / 美股"),
-            ("已有研究", str(covered), f"/ {len(self.symbols)} 只", "未研究的标的保留为空状态"),
+            ("观察目录", str(len(self.observed)), "只", "覆盖 A股 / 港股 / 美股"),
+            ("已有研究", str(covered), f"/ {len(self.observed)} 只", "未研究的标的保留为空状态"),
             ("研究日报", str(days), "份", "按标的与交易日计数，修订另存"),
             ("最新方向分布", str(signals["up"] + signals["neutral"] + signals["down"]), "只已形成判断", direction_text),
         )
         stats = "".join(f'<div class="stat"><span class="stat-label">{e(label)}</span><div class="stat-value">{e(value)}<small>{e(unit)}</small></div><div class="stat-foot">{e(note)}</div></div>' for label, value, unit, note in stat_items)
-        filters = f'<button class="filter-button" data-market-filter="all" aria-pressed="true" type="button">全部<span class="filter-count">{len(self.symbols)}</span></button>'
+        filters = f'<button class="filter-button" data-market-filter="all" aria-pressed="true" type="button">全部<span class="filter-count">{len(self.observed)}</span></button>'
         for market, label in MARKETS.items():
-            filters += f'<button class="filter-button" data-market-filter="{market}" aria-pressed="false" type="button">{label}<span class="filter-count">{sum(s["market"] == market for s in self.symbols)}</span></button>'
+            filters += f'<button class="filter-button" data-market-filter="{market}" aria-pressed="false" type="button">{label}<span class="filter-count">{sum(s["market"] == market for s in self.observed)}</span></button>'
+        observed_codes = {symbol["symbol"] for symbol in self.observed}
+        archived = [symbol for symbol in self.symbols if symbol["symbol"] not in observed_codes]
+        archive_links = " · ".join(f'<a href="{e(self.symbol_url(symbol))}">{e(symbol["name"])} · {e(symbol["symbol"])}</a>' for symbol in archived)
+        archive_section = f'<section class="panel"><h2>历史档案（已停止日常跟踪）</h2><p>保留历史日报与修订，不计入当前观察目录及走势对比。</p><p>{archive_links}</p></section>' if archived else ""
         body = f'''<div class="page-heading"><div><p class="eyebrow">Research / Overview</p><h1>研究总览</h1><p class="page-description">先看趋势与最新判断，再进入标的历史，追溯每份收盘分析。</p></div><div class="heading-side">最新归档交易日<strong>{e(last_date)}</strong></div></div>
 <section class="stats-row" aria-label="研究覆盖概况">{stats}</section>
 <section id="coverage" aria-labelledby="coverage-title"><div class="section-heading"><div><h2 id="coverage-title">观察标的</h2><p>各卡片展示该标的最新归档分析；日期与信息完整程度可能不同。</p></div><span class="archive-mark">历史快照</span></div>
 <noscript><p class="no-js-note">所有标的和报告均可直接阅读。启用 JavaScript 后可筛选、搜索与查看图表日值。</p></noscript>
 <div class="toolbar"><div class="filter-group" aria-label="市场筛选">{filters}</div><div class="search-wrap"><label class="sr-only" for="security-search">搜索标的名称或代码</label><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.5"/></svg><input class="search-input" id="security-search" type="search" placeholder="搜索名称、代码" autocomplete="off" data-security-search></div></div>
-<p class="coverage-status" data-coverage-status aria-live="polite">显示 {len(self.symbols)} / {len(self.symbols)} 只观察标的</p>
-<div class="security-grid">{"".join(self.overview_card(symbol) for symbol in self.symbols)}</div><div data-no-results hidden>{empty_state("没有匹配的观察标的", "试试其他代码、名称，或切换到全部市场。")}</div></section>
+<p class="coverage-status" data-coverage-status aria-live="polite">显示 {len(self.observed)} / {len(self.observed)} 只观察标的</p>
+<div class="security-grid">{"".join(self.overview_card(symbol) for symbol in self.observed)}</div><div data-no-results hidden>{empty_state("没有匹配的观察标的", "试试其他代码、名称，或切换到全部市场。")}</div></section>
+{archive_section}
 {self.comparison()}
 <section class="method-note" id="method" aria-label="阅读说明"><div><h3>三层研究结构</h3><p>总览 → 标的主页 → 按交易日归档的分析。每份日报保留独立链接；同日修订保留原始版本。</p></div><div><h3>行情历史与判断历史分开</h3><p>曲线仅来自实际收盘价。目标和失效价只出现在有研究记录的日期，不补造过往建议。</p></div><div><h3>日期与缺口保持可见</h3><p>交易日、数据截止时间、生成时间分别展示。“未形成判断”表示证据不足；历史记录不能视作实时信号。</p></div></section>'''
         self.write("index.html", self.page("研究总览", "A股、港股、美股的公开研究档案：总览、标的历史与每日分析。", body, [("研究总览", None)], True))
@@ -601,6 +607,7 @@ class Site:
             shutil.copyfile(source, target)
         self.write(".nojekyll", "")
         self.write("data/symbols.json", json.dumps({"schema_version": 1, "symbols": self.symbols}, ensure_ascii=False, indent=2) + "\n")
+        self.write("data/watchlist.json", json.dumps({"schema_version": 1, "symbols": [symbol["symbol"] for symbol in self.observed]}, ensure_ascii=False, indent=2) + "\n")
         for report in self.reports:
             self.write(f'data/reports/{report["symbol"]}/{json_filename(report)}', json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         self.overview()
@@ -713,12 +720,13 @@ def build(root: Path, output: Path, base: str) -> dict:
             "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
             "base_path": base,
             "symbol_count": len(symbols),
+            "observed_symbol_count": len(site.observed),
             "report_count": len(reports),
             "research_date_count": len({(r["symbol"], r["trade_date"]) for r in reports}),
             "html_page_count": len(site.pages),
             "file_count": len(file_entries) + 1,
             "validated_local_links": link_count,
-            "source_allowlist": ["research/symbols.json", "research/reports/<symbol>/<date>[.vN].json", "research/site/styles.css", "research/site/app.js"],
+            "source_allowlist": ["research/symbols.json", "research/watchlist.json", "research/reports/<symbol>/<date>[.vN].json", "research/site/styles.css", "research/site/app.js"],
             "files": file_entries,
             "manifest_file": "build-manifest.json",
             "routes": [{"symbol": s["symbol"], "path": f'symbols/{s["slug"]}/index.html', "report_dates": sorted({r["trade_date"] for r in site.by_symbol[s["symbol"]]})} for s in symbols],

@@ -453,6 +453,31 @@ def _read_json(path: Path) -> Any:
         _fail(str(path), "invalid UTF-8 JSON")
 
 
+def load_watchlist(root: str | Path, symbols: list[dict]) -> list[dict]:
+    """Current observation scope; the full catalog still owns all archives."""
+    root = Path(root)
+    research = root if (root / "symbols.json").is_file() else root / "research"
+    path = research / "watchlist.json"
+    if path.is_symlink():
+        _fail(str(path), "watchlist must not be a symlink")
+    if not path.exists():
+        return list(symbols)  # Older datasets retain their original coverage.
+    if not path.is_file():
+        _fail(str(path), "watchlist must be a regular file")
+    data = _read_json(path)
+    if (not isinstance(data, dict) or set(data) != {"schema_version", "symbols"}
+            or type(data["schema_version"]) is not int or data["schema_version"] != 1
+            or not isinstance(data["symbols"], list)):
+        _fail(str(path), "expected watchlist schema_version 1 and a symbol array")
+    by_code = {symbol["symbol"]: symbol for symbol in symbols}
+    codes = data["symbols"]
+    if any(not isinstance(code, str) or code not in by_code for code in codes):
+        _fail(str(path), "watchlist contains an unregistered symbol")
+    if len(codes) != len(set(codes)):
+        _fail(str(path), "watchlist contains duplicate symbols")
+    return [by_code[code] for code in codes]
+
+
 def load_dataset(root: str | Path) -> tuple[list[dict], list[dict]]:
     """Load and validate research/ below repo root (or a research root itself)."""
     root = Path(root)
@@ -463,6 +488,7 @@ def load_dataset(root: str | Path) -> tuple[list[dict], list[dict]]:
     if not catalog_path.is_file():
         _fail(str(catalog_path), "symbol catalog is missing")
     symbols = validate_symbols(_read_json(catalog_path))
+    load_watchlist(root, symbols)
     by_code = {symbol["symbol"]: symbol for symbol in symbols}
     reports_dir = research / "reports"
     if reports_dir.is_symlink() or not reports_dir.is_dir():
