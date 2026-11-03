@@ -1,0 +1,372 @@
+{
+  "schema_version": 1,
+  "symbol": "9988.HK",
+  "trade_date": "2026-11-03",
+  "revision": 1,
+  "data_as_of": "2026-11-03T08:08:08Z",
+  "generated_at": "2026-11-03T08:35:23Z",
+  "report_kind": "closing",
+  "outlook": "Neutral",
+  "analysis_quality": "degraded",
+  "headline": "冲高回落、缩量微涨，短线修复尚未越过20日线",
+  "summary": "收99.55港元，涨0.10%；高于MA5/10但低于MA20/60/200，量比0.92、RSI42.83。观察98.85–98.485与101.60/102.7875，仍需完整收盘确认。",
+  "market_snapshot": {
+    "close": 99.55,
+    "previous_close": 99.45,
+    "change_pct": 0.10055304,
+    "open": 99.9,
+    "high": 101.6,
+    "low": 98.85
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 98.21,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MA10",
+      "value": 98.485,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MA20",
+      "value": 102.7875,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MA60",
+      "value": 109.72083333,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MA200",
+      "value": 123.362765,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MACD DIF",
+      "value": -2.91915493,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MACD DEA",
+      "value": -2.73967556,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "MACD histogram",
+      "value": -0.35895874,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "Previous MACD histogram",
+      "value": -0.81591096,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 42.82952799,
+      "unit": "0-100",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "Wilder ATR14",
+      "value": 3.6426055,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "Volume ratio",
+      "value": 0.92219508,
+      "unit": "x",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "Raw regular volume",
+      "value": 56486186,
+      "unit": "Longbridge原始单位",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "20D high",
+      "value": 113.2,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "20D low",
+      "value": 95.1,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    },
+    {
+      "name": "60D low",
+      "value": 95.1,
+      "unit": "HKD",
+      "note": "300根已完成Intraday日K独立计算；成交量保留供应商原始单位"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "已完成常规盘量价与独立指标",
+      "direction": "mixed",
+      "evidence": "开99.90、高101.60、低98.85，收99.55低于开盘和前日高100.20。MACD负柱由−0.8159缩至−0.3590，但DIF仍低于DEA及零轴；反弹动量改善与中期弱势并存。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "已公开公司或产品背景",
+      "direction": "mixed",
+      "evidence": "重新核对8月20日已公布的6月季度官方业绩：收入2689.53亿元、同比增长9%，云外部收入增长45%，非GAAP自由现金流流出446.70亿元。增长与资本投入并存，这是旧季度背景，不是11月3日新催化；未把二手评级、美元ADS报价或产品叙事转换为港股盈利和目标。",
+      "source_ids": [
+        "issuer"
+      ]
+    },
+    {
+      "title": "同日有限市场代理",
+      "direction": "mixed",
+      "evidence": "2800.HK收23.66、前收23.48，上涨0.77%；3032.HK上涨0.57%。本标的相对2800单日涨跌幅差-0.67个百分点。代理不能代表市场广度、资金流或确定因果。",
+      "source_ids": [
+        "price",
+        "benchmark",
+        "tech"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": "should_execute=false；后续需重新核验完整价格、触发与风险收益条件。",
+    "invalidation": "观察结构失效时重新研究；不激活、续期或移动旧候选边界。",
+    "basis": "没有通过趋势、触发、交易摩擦与风险收益的联合门槛；真实高低点和均线仅作结构观察。"
+  },
+  "scenarios": [
+    {
+      "name": "保守：修复转弱",
+      "price": 98.21,
+      "condition": "若失守98.85及MA10，并完整收盘跌破MA5约98.21，修复假设减弱。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    },
+    {
+      "name": "基准：短线整理",
+      "price": 99.55,
+      "condition": "守住98.485附近但不能持续收复100.20–101.60时，维持中性整理观察。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    },
+    {
+      "name": "乐观：扩大修复",
+      "price": 102.7875,
+      "condition": "需先完整站稳101.60，再检验MA20约102.7875及后续量价，才重评中期方向。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "观察价位与适用范围",
+      "body": "支撑观察98.85（本日低）及98.485（MA10）；更低98.21（MA5），更远风险95.10（20/60日低）。修复压力100.20（前日高）、101.60（本日高）及102.7875（MA20）。"
+    },
+    {
+      "heading": "结论与证据评分",
+      "body": "outlook=Neutral；should_execute=false。strategy_fit_score=40/100；趋势与相对强弱10/25；技术确认10/20；量价与资金6/15；驱动质量与时效8/15；基本面与估值4/10；风险收益与可执行性2/15。评分是公开证据的主观筛选，不是胜率；driver_strength=null，未提供统计显著性或回测。趋势和技术扣分对应尚未通过的价格确认，驱动/估值扣分对应时效与资料缺口；没有因评分而自动执行的规则。"
+    },
+    {
+      "heading": "交易日、收市竞价与截止",
+      "body": "Longbridge日历确认2026-11-03为HK完整交易日、非半日市；取数当前时间2026-11-03T08:28:40.833006144Z，HK状态Closed，已晚于16:10。HKEX收市竞价全日市在16:08–16:10随机结束，不能把16:00当最终收盘。本次四证券最终快照均为2026-11-03T08:08:08Z，即香港16:08:08，OHLC、前收和原始量与Intraday日K一致；以此为data_as_of。行情和资讯均按此截止，排除后续信息及盘前、盘后和未完成K线。"
+    },
+    {
+      "heading": "样本与独立计算方法",
+      "body": "显式trade_sessions=intraday、forward_adjust=true，固定日期end=2026-11-03；300根真实日K自2025-08-15起，全部返回Intraday。先转Asia/Hong_Kong交易日再检查唯一、递增和不晚于目标日；末两日OHLCV另与不复权日K核对一致。日K的前日16:00Z为本地日期标签，不是收盘成交时刻。MA简单均值；EMA12/26首收盘初始化，DIF为差，DEA为DIF的EMA9，柱=2×(DIF−DEA)。RSI14、ATR14以首14个变动/真实波幅均值初始化后Wilder递推，首TR为高减低。量比=当日量/此前20日均量，不含当日；末30根实际收盘用于历史图。MA200不足则留空。"
+    },
+    {
+      "heading": "情景与有效期",
+      "body": "保守、基准、乐观情景只以已发生高低点、前收和均线为锚，观察未来1–5个实际交易日；没有校准概率，不给出收益承诺。未建立新的入场、止损、目标或有效期组合；旧候选按原有效期结束，不自动续期。多方修复假设须经后续完整收盘检验，失守低点或确认位则重评，不因超卖、放量或单一财报自动认定反转。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-11-02",
+    "narrative": "11月2日Neutral、收99.45。今日盘中越过原观察100.20，但最终99.55未站稳；负动量继续收敛、成交量下降，保留Neutral，不把盘中突破追认为已确认方案。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge 9988.HK固定日期Intraday前复权300根日K，末两日与不复权及最终快照核对；网页非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/9988.HK",
+      "published_at": null
+    },
+    {
+      "id": "benchmark",
+      "label": "Longbridge 2800.HK当日/前日Intraday日K及最终快照，有限市场代理",
+      "url": "https://longbridge.com/zh-CN/quote/2800.HK",
+      "published_at": null
+    },
+    {
+      "id": "tech",
+      "label": "Longbridge 3032.HK当日Intraday日K，有限科技代理",
+      "url": "https://longbridge.com/zh-CN/quote/3032.HK",
+      "published_at": null
+    },
+    {
+      "id": "issuer",
+      "label": "Alibaba官方6月季度业绩，SEC Exhibit 99.1",
+      "url": "https://www.sec.gov/Archives/edgar/data/1577552/000110465926099220/tm2623667d1_ex99-1.htm",
+      "published_at": null
+    },
+    {
+      "id": "session",
+      "label": "HKEX官方CAS FAQ，股票及ETF适用收市竞价，16:08–16:10随机结束",
+      "url": "https://www.hkex.com.hk/Global/Exchange/FAQ/Securities-Market/Trading/CAS?sc_lang=en",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "单一行情供应商；复权、不复权与快照核对不是独立第二行情源，数据仍可能修订。",
+    "未完成完整估值、策略回测、分钟触发先后与费用核验；不推定任何委托或成交。",
+    "未完成最新一致预期、分部估值及新增公告穷尽核验；缩量反弹尚缺中期趋势确认。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-09-21",
+      "close": 112.6
+    },
+    {
+      "date": "2026-09-22",
+      "close": 114.8
+    },
+    {
+      "date": "2026-09-23",
+      "close": 109.8
+    },
+    {
+      "date": "2026-09-24",
+      "close": 110
+    },
+    {
+      "date": "2026-09-25",
+      "close": 108.4
+    },
+    {
+      "date": "2026-09-28",
+      "close": 107.7
+    },
+    {
+      "date": "2026-09-29",
+      "close": 106.2
+    },
+    {
+      "date": "2026-09-30",
+      "close": 106.6
+    },
+    {
+      "date": "2026-10-02",
+      "close": 104.4
+    },
+    {
+      "date": "2026-10-05",
+      "close": 105.4
+    },
+    {
+      "date": "2026-10-06",
+      "close": 108.2
+    },
+    {
+      "date": "2026-10-07",
+      "close": 105.4
+    },
+    {
+      "date": "2026-10-08",
+      "close": 104.3
+    },
+    {
+      "date": "2026-10-09",
+      "close": 107
+    },
+    {
+      "date": "2026-10-12",
+      "close": 108.2
+    },
+    {
+      "date": "2026-10-13",
+      "close": 107.2
+    },
+    {
+      "date": "2026-10-14",
+      "close": 110.5
+    },
+    {
+      "date": "2026-10-15",
+      "close": 106.4
+    },
+    {
+      "date": "2026-10-16",
+      "close": 108.8
+    },
+    {
+      "date": "2026-10-20",
+      "close": 104.9
+    },
+    {
+      "date": "2026-10-21",
+      "close": 103.7
+    },
+    {
+      "date": "2026-10-22",
+      "close": 97.35
+    },
+    {
+      "date": "2026-10-23",
+      "close": 97.8
+    },
+    {
+      "date": "2026-10-26",
+      "close": 97.95
+    },
+    {
+      "date": "2026-10-27",
+      "close": 97
+    },
+    {
+      "date": "2026-10-28",
+      "close": 98.9
+    },
+    {
+      "date": "2026-10-29",
+      "close": 96.1
+    },
+    {
+      "date": "2026-10-30",
+      "close": 97.05
+    },
+    {
+      "date": "2026-11-02",
+      "close": 99.45
+    },
+    {
+      "date": "2026-11-03",
+      "close": 99.55
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge completed Intraday public daily candles; public issuer, fund manager and HKEX disclosures",
+    "note": "实际生成2026-11-03T08:35:23Z；行情和信息均截止2026-11-03T08:08:08Z。仅新增最近已完成交易日初版，不改写历史、不新造更早空档；下游发布以实际回读为准。"
+  }
+}
