@@ -158,10 +158,14 @@
   .skill-form .api-profile-select.visible { display: block; }
   @media (max-width: 720px) { .api-profile-form { grid-template-columns: 1fr; } }
   .settings-section-title { margin: var(--sp-5) 0 var(--sp-3); font-size: 17px; }
-  .settings-layout.ai-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cli-unified { max-width: 900px; }
+  .cli-switch { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); border-bottom: 1px solid var(--stroke); }
+  .cli-switch button { margin: 0; padding: 10px 18px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--fg-2); }
+  .cli-switch button[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+  .cli-unified .cli-settings-form[hidden] { display: none; }
   .settings-status { color: var(--brand); font-size: 14px; font-weight: 700; margin-bottom: var(--sp-2); }
   .settings-note { color: var(--fg-3); font-size: 11px; line-height: 1.6; }
-  @media (max-width: 760px) { .settings-layout, .settings-layout.ai-settings { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .settings-layout { grid-template-columns: 1fr; } }
   .current-selection { font-size: 12px; color: var(--fg-2); background: var(--stripe);
                         border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: var(--sp-3); }
   .current-selection b { color: var(--fg-1); }
@@ -697,7 +701,7 @@
     <section class="page" id="page-settings">
       <div class="page-header">
         <h1>连接设置</h1>
-        <span class="hint">管理 Longbridge 凭据与本地 AI CLI 的 API 连接</span>
+        <span class="hint">管理 Longbridge、AI 服务商与本机 CLI 连接</span>
       </div>
       <h2 class="settings-section-title">Longbridge OpenAPI</h2>
       <div class="settings-layout">
@@ -744,11 +748,14 @@
           <div class="status" id="apiProfileMessage" role="status"></div>
         </form>
       </div>
-      <h2 class="settings-section-title">AI CLI · 自定义 API</h2>
-      <p class="settings-note">配置仅用于本应用之后启动的新任务；留空的 Key 会保留原值。默认仍使用各 CLI 已有的登录。Codex 需要兼容 Responses API，Claude 需要兼容 Anthropic Messages API。</p>
-      <div class="settings-layout ai-settings">
-        <form class="settings-card cli-settings-form" data-runner="codex" autocomplete="off">
-          <h2>Codex CLI</h2>
+      <h2 class="settings-section-title">本机 CLI 连接</h2>
+      <p class="settings-note">切换 Codex 或 Claude，分别管理本机 CLI 的登录与 API 连接。保存后用于下一个新任务；留空 Key 会保留原值。</p>
+      <div class="settings-card cli-unified">
+        <div class="cli-switch" role="tablist" aria-label="本机 CLI">
+          <button type="button" id="cliTabCodex" role="tab" aria-controls="cliFormCodex" aria-selected="true">Codex CLI</button>
+          <button type="button" id="cliTabClaude" role="tab" aria-controls="cliFormClaude" aria-selected="false">Claude CLI</button>
+        </div>
+        <form id="cliFormCodex" class="cli-settings-form" role="tabpanel" aria-labelledby="cliTabCodex" data-runner="codex" autocomplete="off">
           <div class="settings-status" id="cliStatusCodex">读取中…</div>
           <label for="cliModeCodex">连接方式</label>
           <select id="cliModeCodex"><option value="local">使用 CLI 已有登录</option><option value="custom">自定义 API</option></select>
@@ -762,8 +769,7 @@
           <button type="submit">保存 Codex 配置</button><button type="button" class="secondary-action cli-reset">清除自定义配置</button>
           <div class="status" id="cliMessageCodex" role="status"></div>
         </form>
-        <form class="settings-card cli-settings-form" data-runner="claude" autocomplete="off">
-          <h2>Claude CLI</h2>
+        <form id="cliFormClaude" class="cli-settings-form" role="tabpanel" aria-labelledby="cliTabClaude" data-runner="claude" autocomplete="off" hidden>
           <div class="settings-status" id="cliStatusClaude">读取中…</div>
           <label for="cliModeClaude">连接方式</label>
           <select id="cliModeClaude"><option value="local">使用 CLI 已有登录</option><option value="custom">自定义 API</option></select>
@@ -920,6 +926,17 @@ const CLI_SETTINGS_IDS = {
   codex: { suffix: 'Codex' },
   claude: { suffix: 'Claude' },
 };
+let activeCliRunner = 'codex';
+function selectCliRunner(runner) {
+  if (!CLI_SETTINGS_IDS[runner]) return;
+  activeCliRunner = runner;
+  for (const [name, { suffix }] of Object.entries(CLI_SETTINGS_IDS)) {
+    const selected = name === runner;
+    el(`cliTab${suffix}`).setAttribute('aria-selected', String(selected));
+    el(`cliTab${suffix}`).tabIndex = selected ? 0 : -1;
+    el(`cliForm${suffix}`).hidden = !selected;
+  }
+}
 
 function updateCliFormState(runner) {
   const suffix = CLI_SETTINGS_IDS[runner].suffix;
@@ -2348,6 +2365,18 @@ document.querySelectorAll('.cli-settings-form').forEach(form => {
   form.querySelector('.cli-reset').addEventListener('click', () => resetCliSettings(runner));
   el(`cliMode${CLI_SETTINGS_IDS[runner].suffix}`).addEventListener('change', () => updateCliFormState(runner));
 });
+for (const [runner, { suffix }] of Object.entries(CLI_SETTINGS_IDS)) {
+  const tab = el(`cliTab${suffix}`);
+  tab.addEventListener('click', () => selectCliRunner(runner));
+  tab.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const next = runner === 'codex' ? 'claude' : 'codex';
+    selectCliRunner(next);
+    el(`cliTab${CLI_SETTINGS_IDS[next].suffix}`).focus();
+  });
+}
+selectCliRunner(activeCliRunner);
 el('apiProfileForm').addEventListener('submit', async event => {
   event.preventDefault();
   const body = profileFields();
