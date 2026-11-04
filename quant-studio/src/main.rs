@@ -562,7 +562,9 @@ async fn start_company_analysis(
     }
     let slug = skill_runner::new_job_slug(&name);
     let job_dir = state.company_analysis_dir.join(&slug);
-    if let Err(e) = std::fs::create_dir_all(&job_dir) {
+    if let Err(e) = std::fs::create_dir_all(&state.company_analysis_dir)
+        .and_then(|_| std::fs::create_dir(&job_dir))
+    {
         return err_response(anyhow::anyhow!("创建任务目录失败: {e}")).into_response();
     }
     let out_dir = std::fs::canonicalize(&job_dir).unwrap_or(job_dir.clone());
@@ -585,7 +587,7 @@ async fn start_company_analysis(
     );
     let command = build_command(req.runner, &prompt, &state.trading_analyst_root);
 
-    if let Err(e) = skill_runner::prepare_job(&job_dir, &command) {
+    if let Err(e) = skill_runner::prepare_job(&job_dir, &command, &name) {
         return err_response(anyhow::anyhow!("准备任务失败: {e}")).into_response();
     }
 
@@ -701,7 +703,9 @@ async fn start_trade_review(
 
     let slug = skill_runner::new_job_slug(&symbol);
     let job_dir = state.trade_review_dir.join(&slug);
-    if let Err(e) = std::fs::create_dir_all(&job_dir) {
+    if let Err(e) = std::fs::create_dir_all(&state.trade_review_dir)
+        .and_then(|_| std::fs::create_dir(&job_dir))
+    {
         return err_response(anyhow::anyhow!("创建任务目录失败: {e}")).into_response();
     }
     let records = json!({ "symbol": symbol, "paper": paper_symbol, "live": live_filtered });
@@ -734,7 +738,7 @@ async fn start_trade_review(
     );
     let command = build_command(req.runner, &prompt, &state.trading_analyst_root);
 
-    if let Err(e) = skill_runner::prepare_job(&job_dir, &command) {
+    if let Err(e) = skill_runner::prepare_job(&job_dir, &command, &symbol) {
         return err_response(anyhow::anyhow!("准备任务失败: {e}")).into_response();
     }
 

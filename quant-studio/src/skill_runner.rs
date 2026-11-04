@@ -1,9 +1,12 @@
 //! Job metadata and report discovery for the local Codex/Claude terminal and
 //! the existing manual-command flow.
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use serde_json::{Value, json};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static JOB_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Unicode-aware（不是 `is_ascii_alphanumeric`）——公司名常是中文（"贵州茅台"），
 /// 只按 ASCII 过滤会把所有中文输入都滤成空字符串，退化成毫无信息量的 "job_<时间戳>"。
@@ -25,7 +28,12 @@ pub fn slugify(input: &str) -> String {
 }
 
 pub fn new_job_slug(seed: &str) -> String {
-    format!("{}_{}", slugify(seed), Utc::now().format("%Y%m%d%H%M%S"))
+    format!(
+        "{}_{}-{:x}",
+        slugify(seed),
+        Utc::now().format("%Y%m%d%H%M%S%6f"),
+        JOB_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    )
 }
 
 /// slug 是从客户端 URL path 里读回来的（GET /api/.../{slug}/status），不能直接信任——
@@ -43,15 +51,20 @@ pub fn is_safe_slug(slug: &str) -> bool {
 }
 
 /// 建好任务目录，把要跑的命令存一份 `command.txt`（方便复制），返回命令本身供页面展示。
-pub fn prepare_job(job_dir: &Path, command: &str) -> Result<()> {
+pub fn prepare_job(job_dir: &Path, command: &str, subject: &str) -> Result<()> {
     std::fs::create_dir_all(job_dir)?;
     std::fs::create_dir_all(job_dir.join("workflow"))?;
     std::fs::write(job_dir.join("command.txt"), command)?;
+    let created_at = Utc::now().to_rfc3339();
+    std::fs::write(
+        job_dir.join("job.json"),
+        serde_json::to_vec_pretty(&json!({ "subject": subject, "created_at": created_at }))?,
+    )?;
     std::fs::write(
         job_dir.join("status.json"),
         serde_json::to_string_pretty(&json!({
             "status": "waiting_for_manual_run",
-            "created_at": Utc::now().to_rfc3339(),
+            "created_at": created_at,
         }))?,
     )?;
     Ok(())
@@ -64,6 +77,22 @@ pub fn job_status(job_dir: &Path, report_filename: &str) -> Value {
         .ok()
         .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
         .unwrap_or(Value::Null);
+    let job_info = std::fs::read(job_dir.join("job.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .unwrap_or(Value::Null);
+    let fallback_subject = job_dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|slug| slug.rsplit_once('_').map(|(subject, _)| subject))
+        .unwrap_or("未知标的");
+    let subject = job_info["subject"].as_str().unwrap_or(fallback_subject);
+    let created_at = job_info["created_at"]
+        .as_str()
+        .or_else(|| metadata["created_at"].as_str())
+        .map(str::to_owned)
+        .or_else(|| created_at_from_slug(job_dir))
+        .unwrap_or_default();
     let stored = metadata["status"]
         .as_str()
         .unwrap_or("waiting_for_manual_run");
@@ -77,14 +106,23 @@ pub fn job_status(job_dir: &Path, report_filename: &str) -> Value {
         let summary = std::fs::read_to_string(job_dir.join("summary.json"))
             .ok()
             .and_then(|s| serde_json::from_str::<Value>(&s).ok());
-        return json!({ "status": "done", "runner": runner, "command": command, "summary": summary,
+        return json!({ "status": "done", "runner": runner, "command": command, "subject": subject,
+            "created_at": created_at, "summary": summary,
             "workflow": workflow_status(job_dir, report_filename, "done") });
     }
     if job_dir.exists() {
-        return json!({ "status": stored, "runner": runner, "command": command, "exit_code": metadata["exit_code"],
+        return json!({ "status": stored, "runner": runner, "command": command, "subject": subject,
+            "created_at": created_at, "exit_code": metadata["exit_code"],
             "workflow": workflow_status(job_dir, report_filename, stored) });
     }
     json!({ "status": "not_found" })
+}
+
+fn created_at_from_slug(job_dir: &Path) -> Option<String> {
+    let slug = job_dir.file_name()?.to_str()?;
+    let timestamp = slug.rsplit_once('_')?.1.split('-').next()?;
+    let date = NaiveDateTime::parse_from_str(timestamp.get(..14)?, "%Y%m%d%H%M%S").ok()?;
+    Some(date.and_utc().to_rfc3339())
 }
 
 struct StageSpec {
@@ -240,9 +278,17 @@ pub fn list_jobs(root: &Path, report_filename: &str) -> Vec<Value> {
         let slug = entry.file_name().to_string_lossy().to_string();
         let mut status = job_status(&entry.path(), report_filename);
         status["slug"] = json!(slug);
+        if let Some(object) = status.as_object_mut() {
+            object.remove("command");
+        }
         jobs.push(status);
     }
-    jobs.sort_by(|a, b| b["slug"].as_str().cmp(&a["slug"].as_str()));
+    jobs.sort_by(|a, b| {
+        b["created_at"]
+            .as_str()
+            .cmp(&a["created_at"].as_str())
+            .then_with(|| b["slug"].as_str().cmp(&a["slug"].as_str()))
+    });
     jobs
 }
 
@@ -255,13 +301,53 @@ mod tests {
     use super::*;
 
     #[test]
+    fn repeated_subjects_get_distinct_jobs_and_sorted_history() {
+        assert!(created_at_from_slug(Path::new("比亚迪-a股_20261104064629"))
+            .unwrap()
+            .starts_with("2026-11-04T06:46:29"));
+        let root = std::env::temp_dir().join(format!(
+            "quant-studio-history-{}-{}",
+            std::process::id(),
+            Utc::now().timestamp_micros()
+        ));
+        let first_slug = new_job_slug("AAPL.US");
+        let second_slug = new_job_slug("AAPL.US");
+        assert_ne!(first_slug, second_slug);
+        assert!(is_safe_slug(&first_slug) && is_safe_slug(&second_slug));
+        let first = root.join(&first_slug);
+        let second = root.join(&second_slug);
+        prepare_job(&first, "first command", "AAPL.US").unwrap();
+        prepare_job(&second, "second command", "AAPL.US").unwrap();
+        std::fs::write(
+            first.join("job.json"),
+            r#"{"subject":"AAPL.US","created_at":"2026-01-01T00:00:00Z"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            second.join("job.json"),
+            r#"{"subject":"AAPL.US","created_at":"2026-02-01T00:00:00Z"}"#,
+        )
+        .unwrap();
+        let jobs = list_jobs(&root, "deep_dive.html");
+        assert_eq!(jobs.len(), 2);
+        assert_eq!(jobs[0]["slug"], second_slug);
+        assert_eq!(jobs[0]["subject"], "AAPL.US");
+        assert!(jobs[0].get("command").is_none());
+        assert_eq!(
+            job_status(&second, "deep_dive.html")["command"],
+            "second command"
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn workflow_advances_only_when_artifacts_are_valid() {
         let dir = std::env::temp_dir().join(format!(
             "quant-studio-workflow-{}-{}",
             std::process::id(),
             Utc::now().timestamp_micros()
         ));
-        prepare_job(&dir, "test command").unwrap();
+        prepare_job(&dir, "test command", "AAPL.US").unwrap();
         let initial = job_status(&dir, "deep_dive.html");
         assert_eq!(initial["workflow"]["ready_count"], 1);
         assert_eq!(initial["workflow"]["stages"][1]["state"], "waiting");
@@ -286,7 +372,7 @@ mod tests {
             std::process::id(),
             Utc::now().timestamp_micros()
         ));
-        prepare_job(&dir, "test command").unwrap();
+        prepare_job(&dir, "test command", "AAPL.US").unwrap();
         std::fs::write(dir.join("records.json"), "{}").unwrap();
         let initial = job_status(&dir, "review.html");
         assert_eq!(initial["workflow"]["ready_count"], 1);

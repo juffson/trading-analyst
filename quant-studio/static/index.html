@@ -358,6 +358,36 @@
   .job-row .name { font-weight: 600; flex: 1; }
   .job-row .meta { font-size: 11px; color: var(--fg-3); }
   .job-row .progress { font-size: 11px; color: var(--fg-2); white-space: nowrap; }
+  .history-toolbar { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0 var(--sp-3); flex-wrap: wrap; }
+  .history-toolbar input { flex: 1 1 220px; width: auto; }
+  .history-toolbar select { flex: 0 0 120px; width: 120px; }
+  .history-toolbar button { width: auto; cursor: pointer; white-space: nowrap; }
+  .history-toolbar button:disabled { opacity: .45; cursor: default; }
+  .history-count { color: var(--fg-2); font-size: 11px; white-space: nowrap; }
+  .history-detail-title { margin-top: var(--sp-4); }
+  .subject-group { border: 1px solid var(--stroke); border-radius: var(--radius-lg); background: var(--card); overflow: hidden; }
+  .subject-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--stroke); }
+  .subject-group-head strong { font-size: 13px; }
+  .subject-group-head span { color: var(--fg-2); font-size: 11px; }
+  .subject-runs { display: flex; flex-direction: column; }
+  .subject-runs .job-row { border: 0; border-radius: 0; box-shadow: none; }
+  .subject-runs .job-row + .job-row { border-top: 1px solid var(--stroke); }
+  .job-row.active { background: var(--lb-brand-2); }
+  .job-row input[type="checkbox"] { width: 16px; height: 16px; flex: 0 0 16px; accent-color: var(--brand); cursor: pointer; }
+  .job-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-3); text-align: left; background: transparent; border: 0; padding: 0; color: var(--fg-1); cursor: pointer; }
+  .job-open .name { flex: 0 1 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .job-open .meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .job-repeat { flex: 0 0 auto; width: auto; padding: 5px 9px; color: var(--fg-2); cursor: pointer; font-size: 11px; }
+  .comparison-area { margin-top: var(--sp-4); }
+  .comparison-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+  .comparison-head button { width: auto; cursor: pointer; }
+  .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .comparison-card { min-width: 0; border: 1px solid var(--stroke); border-radius: var(--radius-lg); background: var(--card); overflow: hidden; }
+  .comparison-card header { display: flex; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3); color: var(--fg-2); }
+  .comparison-card header strong { color: var(--fg-1); }
+  .comparison-card .comparison-metrics { padding: 0 var(--sp-3) var(--sp-2); color: var(--fg-2); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comparison-card iframe { display: block; width: 100%; height: 620px; border: 0; background: white; }
+  @media (max-width: 760px) { .comparison-grid { grid-template-columns: 1fr; } .job-row .progress { display: none; } }
   .job-badge { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: var(--radius-pill); }
   .job-badge.done { background: rgba(0,204,146,0.18); color: var(--risk-safe); }
   .job-badge.waiting_for_manual_run { background: rgba(255,146,45,0.18); color: var(--risk-warning); }
@@ -617,9 +647,12 @@
         <select id="companyRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="manual">手动命令</option></select>
         <button id="companyGenBtn">开始分析</button>
       </div>
-      <div id="companyCommandArea"></div>
       <h3>历史分析</h3>
+      <div class="history-toolbar"><input id="companyHistorySearch" placeholder="搜索标的或任务时间" aria-label="搜索公司分析记录"><select id="companyHistoryFilter" aria-label="筛选分析状态"><option value="all">全部状态</option><option value="done">已完成</option><option value="active">进行中</option><option value="other">其他</option></select><span class="history-count" id="companyHistoryCount"></span><button id="companyCompareBtn" disabled>对比报告 (0/4)</button></div>
       <div class="job-list" id="companyJobList"><div class="empty-note">还没有分析记录</div></div>
+      <div class="comparison-area" id="companyComparisonArea"></div>
+      <h3 class="history-detail-title">所选分析</h3>
+      <div id="companyCommandArea"></div>
     </section>
 
     <!-- ================= 交易记录分析 ================= -->
@@ -634,9 +667,12 @@
         <select id="reviewRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="manual">手动命令</option></select>
         <button id="reviewGenBtn">开始复盘</button>
       </div>
-      <div id="reviewCommandArea"></div>
       <h3>历史复盘</h3>
+      <div class="history-toolbar"><input id="reviewHistorySearch" placeholder="搜索标的或任务时间" aria-label="搜索交易复盘记录"><select id="reviewHistoryFilter" aria-label="筛选复盘状态"><option value="all">全部状态</option><option value="done">已完成</option><option value="active">进行中</option><option value="other">其他</option></select><span class="history-count" id="reviewHistoryCount"></span><button id="reviewCompareBtn" disabled>对比报告 (0/4)</button></div>
       <div class="job-list" id="reviewJobList"><div class="empty-note">还没有复盘记录</div></div>
+      <div class="comparison-area" id="reviewComparisonArea"></div>
+      <h3 class="history-detail-title">所选复盘</h3>
+      <div id="reviewCommandArea"></div>
     </section>
 
     <!-- ================= 账号设置 ================= -->
@@ -1536,8 +1572,8 @@ async function loadLiveTrading() {
 
 /* ---------------- 公司分析 / 交易记录分析 ---------------- */
 const SKILL_KINDS = {
-  company: { api: '/api/company-analysis', reportField: 'name', label: '公司', commandArea: 'companyCommandArea', jobList: 'companyJobList' },
-  'trade-review': { api: '/api/trade-review', reportField: 'symbol', label: '标的', commandArea: 'reviewCommandArea', jobList: 'reviewJobList' },
+  company: { api: '/api/company-analysis', commandArea: 'companyCommandArea', jobList: 'companyJobList', input: 'companyNameInput', runnerSelect: 'companyRunnerSelect', historySearch: 'companyHistorySearch', historyFilter: 'companyHistoryFilter', historyCount: 'companyHistoryCount', compareBtn: 'companyCompareBtn', comparisonArea: 'companyComparisonArea' },
+  'trade-review': { api: '/api/trade-review', commandArea: 'reviewCommandArea', jobList: 'reviewJobList', input: 'reviewSymbolInput', runnerSelect: 'reviewRunnerSelect', historySearch: 'reviewHistorySearch', historyFilter: 'reviewHistoryFilter', historyCount: 'reviewHistoryCount', compareBtn: 'reviewCompareBtn', comparisonArea: 'reviewComparisonArea' },
 };
 const WORKFLOW_PREVIEW = {
   company: ['任务准备', '财务数据', '多维分析', '估值综合', '研究报告'],
@@ -1549,6 +1585,13 @@ let jobPolling = null;
 let activeJobKey = null;
 let lastActiveStatus = null;
 let autoOpeningJob = null;
+const historyJobs = { company: [], 'trade-review': [] };
+const selectedReports = { company: new Set(), 'trade-review': new Set() };
+for (const [kind, cfg] of Object.entries(SKILL_KINDS)) {
+  el(cfg.historySearch).addEventListener('input', () => renderHistoryList(kind));
+  el(cfg.historyFilter).addEventListener('change', () => renderHistoryList(kind));
+  el(cfg.compareBtn).addEventListener('click', () => renderComparison(kind));
+}
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
@@ -1585,11 +1628,12 @@ function renderCommandArea(kind, slug, command, runner = 'manual', status = 'wai
   activeJobKey = `${kind}/${slug}`;
   const cfg = SKILL_KINDS[kind];
   const manual = runner === 'manual';
+  const live = status === 'running' || status === 'stopping';
   el(cfg.commandArea).innerHTML = `
     <div class="command-box">
       <div id="workflow-${escapeHtml(slug)}" class="workflow-board"></div>
-      <div class="steps">${manual ? '复制命令到外部终端运行；完成后检查报告。' : '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。'}</div>
-      ${manual ? `<details class="manual-command"><summary>查看外部终端命令</summary><pre id="cmdText-${escapeHtml(slug)}"></pre></details>` : `<div class="terminal-shell"><div class="terminal-heading"><span>${escapeHtml(runner.toUpperCase())} · 本地会话</span><button id="stopJob-${escapeHtml(slug)}" ${status === 'running' || status === 'stopping' ? '' : 'hidden'}>停止任务</button></div><div class="terminal-view" id="terminal-${escapeHtml(slug)}"></div></div>`}
+      <div class="steps" id="jobInstructions-${escapeHtml(slug)}">${manual ? '复制命令到外部终端运行；完成后检查报告。' : live ? '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。' : '此任务的 CLI 会话已结束；下方为只读的历史输出。可用历史列表中的「再次分析 / 再次复盘」重新发起。'}</div>
+      ${manual ? `<details class="manual-command"><summary>查看外部终端命令</summary><pre id="cmdText-${escapeHtml(slug)}"></pre></details>` : `<div class="terminal-shell"><div class="terminal-heading"><span id="terminalLabel-${escapeHtml(slug)}">${escapeHtml(runner.toUpperCase())} · ${live ? '本地会话' : '历史输出（只读）'}</span><button id="stopJob-${escapeHtml(slug)}" ${live ? '' : 'hidden'}>停止任务</button></div><div class="terminal-view" id="terminal-${escapeHtml(slug)}"></div></div>`}
       <div class="command-actions">
         ${manual ? `<button id="copyJob-${escapeHtml(slug)}">复制命令</button>` : ''}
         <button class="primary" id="checkJob-${escapeHtml(slug)}">检查状态</button>
@@ -1605,7 +1649,7 @@ function renderCommandArea(kind, slug, command, runner = 'manual', status = 'wai
     openTerminal(kind, slug, status);
   }
   el(`checkJob-${slug}`).onclick = () => checkJobDone(kind, slug);
-  updateJobView(kind, slug, { status, workflow });
+  updateJobView(kind, slug, { status, workflow, runner });
   if (workflow === undefined) checkJobDone(kind, slug, true);
   if (status === 'running' || status === 'stopping') {
     jobPolling = setInterval(() => checkJobDone(kind, slug, true), 1500);
@@ -1708,6 +1752,11 @@ function setJobStatus(slug, msg, isError) {
 
 function updateJobView(kind, slug, data) {
   if (activeJobKey !== `${kind}/${slug}`) return;
+  const live = ['running', 'stopping'].includes(data.status);
+  const terminalLabel = el(`terminalLabel-${slug}`);
+  if (terminalLabel) terminalLabel.textContent = `${String(data.runner || '').toUpperCase()} · ${live ? '本地会话' : '历史输出（只读）'}`;
+  const instructions = el(`jobInstructions-${slug}`);
+  if (instructions && terminalLabel && !live) instructions.textContent = '此任务的 CLI 会话已结束；下方为只读的历史输出。可从历史列表重新发起。';
   renderWorkflow(kind, slug, data.workflow);
   if (data.status !== lastActiveStatus) {
     lastActiveStatus = data.status;
@@ -1750,50 +1799,144 @@ async function checkJobDone(kind, slug, quiet = false) {
   }
 }
 
+function historyDate(value, slug = '') {
+  let date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const match = String(slug).match(/_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+    if (match) date = new Date(Date.UTC(+match[1], +match[2] - 1, +match[3], +match[4], +match[5], +match[6]));
+  }
+  return Number.isNaN(date.getTime()) ? '时间未知' : date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function historySummary(summary) {
+  if (!summary || typeof summary !== 'object') return '';
+  return Object.entries(summary).filter(([, value]) => ['string', 'number'].includes(typeof value))
+    .slice(0, 2).map(([key, value]) => `${key}: ${String(value).slice(0, 64)}`).join(' · ');
+}
+
+function renderHistoryList(kind) {
+  const cfg = SKILL_KINDS[kind];
+  const jobs = historyJobs[kind];
+  const query = el(cfg.historySearch).value.trim().toLocaleLowerCase();
+  const filter = el(cfg.historyFilter).value;
+  const visible = jobs.filter(job => {
+    const matchesQuery = !query || `${job.subject || ''} ${job.slug || ''} ${job.created_at || ''}`.toLocaleLowerCase().includes(query);
+    const matchesState = filter === 'all' || (filter === 'done' && job.status === 'done')
+      || (filter === 'active' && ['running', 'stopping'].includes(job.status))
+      || (filter === 'other' && !['done', 'running', 'stopping'].includes(job.status));
+    return matchesQuery && matchesState;
+  });
+  el(cfg.historyCount).textContent = `${visible.length} / ${jobs.length} 条记录`;
+  const target = el(cfg.jobList);
+  if (!visible.length) {
+    target.innerHTML = `<div class="empty-note">${jobs.length ? '没有符合条件的记录' : `还没有${kind === 'company' ? '分析' : '复盘'}记录`}</div>`;
+    updateCompareButton(kind);
+    return;
+  }
+  const groups = new Map();
+  for (const job of visible) {
+    const subject = String(job.subject || job.slug?.split('_')[0] || '未知标的');
+    const key = subject.trim().toLocaleLowerCase();
+    if (!groups.has(key)) groups.set(key, { subject, jobs: [] });
+    groups.get(key).jobs.push(job);
+  }
+  const selected = selectedReports[kind];
+  const statusLabels = { done: '已完成', waiting_for_manual_run: '待运行', running: '运行中', stopping: '停止中',
+    failed: '失败', incomplete: '未生成报告', interrupted: '已中断', cancelled: '已停止' };
+  target.innerHTML = [...groups.values()].map(group => `
+    <section class="subject-group">
+      <div class="subject-group-head"><strong>${escapeHtml(group.subject)}</strong><span>${group.jobs.length} 次${kind === 'company' ? '分析' : '复盘'} · ${group.jobs.filter(j => j.status === 'done').length} 份报告</span></div>
+      <div class="subject-runs">${group.jobs.map(job => `
+        <div class="job-row ${activeJobKey === `${kind}/${job.slug}` ? 'active' : ''}">
+          <input type="checkbox" data-compare-slug="${escapeHtml(job.slug)}" aria-label="选择 ${escapeHtml(group.subject)} ${escapeHtml(historyDate(job.created_at, job.slug))} 的报告" ${selected.has(job.slug) ? 'checked' : ''} ${job.status !== 'done' || (selected.size >= 4 && !selected.has(job.slug)) ? 'disabled' : ''}>
+          <button class="job-open" data-open-slug="${escapeHtml(job.slug)}">
+            <span class="name">${escapeHtml(historyDate(job.created_at, job.slug))}</span>
+            <span class="meta">${escapeHtml(historySummary(job.summary) || job.slug)}</span>
+          </button>
+          <span class="progress">${job.workflow ? `${job.workflow.ready_count}/${job.workflow.total_count} 产物` : escapeHtml(job.runner || '手动')}</span>
+          <span class="job-badge ${escapeHtml(job.status)}">${escapeHtml(statusLabels[job.status] || job.status)}</span>
+          <button class="job-repeat" data-repeat-slug="${escapeHtml(job.slug)}">${kind === 'company' ? '再次分析' : '再次复盘'}</button>
+        </div>`).join('')}</div>
+    </section>`).join('');
+  target.querySelectorAll('[data-open-slug]').forEach(button => button.onclick = () => openJob(kind, button.dataset.openSlug, true));
+  target.querySelectorAll('[data-repeat-slug]').forEach(button => button.onclick = () => {
+    const job = historyJobs[kind].find(item => item.slug === button.dataset.repeatSlug);
+    if (!job) return;
+    const input = el(cfg.input);
+    input.value = job.subject || '';
+    const select = el(cfg.runnerSelect);
+    if ([...select.options].some(option => option.value === job.runner && !option.disabled)) select.value = job.runner;
+    input.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    input.focus();
+  });
+  target.querySelectorAll('[data-compare-slug]').forEach(box => box.onchange = () => {
+    if (box.checked) selected.add(box.dataset.compareSlug);
+    else selected.delete(box.dataset.compareSlug);
+    renderHistoryList(kind);
+  });
+  updateCompareButton(kind);
+}
+
+function updateCompareButton(kind) {
+  const button = el(SKILL_KINDS[kind].compareBtn);
+  const count = selectedReports[kind].size;
+  button.textContent = `对比报告 (${count}/4)`;
+  button.disabled = count < 2;
+}
+
+function renderComparison(kind) {
+  const cfg = SKILL_KINDS[kind];
+  const selected = selectedReports[kind];
+  const jobs = historyJobs[kind].filter(job => selected.has(job.slug) && job.status === 'done');
+  const target = el(cfg.comparisonArea);
+  if (jobs.length < 2) { target.innerHTML = ''; return; }
+  target.innerHTML = `<div class="comparison-head"><h3>报告对比 · ${jobs.length} 份</h3><button id="${kind === 'company' ? 'company' : 'review'}CloseComparison">关闭对比</button></div>
+    <div class="comparison-grid">${jobs.map(job => `<article class="comparison-card">
+      <header><strong>${escapeHtml(job.subject || job.slug)}</strong><span>${escapeHtml(historyDate(job.created_at, job.slug))}</span></header>
+      <div class="comparison-metrics">${escapeHtml(historySummary(job.summary) || '查看完整报告')}</div>
+      <iframe sandbox="allow-scripts" title="${escapeHtml(job.subject || job.slug)} 报告" src="${cfg.api}/${encodeURIComponent(job.slug)}/report"></iframe>
+    </article>`).join('')}</div>`;
+  target.querySelector('.comparison-head button').onclick = () => { target.innerHTML = ''; };
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadJobList(kind) {
   const cfg = SKILL_KINDS[kind];
-  const target = el(cfg.jobList);
   try {
     const resp = await fetch(cfg.api);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     const jobs = data.jobs || [];
+    historyJobs[kind] = jobs;
+    const valid = new Set(jobs.filter(job => job.status === 'done').map(job => job.slug));
+    for (const slug of selectedReports[kind]) if (!valid.has(slug)) selectedReports[kind].delete(slug);
+    renderHistoryList(kind);
     if (!jobs.length) {
-      target.innerHTML = `<div class="empty-note">还没有${kind === 'company' ? '分析' : '复盘'}记录</div>`;
       if (!activeJobKey && document.getElementById(`page-${kind}`).classList.contains('active')) renderWorkflowPreview(kind);
       return;
     }
-    target.innerHTML = jobs.map(j => {
-      const label = { done: '已完成', waiting_for_manual_run: '待运行', running: '运行中', stopping: '停止中',
-        failed: '失败', incomplete: '未生成报告', interrupted: '已中断', cancelled: '已停止' }[j.status] || j.status;
-      const summaryBits = j.summary ? Object.entries(j.summary).slice(0, 3)
-        .map(([k, v]) => `${escapeHtml(k)}=${escapeHtml(v)}`).join(' · ') : '';
-      const progress = j.workflow ? `${j.workflow.ready_count}/${j.workflow.total_count} 项产物` : '旧任务';
-      return `
-        <div class="job-row" data-kind="${kind}" data-slug="${escapeHtml(j.slug)}">
-          <span class="name">${escapeHtml(j.slug)}</span>
-          <span class="meta">${summaryBits}</span>
-          <span class="progress">${escapeHtml(progress)}</span>
-          <span class="job-badge ${escapeHtml(j.status)}">${escapeHtml(label)}</span>
-        </div>`;
-    }).join('');
-    target.querySelectorAll('.job-row').forEach(row => row.onclick = () => openJob(row.dataset.kind, row.dataset.slug));
     if (!activeJobKey && !autoOpeningJob && document.getElementById(`page-${kind}`).classList.contains('active')) {
-      autoOpeningJob = `${kind}/${jobs[0].slug}`;
-      try { await openJob(kind, jobs[0].slug); } finally { autoOpeningJob = null; }
+      const featured = jobs.find(job => ['running', 'stopping'].includes(job.status))
+        || jobs.find(job => job.status === 'done')
+        || jobs.find(job => job.status === 'waiting_for_manual_run');
+      if (!featured) { renderWorkflowPreview(kind); return; }
+      autoOpeningJob = `${kind}/${featured.slug}`;
+      try { await openJob(kind, featured.slug); } finally { autoOpeningJob = null; }
     }
   } catch (e) {
-    target.innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
+    el(cfg.jobList).textContent = `加载失败：${String(e.message || e)}`;
   }
 }
 
-async function openJob(kind, slug) {
+async function openJob(kind, slug, scrollToDetail = false) {
   const cfg = SKILL_KINDS[kind];
   try {
     const resp = await fetch(`${cfg.api}/${encodeURIComponent(slug)}/status`);
     const data = await resp.json();
     renderCommandArea(kind, slug, data.command || '', data.runner || 'manual', data.status, data.workflow);
+    if (scrollToDetail) el(cfg.commandArea).scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) {
-    el(cfg.commandArea).innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
+    el(cfg.commandArea).textContent = `加载失败：${String(e.message || e)}`;
   }
 }
 
