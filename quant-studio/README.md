@@ -145,6 +145,9 @@ python3 auto-trader/scripts/render_dashboard.py
     任务目录在 `data/company-analysis/<slug>/`、`data/trade-review/<slug>/`，其中 `terminal.log`
     保存最多 8 MiB 输出；CLI 退出后检查 `deep_dive.html`/`review.html` 并在页面展示报告。
     重启服务会把未完成会话标记为中断，历史输出仍可查看。
+    每个新任务还有工作流看板：公司研究按任务准备、财务数据、多维分析、估值综合、研究报告五阶段展示；
+    交易复盘按任务准备、行情与资讯、执行复盘、复盘报告四阶段展示。节点只在对应 JSON 或报告
+    实际写入且可读取后点亮，`workflow/` 保存中间产物；旧任务没有阶段记录时明确标示。
     交易记录分析会把当前模拟交易 + 实盘账户记录（复用上面两个页面的数据源）整理成
     `records.json` 喂给 skill，让它做"无基线复盘"（没有走 skill 自己 `plan_io.py` 存的历史
     plan）。**这两个页面没有下单入口；所选本机 CLI 可按你在终端中的确认访问工作区与网络。**

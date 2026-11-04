@@ -571,6 +571,11 @@ async fn start_company_analysis(
 
     let prompt = format!(
         "{header}任务：对 \"{name}\" 做买入前的深度价值分析（11 维度打分 + DCF + HTML 决策仪表盘）。\n\
+         本次研究的数据目录固定为 {out}/workflow。请按 SKILL.md 的真实阶段执行，并在每项工作完成后立刻把对应的有效 JSON 写入该目录；不要预先创建空文件或伪造进度：\n\
+         数据采集：stock_quote.json、financial_statements.json；\n\
+         多维分析：economic_model.json、pestel.json、porter.json、asset_valuation.json；\n\
+         估值综合：dcf_valuation.json、analysis_summary.json。\n\
+         调用 render_dashboard.py 时，--data-dir 指向 {out}/workflow，--analysis-json 指向 {out}/workflow/analysis_summary.json。\n\
          完整仪表盘存到 {out}/deep_dive.html（必须用 render_dashboard.py 生成，不要自己手写 HTML）；\n\
          另外在 {out}/summary.json 写一份精简摘要，字段：company, code, score_total, score_max, \
          recommendation_band, buy_price_range, margin_of_safety_pct, generated_at。",
@@ -718,6 +723,9 @@ async fn start_trade_review(
          paper.trade_log 是模拟成交，live.positions/live.today_orders 是 Longbridge 账户当前真实持仓和\
          今日委托）。请基于这份记录 + 最新行情做复盘分析，说清楚哪些操作合理、哪些有问题、下一步怎么调整，\
          按「无基线复盘」的方式处理（没有旧 plan 可比对，直接告知用户这一点）。\n\
+         为了让应用内工作流看板显示真实进度，每项完成后立刻在 {out}/workflow 写入对应的有效 JSON，不要创建空文件或伪造进度：\n\
+         market_snapshot.json（最新行情、技术指标及数据时间）、news_context.json（新增资讯和来源）、\
+         review_analysis.json（实际操作、合理/不合理之处、风险和下一步调整）。\n\
          复盘 HTML 存到 {out}/review.html；另外在 {out}/summary.json 写精简摘要，字段：\n\
          symbol, verdict(on_track|watch|off_track), summary, next_actions, generated_at。",
         header = skill_prompt_header(&skill_dir),

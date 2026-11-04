@@ -317,6 +317,35 @@
                  padding: var(--sp-4); margin-bottom: var(--sp-4); box-shadow: var(--shadow-card); }
   .command-box .steps { font-size: 12px; color: var(--fg-2); margin-bottom: var(--sp-2); line-height: 1.7; }
   .command-box pre { white-space: pre-wrap; word-break: break-all; }
+  .manual-command { margin-top: var(--sp-2); }
+  .manual-command summary { color: var(--fg-2); cursor: pointer; font-size: 12px; }
+  .manual-command pre { max-height: 330px; overflow: auto; padding: var(--sp-3); border: 1px solid var(--stroke); border-radius: var(--radius-lg); background: var(--bg-1); }
+  .workflow-board { margin: 0 0 var(--sp-4); }
+  .workflow-topline { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+  .workflow-topline strong { font-size: 14px; }
+  .workflow-topline span, .workflow-footnote { color: var(--fg-2); font-size: 11px; }
+  .workflow-progress { height: 5px; background: var(--stripe); border-radius: var(--radius-pill); overflow: hidden; margin-bottom: var(--sp-3); }
+  .workflow-progress span { display: block; height: 100%; background: var(--brand); transition: width .3s ease; }
+  .workflow-stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(174px, 1fr)); gap: var(--sp-2); }
+  .workflow-stage { min-width: 0; padding: var(--sp-3); border: 1px solid var(--stroke); border-radius: var(--radius-lg); background: var(--bg-1); }
+  .workflow-stage.active { border-color: var(--chart-blue); box-shadow: inset 0 0 0 1px rgba(12,182,255,.22); }
+  .workflow-stage.done { border-color: rgba(0,204,146,.48); }
+  .workflow-stage.blocked { border-color: rgba(247,65,95,.5); }
+  .workflow-stage-head { display: flex; align-items: center; gap: var(--sp-2); }
+  .workflow-number { display: grid; place-items: center; width: 23px; height: 23px; flex: 0 0 23px; border-radius: 50%; background: var(--stripe); color: var(--fg-2); font-size: 11px; font-weight: 700; }
+  .workflow-stage.active .workflow-number { background: var(--chart-blue); color: var(--lb-fg-invert); }
+  .workflow-stage.done .workflow-number { background: var(--risk-safe); color: var(--lb-fg-invert); }
+  .workflow-stage h4 { margin: 0; font-size: 12px; flex: 1; }
+  .workflow-stage-state { font-size: 10px; color: var(--fg-2); white-space: nowrap; }
+  .workflow-stage.active .workflow-stage-state { color: var(--chart-blue); }
+  .workflow-stage.done .workflow-stage-state { color: var(--risk-safe); }
+  .workflow-stage.blocked .workflow-stage-state { color: var(--risk-danger); }
+  .workflow-stage p { color: var(--fg-2); font-size: 11px; margin: var(--sp-2) 0; min-height: 30px; }
+  .workflow-items { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+  .workflow-items li { border: 1px solid var(--stroke); border-radius: var(--radius-pill); color: var(--fg-2); padding: 2px 7px; font-size: 10px; }
+  .workflow-items li.ready { border-color: rgba(0,204,146,.45); color: var(--risk-safe); }
+  .workflow-footnote { margin: var(--sp-2) 0 0; }
+  .workflow-legacy { margin: 0 0 var(--sp-3); padding: var(--sp-3); border: 1px dashed var(--stroke); border-radius: var(--radius-lg); color: var(--fg-2); }
   .command-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
   .command-actions button { background: var(--bg-1); border: 1px solid var(--stroke); color: var(--fg-1);
                              cursor: pointer; padding: 7px 14px; }
@@ -328,6 +357,7 @@
   .job-row:hover { border-color: var(--chart-blue); }
   .job-row .name { font-weight: 600; flex: 1; }
   .job-row .meta { font-size: 11px; color: var(--fg-3); }
+  .job-row .progress { font-size: 11px; color: var(--fg-2); white-space: nowrap; }
   .job-badge { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: var(--radius-pill); }
   .job-badge.done { background: rgba(0,204,146,0.18); color: var(--risk-safe); }
   .job-badge.waiting_for_manual_run { background: rgba(255,146,45,0.18); color: var(--risk-warning); }
@@ -669,17 +699,18 @@ function el(id) { return document.getElementById(id); }
 /* ---------------- page switching ---------------- */
 function showPage(name) {
   if (!['factors', 'backtest', 'paper', 'live', 'company', 'trade-review', 'settings'].includes(name)) name = 'factors';
+  if (activeJobKey && !activeJobKey.startsWith(`${name}/`)) closeTerminal();
   if (location.hash !== `#${name}`) location.hash = name;
   document.querySelectorAll('.navitem').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${name}`));
   if (name === 'paper' && !loadedPages.has('paper')) { loadedPages.add('paper'); loadPaperTrading(); }
   if (name === 'live' && !loadedPages.has('live')) { loadedPages.add('live'); loadLiveTrading(); }
-  if (name === 'company' && !loadedPages.has('company')) { loadedPages.add('company'); loadJobList('company'); }
+  if (name === 'company') loadJobList('company');
   if (name === 'trade-review' && !loadedPages.has('trade-review')) {
     loadedPages.add('trade-review');
-    loadJobList('trade-review');
     populateKnownSymbols();
   }
+  if (name === 'trade-review') loadJobList('trade-review');
   if (name === 'settings') loadCredentialsStatus();
 }
 document.querySelectorAll('.navitem').forEach(b => b.addEventListener('click', () => showPage(b.dataset.page)));
@@ -1508,15 +1539,22 @@ const SKILL_KINDS = {
   company: { api: '/api/company-analysis', reportField: 'name', label: '公司', commandArea: 'companyCommandArea', jobList: 'companyJobList' },
   'trade-review': { api: '/api/trade-review', reportField: 'symbol', label: '标的', commandArea: 'reviewCommandArea', jobList: 'reviewJobList' },
 };
+const WORKFLOW_PREVIEW = {
+  company: ['任务准备', '财务数据', '多维分析', '估值综合', '研究报告'],
+  'trade-review': ['任务准备', '行情与资讯', '执行复盘', '复盘报告'],
+};
 
 let activeTerminal = null;
 let jobPolling = null;
 let activeJobKey = null;
+let lastActiveStatus = null;
+let autoOpeningJob = null;
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
 function closeTerminal() {
   activeJobKey = null;
+  lastActiveStatus = null;
   if (jobPolling) clearInterval(jobPolling);
   jobPolling = null;
   if (activeTerminal) {
@@ -1542,15 +1580,16 @@ async function loadCliAvailability() {
 }
 loadCliAvailability();
 
-function renderCommandArea(kind, slug, command, runner = 'manual', status = 'waiting_for_manual_run') {
+function renderCommandArea(kind, slug, command, runner = 'manual', status = 'waiting_for_manual_run', workflow) {
   closeTerminal();
   activeJobKey = `${kind}/${slug}`;
   const cfg = SKILL_KINDS[kind];
   const manual = runner === 'manual';
   el(cfg.commandArea).innerHTML = `
     <div class="command-box">
+      <div id="workflow-${escapeHtml(slug)}" class="workflow-board"></div>
       <div class="steps">${manual ? '复制命令到外部终端运行；完成后检查报告。' : '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。'}</div>
-      ${manual ? `<pre id="cmdText-${escapeHtml(slug)}"></pre>` : `<div class="terminal-shell"><div class="terminal-heading"><span>${escapeHtml(runner.toUpperCase())} · 本地会话</span><button id="stopJob-${escapeHtml(slug)}" ${status === 'running' || status === 'stopping' ? '' : 'hidden'}>停止任务</button></div><div class="terminal-view" id="terminal-${escapeHtml(slug)}"></div></div>`}
+      ${manual ? `<details class="manual-command"><summary>查看外部终端命令</summary><pre id="cmdText-${escapeHtml(slug)}"></pre></details>` : `<div class="terminal-shell"><div class="terminal-heading"><span>${escapeHtml(runner.toUpperCase())} · 本地会话</span><button id="stopJob-${escapeHtml(slug)}" ${status === 'running' || status === 'stopping' ? '' : 'hidden'}>停止任务</button></div><div class="terminal-view" id="terminal-${escapeHtml(slug)}"></div></div>`}
       <div class="command-actions">
         ${manual ? `<button id="copyJob-${escapeHtml(slug)}">复制命令</button>` : ''}
         <button class="primary" id="checkJob-${escapeHtml(slug)}">检查状态</button>
@@ -1566,10 +1605,47 @@ function renderCommandArea(kind, slug, command, runner = 'manual', status = 'wai
     openTerminal(kind, slug, status);
   }
   el(`checkJob-${slug}`).onclick = () => checkJobDone(kind, slug);
-  updateJobView(kind, slug, { status });
+  updateJobView(kind, slug, { status, workflow });
+  if (workflow === undefined) checkJobDone(kind, slug, true);
   if (status === 'running' || status === 'stopping') {
     jobPolling = setInterval(() => checkJobDone(kind, slug, true), 1500);
   }
+}
+
+function renderWorkflowPreview(kind) {
+  const target = el(SKILL_KINDS[kind].commandArea);
+  target.innerHTML = `<div class="command-box workflow-board">
+    <div class="workflow-topline"><strong>${kind === 'company' ? '公司研究工作流' : '交易复盘工作流'}</strong><span>流程预览 · 开始任务后显示真实进度</span></div>
+    <div class="workflow-stages">${WORKFLOW_PREVIEW[kind].map((title, index) => `
+      <article class="workflow-stage"><div class="workflow-stage-head"><span class="workflow-number">${index + 1}</span><h4>${title}</h4><span class="workflow-stage-state">待开始</span></div></article>`).join('')}</div>
+  </div>`;
+}
+
+function renderWorkflow(kind, slug, workflow) {
+  const target = el(`workflow-${slug}`);
+  if (!target) return;
+  if (workflow === undefined) {
+    target.innerHTML = '<div class="workflow-legacy">读取工作流阶段…</div>';
+    return;
+  }
+  if (!workflow?.stages?.length) {
+    target.innerHTML = '<div class="workflow-legacy">此任务创建于工作流看板上线前，没有阶段产物记录；仍可查看终端输出和最终报告。</div>';
+    return;
+  }
+  const count = Number(workflow.ready_count) || 0;
+  const total = Number(workflow.total_count) || 0;
+  const current = workflow.stages.find(stage => ['active', 'stopping', 'waiting', 'blocked'].includes(stage.state));
+  const stateLabels = { done: '已完成', active: '进行中', stopping: '停止中', waiting: '待运行', blocked: '已中断', pending: '待开始', untracked: '未留存' };
+  target.innerHTML = `
+    <div class="workflow-topline"><strong>${kind === 'company' ? '公司研究工作流' : '交易复盘工作流'}</strong><span>${current ? '当前：' + escapeHtml(current.title) + ' · ' : ''}已留存 ${count}/${total} 项产物</span></div>
+    <div class="workflow-progress"><span style="width:${total ? Math.min(100, count / total * 100) : 0}%"></span></div>
+    <div class="workflow-stages">${workflow.stages.map(stage => `
+      <article class="workflow-stage ${escapeHtml(stage.state)}">
+        <div class="workflow-stage-head"><span class="workflow-number">${escapeHtml(stage.index)}</span><h4>${escapeHtml(stage.title)}</h4><span class="workflow-stage-state">${escapeHtml(stateLabels[stage.state] || stage.state)}</span></div>
+        <p>${escapeHtml(stage.detail)}</p>
+        <ul class="workflow-items">${(stage.items || []).map(item => `<li class="${item.ready ? 'ready' : ''}">${item.ready ? '✓ ' : '○ '}${escapeHtml(item.label)}</li>`).join('')}</ul>
+      </article>`).join('')}</div>
+    <p class="workflow-footnote">节点依据实际保存的 JSON 和报告更新；尚未留存的产物不会标为完成。</p>`;
 }
 
 function copyCommand(slug) {
@@ -1632,6 +1708,11 @@ function setJobStatus(slug, msg, isError) {
 
 function updateJobView(kind, slug, data) {
   if (activeJobKey !== `${kind}/${slug}`) return;
+  renderWorkflow(kind, slug, data.workflow);
+  if (data.status !== lastActiveStatus) {
+    lastActiveStatus = data.status;
+    loadJobList(kind);
+  }
   const cfg = SKILL_KINDS[kind];
   const labels = { done: '已完成 ✓', running: '正在运行…', stopping: '正在停止…',
     waiting_for_manual_run: '等待手动运行', failed: '运行失败，请查看终端输出',
@@ -1644,7 +1725,6 @@ function updateJobView(kind, slug, data) {
   const report = el(`jobReport-${slug}`);
   if (data.status === 'done' && report && !report.firstChild) {
     report.innerHTML = `<iframe class="report-frame" sandbox="allow-scripts" src="${cfg.api}/${encodeURIComponent(slug)}/report"></iframe>`;
-    loadJobList(kind);
   }
   if (!['running', 'stopping'].includes(data.status) && jobPolling) {
     clearInterval(jobPolling); jobPolling = null;
@@ -1679,6 +1759,7 @@ async function loadJobList(kind) {
     const jobs = data.jobs || [];
     if (!jobs.length) {
       target.innerHTML = `<div class="empty-note">还没有${kind === 'company' ? '分析' : '复盘'}记录</div>`;
+      if (!activeJobKey && document.getElementById(`page-${kind}`).classList.contains('active')) renderWorkflowPreview(kind);
       return;
     }
     target.innerHTML = jobs.map(j => {
@@ -1686,14 +1767,20 @@ async function loadJobList(kind) {
         failed: '失败', incomplete: '未生成报告', interrupted: '已中断', cancelled: '已停止' }[j.status] || j.status;
       const summaryBits = j.summary ? Object.entries(j.summary).slice(0, 3)
         .map(([k, v]) => `${escapeHtml(k)}=${escapeHtml(v)}`).join(' · ') : '';
+      const progress = j.workflow ? `${j.workflow.ready_count}/${j.workflow.total_count} 项产物` : '旧任务';
       return `
         <div class="job-row" data-kind="${kind}" data-slug="${escapeHtml(j.slug)}">
           <span class="name">${escapeHtml(j.slug)}</span>
           <span class="meta">${summaryBits}</span>
+          <span class="progress">${escapeHtml(progress)}</span>
           <span class="job-badge ${escapeHtml(j.status)}">${escapeHtml(label)}</span>
         </div>`;
     }).join('');
     target.querySelectorAll('.job-row').forEach(row => row.onclick = () => openJob(row.dataset.kind, row.dataset.slug));
+    if (!activeJobKey && !autoOpeningJob && document.getElementById(`page-${kind}`).classList.contains('active')) {
+      autoOpeningJob = `${kind}/${jobs[0].slug}`;
+      try { await openJob(kind, jobs[0].slug); } finally { autoOpeningJob = null; }
+    }
   } catch (e) {
     target.innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
   }
@@ -1704,7 +1791,7 @@ async function openJob(kind, slug) {
   try {
     const resp = await fetch(`${cfg.api}/${encodeURIComponent(slug)}/status`);
     const data = await resp.json();
-    renderCommandArea(kind, slug, data.command || '', data.runner || 'manual', data.status);
+    renderCommandArea(kind, slug, data.command || '', data.runner || 'manual', data.status, data.workflow);
   } catch (e) {
     el(cfg.commandArea).innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
   }
