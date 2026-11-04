@@ -138,19 +138,16 @@ python3 auto-trader/scripts/render_dashboard.py
     `today_orders()` 查 Longbridge 账户当前真实持仓和今日委托——auto-trader 里
     `executor.confirm_order()` 只能手动调，没有自动路径产生"实盘成交记录"这种本地数据可读，
     所以换成直接问券商账户，这样"实盘交易"才是真实定义，不看是谁下的单。
-  - **公司分析 / 交易记录分析**：把 `../skills/company-deep-dive` / `../skills/trading-analyst` 这两个
-    Claude Skill 接进页面——但**不会**在后台无人值守跑 `claude -p`。这两个 skill 要跑起来需要
-    Bash/网络/子 agent 权限，没有 TTY 就没法逐条确认，唯一能不卡住的办法是
-    `--permission-mode bypassPermissions`（完全绕过审批），让一个点了页面按钮就能触发的进程
-    完全免确认地跑最多 30 分钟、花掉真金白银的 API 调用——这个口子太大，所以设计成"生成命令，
-    人工跑"：页面拼好完整的 `claude -p "..."` 命令（`prompt` 里直接把 SKILL.md 的绝对路径写清楚，
-    让 claude 自己读文件按流程执行，不依赖 skill 自动发现/匹配——这两个 skill 没有装进
-    `~/.claude/skills/`），你自己复制到终端里跑、交互式确认每一步，跑完回页面点"检查是否已完成"，
-    从磁盘上找 `deep_dive.html`/`review.html` 展示。任务状态和历史记录都是文件系统驱动
-    （`data/company-analysis/<slug>/`、`data/trade-review/<slug>/`），没有内存态、没有后台进程。
+  - **公司分析 / 交易记录分析**：把 `../skills/company-deep-dive` / `../skills/trading-analyst` 的
+    工作流接进页面，可选择本机 Codex CLI、Claude CLI 或手动命令。内置模式以 PTY 启动交互式
+    CLI，页面终端可输入、查看输出、响应权限确认和停止任务；不使用跳过权限检查的参数。
+    `prompt` 里写明 SKILL.md 的绝对路径，不依赖 skill 全局安装。CLI 需要事先在本机安装并登录。
+    任务目录在 `data/company-analysis/<slug>/`、`data/trade-review/<slug>/`，其中 `terminal.log`
+    保存最多 8 MiB 输出；CLI 退出后检查 `deep_dive.html`/`review.html` 并在页面展示报告。
+    重启服务会把未完成会话标记为中断，历史输出仍可查看。
     交易记录分析会把当前模拟交易 + 实盘账户记录（复用上面两个页面的数据源）整理成
     `records.json` 喂给 skill，让它做"无基线复盘"（没有走 skill 自己 `plan_io.py` 存的历史
-    plan）。**这两个页面都只读、只生成命令，没有下单入口、没有自动执行入口。**
+    plan）。**这两个页面没有下单入口；所选本机 CLI 可按你在终端中的确认访问工作区与网络。**
 - **持续跟踪效果**：每次跑回测都会往 `data/performance/<factor_key>.jsonl` 追加一条
   `{ts, symbol, metrics}` 快照——同一个因子在不同时间测，能看出表现有没有漂移。
   `metrics` 现在记 10 个字段（原本 6 个，后加了 sortino / profit_factor / avg_trade_pct /

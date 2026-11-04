@@ -1,17 +1,8 @@
-//! 把 `../skills/company-deep-dive` / `../skills/trading-analyst` 这两个 Skill 接到
-//! quant-studio 页面里——
-//! **不**在后台无人值守跑 headless claude。跑完整个 skill 流程需要 Bash/网络/子 agent 权限，
-//! 没有 TTY 就没法逐条确认，唯一能不卡住的办法是 `--permission-mode bypassPermissions`，
-//! 那等于让一个点了页面按钮就能触发的进程完全绕过审批——这个口子太大，用户明确选了不开。
-//!
-//! 所以这里只做"生成命令，人工跑"：quant-studio 拼好完整的 `claude -p "..."` 命令（跟
-//! `auto-trader/pipeline/README.md` 里手动调用 skill 的方式一致），用户自己复制到终端跑，
-//! 交互式确认每一步；跑完回来点"检查完成"，页面从磁盘上找生成的报告文件展示。
-//! 不依赖 skill 自动发现/匹配（用户也没把这两个 skill 装进 ~/.claude/skills/）——命令里直接把
-//! SKILL.md 的绝对路径写清楚，让 claude 自己读文件按流程做。
+//! Job metadata and report discovery for the local Codex/Claude terminal and
+//! the existing manual-command flow.
 use anyhow::Result;
 use chrono::Utc;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::Path;
 
 /// Unicode-aware（不是 `is_ascii_alphanumeric`）——公司名常是中文（"贵州茅台"），
@@ -46,7 +37,9 @@ pub fn is_safe_slug(slug: &str) -> bool {
         && slug != "."
         && slug != ".."
         && !slug.contains(['/', '\\', '\0'])
-        && slug.chars().all(|c| c.is_alphanumeric() || matches!(c, '_' | '-'))
+        && slug
+            .chars()
+            .all(|c| c.is_alphanumeric() || matches!(c, '_' | '-'))
 }
 
 /// 建好任务目录，把要跑的命令存一份 `command.txt`（方便复制），返回命令本身供页面展示。
@@ -63,17 +56,30 @@ pub fn prepare_job(job_dir: &Path, command: &str) -> Result<()> {
     Ok(())
 }
 
-/// 状态纯靠磁盘上有没有目标报告文件判断——没有后台进程，没有"running"这个中间态。
+/// 结合终端会话写入的状态和报告文件，供页面与历史列表展示。
 pub fn job_status(job_dir: &Path, report_filename: &str) -> Value {
     let command = std::fs::read_to_string(job_dir.join("command.txt")).unwrap_or_default();
-    if job_dir.join(report_filename).exists() {
+    let metadata = std::fs::read(job_dir.join("status.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .unwrap_or(Value::Null);
+    let stored = metadata["status"]
+        .as_str()
+        .unwrap_or("waiting_for_manual_run");
+    let runner = metadata["runner"].as_str().unwrap_or("manual");
+    if job_dir.join(report_filename).exists()
+        && !matches!(
+            stored,
+            "running" | "stopping" | "cancelled" | "failed" | "interrupted"
+        )
+    {
         let summary = std::fs::read_to_string(job_dir.join("summary.json"))
             .ok()
             .and_then(|s| serde_json::from_str::<Value>(&s).ok());
-        return json!({ "status": "done", "command": command, "summary": summary });
+        return json!({ "status": "done", "runner": runner, "command": command, "summary": summary });
     }
     if job_dir.exists() {
-        return json!({ "status": "waiting_for_manual_run", "command": command });
+        return json!({ "status": stored, "runner": runner, "command": command, "exit_code": metadata["exit_code"] });
     }
     json!({ "status": "not_found" })
 }

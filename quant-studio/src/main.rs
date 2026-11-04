@@ -5,11 +5,13 @@ mod longbridge;
 mod paper_trading;
 mod performance;
 mod skill_runner;
+mod terminal;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path as AxumPath, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{Html, IntoResponse, Json as JsonResponse};
@@ -22,6 +24,7 @@ use tower_http::services::ServeDir;
 use credentials::{Credentials, CredentialsUpdate};
 use factors::FactorLib;
 use performance::PerformanceLog;
+use terminal::{Runner, SessionManager};
 
 struct AppState {
     factor_lib_path: PathBuf,
@@ -35,6 +38,7 @@ struct AppState {
     trading_analyst_skill_dir: PathBuf,
     company_analysis_dir: PathBuf,
     trade_review_dir: PathBuf,
+    sessions: SessionManager,
 }
 
 type SharedState = Arc<AppState>;
@@ -46,6 +50,9 @@ async fn main() {
     let auto_trader_root = root.join("auto-trader");
     let trading_analyst_root =
         std::fs::canonicalize(root.join("..")).unwrap_or_else(|_| root.join(".."));
+    let sessions = SessionManager::new();
+    sessions.reconcile(&root.join("data/company-analysis"));
+    sessions.reconcile(&root.join("data/trade-review"));
     let state = Arc::new(AppState {
         // 因子库只有一份：auto-trader/strategy-kit/strategy_kit.json（Python CLI 和本服务共用）
         factor_lib_path: auto_trader_root.join("strategy-kit/strategy_kit.json"),
@@ -59,6 +66,7 @@ async fn main() {
         trading_analyst_skill_dir: trading_analyst_root.join("skills/trading-analyst"),
         company_analysis_dir: root.join("data/company-analysis"),
         trade_review_dir: root.join("data/trade-review"),
+        sessions,
         trading_analyst_root,
     });
 
@@ -72,6 +80,10 @@ async fn main() {
         .route("/api/performance/{key}", get(performance_history))
         .route("/api/paper-trading", get(paper_trading_snapshot))
         .route("/api/live-trading", get(live_trading_snapshot))
+        .route("/api/cli/available", get(cli_available))
+        .route("/api/cli/{kind}/{slug}/terminal", get(cli_terminal))
+        .route("/api/cli/{kind}/{slug}/log", get(cli_log))
+        .route("/api/cli/{kind}/{slug}/stop", post(cli_stop))
         .route(
             "/api/company-analysis",
             get(list_company_analysis).post(start_company_analysis),
@@ -361,7 +373,136 @@ async fn live_trading_snapshot(State(state): State<SharedState>) -> impl IntoRes
     }
 }
 
-/// 让 claude 自己读 SKILL.md 按流程做，不依赖 skill 自动发现/匹配（用户选了不把这两个 skill
+async fn cli_available() -> impl IntoResponse {
+    JsonResponse(SessionManager::available())
+}
+
+fn local_origin(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::ORIGIN)
+        .map(|origin| origin.to_str().ok() == Some("http://127.0.0.1:4870"))
+        .unwrap_or(true)
+}
+
+fn cli_job_dir(state: &AppState, kind: &str, slug: &str) -> anyhow::Result<PathBuf> {
+    if !skill_runner::is_safe_slug(slug) {
+        anyhow::bail!("非法任务 ID");
+    }
+    let root = match kind {
+        "company" => &state.company_analysis_dir,
+        "trade-review" => &state.trade_review_dir,
+        _ => anyhow::bail!("未知任务类型"),
+    };
+    let dir = root.join(slug);
+    if !dir.is_dir() {
+        anyhow::bail!("任务不存在");
+    }
+    Ok(dir)
+}
+
+async fn cli_terminal(
+    State(state): State<SharedState>,
+    AxumPath((kind, slug)): AxumPath<(String, String)>,
+    headers: HeaderMap,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (StatusCode::FORBIDDEN, "只允许本地页面连接终端").into_response();
+    }
+    let dir = match cli_job_dir(&state, &kind, &slug) {
+        Ok(dir) => dir,
+        Err(error) => return err_response(error).into_response(),
+    };
+    let Some(session) = state.sessions.get(&dir) else {
+        return (StatusCode::NOT_FOUND, "终端会话已结束").into_response();
+    };
+    ws.on_upgrade(move |socket| serve_cli_terminal(socket, session))
+        .into_response()
+}
+
+async fn serve_cli_terminal(mut socket: WebSocket, session: Arc<terminal::Session>) {
+    let mut output = session.subscribe();
+    let replay = session.replay();
+    if !replay.is_empty() && socket.send(Message::Binary(replay.into())).await.is_err() {
+        return;
+    }
+    loop {
+        tokio::select! {
+            received = socket.recv() => match received {
+                Some(Ok(Message::Text(text))) => {
+                    let Ok(event) = serde_json::from_str::<Value>(text.as_str()) else { continue };
+                    match event["type"].as_str() {
+                        Some("input") => {
+                            if let Some(data) = event["data"].as_str() {
+                                let _ = session.input(data.as_bytes());
+                            }
+                        }
+                        Some("resize") => {
+                            if let (Some(cols), Some(rows)) = (event["cols"].as_u64(), event["rows"].as_u64()) {
+                                let _ = session.resize(cols.min(u16::MAX as u64) as u16, rows.min(u16::MAX as u64) as u16);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break,
+                _ => {}
+            },
+            chunk = output.recv() => match chunk {
+                Ok(bytes) => {
+                    if socket.send(Message::Binary(bytes.into())).await.is_err() { break; }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(_) => break,
+            },
+        }
+    }
+}
+
+async fn cli_log(
+    State(state): State<SharedState>,
+    AxumPath((kind, slug)): AxumPath<(String, String)>,
+) -> impl IntoResponse {
+    match cli_job_dir(&state, &kind, &slug) {
+        Ok(dir) => (
+            StatusCode::OK,
+            [
+                (header::CONTENT_TYPE, "application/octet-stream"),
+                (header::CACHE_CONTROL, "no-store"),
+            ],
+            terminal::tail_log(&dir.join("terminal.log")),
+        )
+            .into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn cli_stop(
+    State(state): State<SharedState>,
+    AxumPath((kind, slug)): AxumPath<(String, String)>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (
+            StatusCode::FORBIDDEN,
+            JsonResponse(json!({ "error": "只允许本地页面停止任务" })),
+        )
+            .into_response();
+    }
+    let dir = match cli_job_dir(&state, &kind, &slug) {
+        Ok(dir) => dir,
+        Err(error) => return err_response(error).into_response(),
+    };
+    let Some(session) = state.sessions.get(&dir) else {
+        return err_response(anyhow::anyhow!("终端会话已结束")).into_response();
+    };
+    match session.stop(&dir) {
+        Ok(()) => JsonResponse(json!({ "status": "stopping" })).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+/// 让本机 CLI 自己读 SKILL.md 按流程做，不依赖 skill 自动发现/匹配（用户选了不把这两个 skill
 /// 装进 ~/.claude/skills/，避免变成全局配置副作用）。
 fn skill_prompt_header(skill_dir: &std::path::Path) -> String {
     format!(
@@ -371,24 +512,31 @@ fn skill_prompt_header(skill_dir: &std::path::Path) -> String {
     )
 }
 
-/// 拼成一条可以直接复制到终端跑的命令。**不加 --permission-mode bypassPermissions**——
-/// 这两个 skill 需要 Bash/网络/子 agent 权限，交给用户自己在交互式终端里逐条确认，
-/// quant-studio 后端不代跑、不无人值守执行任何东西。
+/// 复制到外部终端时使用的等价命令；内置终端以结构化参数启动，不调用 shell。
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
-fn build_command(prompt: &str, cwd: &std::path::Path) -> String {
+fn build_command(runner: Runner, prompt: &str, cwd: &std::path::Path) -> String {
+    let prefix = match runner {
+        Runner::Codex => format!(
+            "codex --no-alt-screen -C {} -s workspace-write -a on-request",
+            shell_quote(&cwd.display().to_string())
+        ),
+        Runner::Manual | Runner::Claude => "claude --permission-mode manual".to_string(),
+    };
     format!(
-        "cd {} && claude -p {}",
+        "cd {} && {prefix} {}",
         shell_quote(&cwd.display().to_string()),
-        shell_quote(prompt),
+        shell_quote(prompt)
     )
 }
 
 #[derive(Deserialize)]
 struct CompanyAnalysisRequest {
     name: String,
+    #[serde(default)]
+    runner: Runner,
 }
 
 async fn list_company_analysis(State(state): State<SharedState>) -> impl IntoResponse {
@@ -398,8 +546,16 @@ async fn list_company_analysis(State(state): State<SharedState>) -> impl IntoRes
 
 async fn start_company_analysis(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     JsonResponse(req): JsonResponse<CompanyAnalysisRequest>,
 ) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (
+            StatusCode::FORBIDDEN,
+            JsonResponse(json!({ "error": "只允许本地页面启动任务" })),
+        )
+            .into_response();
+    }
     let name = req.name.trim().to_string();
     if name.is_empty() {
         return err_response(anyhow::anyhow!("公司名/代码不能为空")).into_response();
@@ -422,15 +578,29 @@ async fn start_company_analysis(
         name = name,
         out = out_dir.display(),
     );
-    let command = build_command(&prompt, &state.trading_analyst_root);
+    let command = build_command(req.runner, &prompt, &state.trading_analyst_root);
 
     if let Err(e) = skill_runner::prepare_job(&job_dir, &command) {
         return err_response(anyhow::anyhow!("准备任务失败: {e}")).into_response();
     }
 
+    if req.runner != Runner::Manual {
+        if let Err(error) = state.sessions.launch(
+            req.runner,
+            &job_dir,
+            &state.trading_analyst_root,
+            &prompt,
+            "deep_dive.html",
+        ) {
+            let _ = terminal::write_status(&job_dir, "failed", req.runner, None);
+            return err_response(error).into_response();
+        }
+    }
+
     (
         StatusCode::OK,
-        JsonResponse(json!({ "slug": slug, "command": command })),
+        JsonResponse(json!({ "slug": slug, "command": command, "runner": req.runner.name(),
+            "status": if req.runner == Runner::Manual { "waiting_for_manual_run" } else { "running" } })),
     )
         .into_response()
 }
@@ -466,6 +636,8 @@ async fn company_analysis_report(
 #[derive(Deserialize)]
 struct TradeReviewRequest {
     symbol: String,
+    #[serde(default)]
+    runner: Runner,
 }
 
 async fn list_trade_review(State(state): State<SharedState>) -> impl IntoResponse {
@@ -475,8 +647,16 @@ async fn list_trade_review(State(state): State<SharedState>) -> impl IntoRespons
 
 async fn start_trade_review(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     JsonResponse(req): JsonResponse<TradeReviewRequest>,
 ) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (
+            StatusCode::FORBIDDEN,
+            JsonResponse(json!({ "error": "只允许本地页面启动任务" })),
+        )
+            .into_response();
+    }
     let symbol = req.symbol.trim().to_string();
     if symbol.is_empty() {
         return err_response(anyhow::anyhow!("symbol 不能为空")).into_response();
@@ -544,15 +724,29 @@ async fn start_trade_review(
         symbol = symbol,
         out = out_dir.display(),
     );
-    let command = build_command(&prompt, &state.trading_analyst_root);
+    let command = build_command(req.runner, &prompt, &state.trading_analyst_root);
 
     if let Err(e) = skill_runner::prepare_job(&job_dir, &command) {
         return err_response(anyhow::anyhow!("准备任务失败: {e}")).into_response();
     }
 
+    if req.runner != Runner::Manual {
+        if let Err(error) = state.sessions.launch(
+            req.runner,
+            &job_dir,
+            &state.trading_analyst_root,
+            &prompt,
+            "review.html",
+        ) {
+            let _ = terminal::write_status(&job_dir, "failed", req.runner, None);
+            return err_response(error).into_response();
+        }
+    }
+
     (
         StatusCode::OK,
-        JsonResponse(json!({ "slug": slug, "command": command })),
+        JsonResponse(json!({ "slug": slug, "command": command, "runner": req.runner.name(),
+            "status": if req.runner == Runner::Manual { "waiting_for_manual_run" } else { "running" } })),
     )
         .into_response()
 }

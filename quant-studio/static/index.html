@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh">
 <head>
+<link rel="stylesheet" href="/vendor/xterm/xterm.css">
 <meta charset="utf-8">
 <title>Quant Lab · 量化研究工作台</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -305,9 +306,10 @@
   .history-list li:last-child { border-bottom: none; }
   .symbol-card .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-bottom: var(--sp-3); }
 
-  /* ---------- 公司分析 / 交易记录分析（人工跑 skill 命令） ---------- */
+  /* ---------- 公司分析 / 交易记录分析 ---------- */
   .skill-form { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-  .skill-form input { flex: 1; }
+  .skill-form input { flex: 1 1 auto; min-width: 0; }
+  .skill-form select { flex: 0 0 156px; width: 156px; min-width: 0; }
   .skill-form button { background: var(--brand); border-color: var(--brand); color: var(--lb-fg-invert);
                         font-weight: 700; cursor: pointer; padding: 8px 16px; white-space: nowrap; }
   .skill-form button:disabled { opacity: .5; cursor: default; }
@@ -329,6 +331,13 @@
   .job-badge { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: var(--radius-pill); }
   .job-badge.done { background: rgba(0,204,146,0.18); color: var(--risk-safe); }
   .job-badge.waiting_for_manual_run { background: rgba(255,146,45,0.18); color: var(--risk-warning); }
+  .job-badge.running, .job-badge.stopping { background: rgba(65,145,255,0.18); color: var(--chart-blue); }
+  .job-badge.failed, .job-badge.incomplete, .job-badge.interrupted, .job-badge.cancelled { background: rgba(255,100,100,0.16); color: var(--risk-danger); }
+  .terminal-shell { margin-top: var(--sp-3); border: 1px solid var(--stroke); border-radius: var(--radius-lg); overflow: hidden; background: #0b111b; }
+  .terminal-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); padding: 8px 12px; color: #aab8ca; font-size: 12px; border-bottom: 1px solid #253344; }
+  .terminal-heading button { cursor: pointer; color: #ffaaaa; background: transparent; border: 1px solid #6b3434; padding: 4px 10px; }
+  .terminal-view { height: 420px; padding: 8px; }
+  .terminal-view .xterm { height: 100%; }
   .report-frame { width: 100%; height: 80vh; border: 1px solid var(--stroke); border-radius: var(--radius-lg);
                    background: var(--bg-1); margin-top: var(--sp-3); }
 </style>
@@ -571,11 +580,12 @@
     <section class="page" id="page-company">
       <div class="page-header">
         <h1>公司分析</h1>
-        <span class="hint">调用 ../skills/company-deep-dive skill &middot; 命令需要你自己在终端里跑并逐条确认，quant-studio 不代跑</span>
+        <span class="hint">选择本机 Codex 或 Claude，在内置终端里运行并确认工具操作</span>
       </div>
       <div class="skill-form">
         <input id="companyNameInput" placeholder="公司名或代码，比如 贵州茅台 / 600519 / AAPL">
-        <button id="companyGenBtn">生成分析命令</button>
+        <select id="companyRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="manual">手动命令</option></select>
+        <button id="companyGenBtn">开始分析</button>
       </div>
       <div id="companyCommandArea"></div>
       <h3>历史分析</h3>
@@ -586,12 +596,13 @@
     <section class="page" id="page-trade-review">
       <div class="page-header">
         <h1>交易记录分析</h1>
-        <span class="hint">调用 ../skills/trading-analyst skill 模式5复盘 &middot; 命令需要你自己在终端里跑并逐条确认，quant-studio 不代跑</span>
+        <span class="hint">用本机 Codex 或 Claude 复盘模拟与实盘记录，在内置终端里确认工具操作</span>
       </div>
       <div class="skill-form">
         <input id="reviewSymbolInput" list="knownSymbolsList" placeholder="标的代码，比如 AAPL.US / 700.HK">
         <datalist id="knownSymbolsList"></datalist>
-        <button id="reviewGenBtn">生成复盘命令</button>
+        <select id="reviewRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="manual">手动命令</option></select>
+        <button id="reviewGenBtn">开始复盘</button>
       </div>
       <div id="reviewCommandArea"></div>
       <h3>历史复盘</h3>
@@ -636,6 +647,8 @@
   </div>
 </div>
 
+<script src="/vendor/xterm/xterm.js"></script>
+<script src="/vendor/xterm/addon-fit.js"></script>
 <script>
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -1490,28 +1503,73 @@ async function loadLiveTrading() {
   }
 }
 
-/* ---------------- 公司分析 / 交易记录分析（生成命令，人工跑） ---------------- */
+/* ---------------- 公司分析 / 交易记录分析 ---------------- */
 const SKILL_KINDS = {
   company: { api: '/api/company-analysis', reportField: 'name', label: '公司', commandArea: 'companyCommandArea', jobList: 'companyJobList' },
   'trade-review': { api: '/api/trade-review', reportField: 'symbol', label: '标的', commandArea: 'reviewCommandArea', jobList: 'reviewJobList' },
 };
 
-function renderCommandArea(kind, slug, command) {
+let activeTerminal = null;
+let jobPolling = null;
+let activeJobKey = null;
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+}
+function closeTerminal() {
+  activeJobKey = null;
+  if (jobPolling) clearInterval(jobPolling);
+  jobPolling = null;
+  if (activeTerminal) {
+    activeTerminal.socket?.close();
+    activeTerminal.resizeObserver?.disconnect();
+    activeTerminal.term?.dispose();
+    activeTerminal = null;
+  }
+}
+async function loadCliAvailability() {
+  try {
+    const available = await (await fetch('/api/cli/available')).json();
+    for (const id of ['companyRunnerSelect', 'reviewRunnerSelect']) {
+      const select = el(id);
+      for (const option of select.options) {
+        if (option.value !== 'manual') option.disabled = !available[option.value];
+      }
+      select.value = available.codex ? 'codex' : available.claude ? 'claude' : 'manual';
+    }
+  } catch (_) {
+    for (const id of ['companyRunnerSelect', 'reviewRunnerSelect']) el(id).value = 'manual';
+  }
+}
+loadCliAvailability();
+
+function renderCommandArea(kind, slug, command, runner = 'manual', status = 'waiting_for_manual_run') {
+  closeTerminal();
+  activeJobKey = `${kind}/${slug}`;
   const cfg = SKILL_KINDS[kind];
+  const manual = runner === 'manual';
   el(cfg.commandArea).innerHTML = `
     <div class="command-box">
-      <div class="steps">
-        1. 复制下面命令，在终端里跑（会提示你确认多个工具调用，正常交互确认即可）<br>
-        2. 跑完之后回这里点「检查是否已完成」，完成了会直接在下面展示报告
-      </div>
-      <pre id="cmdText-${slug}">${command.replace(/</g, '&lt;')}</pre>
+      <div class="steps">${manual ? '复制命令到外部终端运行；完成后检查报告。' : '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。'}</div>
+      ${manual ? `<pre id="cmdText-${escapeHtml(slug)}"></pre>` : `<div class="terminal-shell"><div class="terminal-heading"><span>${escapeHtml(runner.toUpperCase())} · 本地会话</span><button id="stopJob-${escapeHtml(slug)}" ${status === 'running' || status === 'stopping' ? '' : 'hidden'}>停止任务</button></div><div class="terminal-view" id="terminal-${escapeHtml(slug)}"></div></div>`}
       <div class="command-actions">
-        <button onclick="copyCommand('${slug}')">复制命令</button>
-        <button class="primary" onclick="checkJobDone('${kind}', '${slug}')">检查是否已完成</button>
+        ${manual ? `<button id="copyJob-${escapeHtml(slug)}">复制命令</button>` : ''}
+        <button class="primary" id="checkJob-${escapeHtml(slug)}">检查状态</button>
       </div>
-      <div class="status" id="jobStatus-${slug}"></div>
-      <div id="jobReport-${slug}"></div>
+      <div class="status" id="jobStatus-${escapeHtml(slug)}"></div>
+      <div id="jobReport-${escapeHtml(slug)}"></div>
     </div>`;
+  if (manual) {
+    el(`cmdText-${slug}`).textContent = command;
+    el(`copyJob-${slug}`).onclick = () => copyCommand(slug);
+  } else {
+    el(`stopJob-${slug}`).onclick = () => stopJob(kind, slug);
+    openTerminal(kind, slug, status);
+  }
+  el(`checkJob-${slug}`).onclick = () => checkJobDone(kind, slug);
+  updateJobView(kind, slug, { status });
+  if (status === 'running' || status === 'stopping') {
+    jobPolling = setInterval(() => checkJobDone(kind, slug, true), 1500);
+  }
 }
 
 function copyCommand(slug) {
@@ -1522,6 +1580,49 @@ function copyCommand(slug) {
   );
 }
 
+async function openTerminal(kind, slug, status) {
+  const container = el(`terminal-${slug}`);
+  if (!container || typeof Terminal === 'undefined' || !window.FitAddon) {
+    container.textContent = '终端组件未加载，请重新打开页面。';
+    return;
+  }
+  const term = new Terminal({ cursorBlink: status === 'running', convertEol: true, fontSize: 13,
+    fontFamily: 'Menlo, Monaco, monospace', theme: { background: '#0b111b', foreground: '#d8e3ef' } });
+  const fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open(container);
+  fit.fit();
+  const state = { term, fit, socket: null, resizeObserver: null };
+  activeTerminal = state;
+  const resizeObserver = new ResizeObserver(() => {
+    fit.fit();
+    if (state.socket?.readyState === WebSocket.OPEN) state.socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+  });
+  resizeObserver.observe(container);
+  state.resizeObserver = resizeObserver;
+  const url = `/api/cli/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/terminal`;
+  if (status === 'running' || status === 'stopping') {
+    const socket = new WebSocket(`ws://${location.host}${url}`);
+    socket.binaryType = 'arraybuffer';
+    state.socket = socket;
+    socket.onopen = () => socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+    socket.onmessage = event => {
+      if (activeTerminal === state) term.write(event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : event.data);
+    };
+    socket.onclose = () => { if (activeTerminal === state) checkJobDone(kind, slug, true); };
+    term.onData(data => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data })); });
+  } else {
+    const resp = await fetch(`/api/cli/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/log`);
+    if (resp.ok && activeTerminal === state) term.write(new Uint8Array(await resp.arrayBuffer()));
+  }
+}
+
+async function stopJob(kind, slug) {
+  const resp = await fetch(`/api/cli/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/stop`, { method: 'POST' });
+  if (!resp.ok) setJobStatus(slug, '停止失败', true);
+  else setJobStatus(slug, '正在停止…');
+}
+
 function setJobStatus(slug, msg, isError) {
   const s = el(`jobStatus-${slug}`);
   if (!s) return;
@@ -1529,21 +1630,41 @@ function setJobStatus(slug, msg, isError) {
   s.className = 'status' + (isError ? ' error' : '');
 }
 
-async function checkJobDone(kind, slug) {
+function updateJobView(kind, slug, data) {
+  if (activeJobKey !== `${kind}/${slug}`) return;
   const cfg = SKILL_KINDS[kind];
-  setJobStatus(slug, '检查中…');
+  const labels = { done: '已完成 ✓', running: '正在运行…', stopping: '正在停止…',
+    waiting_for_manual_run: '等待手动运行', failed: '运行失败，请查看终端输出',
+    incomplete: 'CLI 已结束，但未生成报告', interrupted: '应用重启，会话已中断',
+    cancelled: '任务已停止' };
+  setJobStatus(slug, labels[data.status] || `状态：${data.status}`,
+    ['failed', 'incomplete', 'interrupted'].includes(data.status));
+  const stop = el(`stopJob-${slug}`);
+  if (stop) stop.hidden = !['running', 'stopping'].includes(data.status);
+  const report = el(`jobReport-${slug}`);
+  if (data.status === 'done' && report && !report.firstChild) {
+    report.innerHTML = `<iframe class="report-frame" sandbox="allow-scripts" src="${cfg.api}/${encodeURIComponent(slug)}/report"></iframe>`;
+    loadJobList(kind);
+  }
+  if (!['running', 'stopping'].includes(data.status) && jobPolling) {
+    clearInterval(jobPolling); jobPolling = null;
+  }
+  if (!['running', 'stopping'].includes(data.status) && activeTerminal?.socket) {
+    activeTerminal.socket.onclose = null;
+    activeTerminal.socket.close();
+    activeTerminal.socket = null;
+  }
+}
+
+async function checkJobDone(kind, slug, quiet = false) {
+  if (activeJobKey !== `${kind}/${slug}`) return;
+  const cfg = SKILL_KINDS[kind];
+  if (!quiet) setJobStatus(slug, '检查中…');
   try {
     const resp = await fetch(`${cfg.api}/${encodeURIComponent(slug)}/status`);
     const data = await resp.json();
-    if (data.status === 'done') {
-      setJobStatus(slug, '已完成 ✓');
-      el(`jobReport-${slug}`).innerHTML = `<iframe class="report-frame" src="${cfg.api}/${encodeURIComponent(slug)}/report"></iframe>`;
-      loadJobList(kind);
-    } else if (data.status === 'waiting_for_manual_run') {
-      setJobStatus(slug, '还没检测到报告文件——命令跑完了吗？');
-    } else {
-      setJobStatus(slug, `状态: ${data.status}`, true);
-    }
+    if (activeJobKey !== `${kind}/${slug}`) return;
+    updateJobView(kind, slug, data);
   } catch (e) {
     setJobStatus(slug, String(e.message || e), true);
   }
@@ -1561,16 +1682,18 @@ async function loadJobList(kind) {
       return;
     }
     target.innerHTML = jobs.map(j => {
-      const label = { done: '已完成', waiting_for_manual_run: '待运行' }[j.status] || j.status;
+      const label = { done: '已完成', waiting_for_manual_run: '待运行', running: '运行中', stopping: '停止中',
+        failed: '失败', incomplete: '未生成报告', interrupted: '已中断', cancelled: '已停止' }[j.status] || j.status;
       const summaryBits = j.summary ? Object.entries(j.summary).slice(0, 3)
-        .map(([k, v]) => `${k}=${v}`).join(' · ') : '';
+        .map(([k, v]) => `${escapeHtml(k)}=${escapeHtml(v)}`).join(' · ') : '';
       return `
-        <div class="job-row" onclick="openJob('${kind}', '${j.slug}')">
-          <span class="name">${j.slug}</span>
+        <div class="job-row" data-kind="${kind}" data-slug="${escapeHtml(j.slug)}">
+          <span class="name">${escapeHtml(j.slug)}</span>
           <span class="meta">${summaryBits}</span>
-          <span class="job-badge ${j.status}">${label}</span>
+          <span class="job-badge ${escapeHtml(j.status)}">${escapeHtml(label)}</span>
         </div>`;
     }).join('');
+    target.querySelectorAll('.job-row').forEach(row => row.onclick = () => openJob(row.dataset.kind, row.dataset.slug));
   } catch (e) {
     target.innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
   }
@@ -1581,13 +1704,7 @@ async function openJob(kind, slug) {
   try {
     const resp = await fetch(`${cfg.api}/${encodeURIComponent(slug)}/status`);
     const data = await resp.json();
-    renderCommandArea(kind, slug, data.command || '');
-    if (data.status === 'done') {
-      setJobStatus(slug, '已完成 ✓');
-      el(`jobReport-${slug}`).innerHTML = `<iframe class="report-frame" src="${cfg.api}/${encodeURIComponent(slug)}/report"></iframe>`;
-    } else {
-      setJobStatus(slug, '还没检测到报告文件——命令跑完了吗？');
-    }
+    renderCommandArea(kind, slug, data.command || '', data.runner || 'manual', data.status);
   } catch (e) {
     el(cfg.commandArea).innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
   }
@@ -1609,17 +1726,18 @@ async function populateKnownSymbols() {
 el('companyGenBtn').addEventListener('click', async () => {
   const name = el('companyNameInput').value.trim();
   if (!name) return;
+  const runner = el('companyRunnerSelect').value;
   el('companyGenBtn').disabled = true;
   try {
     const resp = await fetch('/api/company-analysis', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, runner }),
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-    renderCommandArea('company', data.slug, data.command);
+    renderCommandArea('company', data.slug, data.command, data.runner, data.status);
     loadJobList('company');
   } catch (e) {
-    el('companyCommandArea').innerHTML = `<div class="empty-note">生成失败：${String(e.message || e)}</div>`;
+    el('companyCommandArea').textContent = `启动失败：${String(e.message || e)}`;
   } finally {
     el('companyGenBtn').disabled = false;
   }
@@ -1628,17 +1746,18 @@ el('companyGenBtn').addEventListener('click', async () => {
 el('reviewGenBtn').addEventListener('click', async () => {
   const symbol = el('reviewSymbolInput').value.trim();
   if (!symbol) return;
+  const runner = el('reviewRunnerSelect').value;
   el('reviewGenBtn').disabled = true;
   try {
     const resp = await fetch('/api/trade-review', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, runner }),
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-    renderCommandArea('trade-review', data.slug, data.command);
+    renderCommandArea('trade-review', data.slug, data.command, data.runner, data.status);
     loadJobList('trade-review');
   } catch (e) {
-    el('reviewCommandArea').innerHTML = `<div class="empty-note">生成失败：${String(e.message || e)}</div>`;
+    el('reviewCommandArea').textContent = `启动失败：${String(e.message || e)}`;
   } finally {
     el('reviewGenBtn').disabled = false;
   }
