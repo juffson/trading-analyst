@@ -1,6 +1,8 @@
+mod embedded;
 #[path = "../../src/factors.rs"]
 mod factors;
 
+use embedded::EmbeddedPages;
 use factors::{Factor, FactorLib};
 use gpui_kit::component::button::Button;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
@@ -46,6 +48,9 @@ struct QuantLab {
     search: Entity<InputState>,
     _search_subscription: Subscription,
     error: Option<String>,
+    active_page: &'static str,
+    navigation_error: Option<String>,
+    embedded: EmbeddedPages,
 }
 
 impl QuantLab {
@@ -67,6 +72,9 @@ impl QuantLab {
             search,
             _search_subscription: subscription,
             error: None,
+            active_page: "factors",
+            navigation_error: None,
+            embedded: EmbeddedPages::new(),
         };
         app.reload();
         app
@@ -109,24 +117,45 @@ impl QuantLab {
             .collect()
     }
 
-    fn web_link(
+    fn navigate(
+        &mut self,
+        page: &'static str,
+        factor: Option<&str>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.active_page = page;
+        self.navigation_error = if page == "factors" {
+            self.embedded.hide().err().map(|error| error.to_string())
+        } else {
+            self.embedded
+                .open(page, factor, window)
+                .err()
+                .map(|error| error.to_string())
+        };
+        cx.notify();
+    }
+
+    fn page_link(
         label: &'static str,
         page: &'static str,
         index: usize,
+        active: bool,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         div()
-            .id(("web-nav", index))
+            .id(("page-nav", index))
             .w_full()
             .px_4()
             .py_3()
             .rounded_lg()
-            .text_color(MUTED)
+            .bg(if active { color(0x263d31) } else { RAIL })
+            .text_color(if active { GREEN } else { MUTED })
             .cursor_pointer()
             .hover(|style| style.bg(HOVER).text_color(TEXT))
-            .child(h_flex().justify_between().child(label).child("↗"))
-            .on_click(cx.listener(move |_, _, _, cx| {
-                cx.open_url(&format!("http://127.0.0.1:4870/#{page}"));
+            .child(label)
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.navigate(page, None, window, cx);
             }))
     }
 
@@ -380,12 +409,9 @@ impl QuantLab {
             .when(factor.implemented, |this| {
                 this.child(
                     Button::new("open-backtest")
-                        .label("在 Web 工作台回测 ↗")
-                        .on_click(cx.listener(move |_, _, _, cx| {
-                            cx.open_url(&format!(
-                                "http://127.0.0.1:4870/?factor={}#backtest",
-                                launch_id
-                            ));
+                        .label("在应用内回测 →")
+                        .on_click(cx.listener(move |this, _, window, cx| {
+                            this.navigate("backtest", Some(&launch_id), window, cx);
                         })),
                 )
             })
@@ -432,7 +458,12 @@ impl QuantLab {
 }
 
 impl Render for QuantLab {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.active_page != "factors" {
+            if let Err(error) = self.embedded.resize(window) {
+                self.navigation_error = Some(error.to_string());
+            }
+        }
         let query = self.search.read(cx).value();
         let filtered = self.filtered(&query);
         let selected = self
@@ -534,23 +565,20 @@ impl Render for QuantLab {
                     .text_color(MUTED)
                     .child("WORKSPACE"),
             )
-            .child(
-                div()
-                    .px_4()
-                    .py_3()
-                    .rounded_lg()
-                    .bg(color(0x263d31))
-                    .text_color(GREEN)
-                    .font_semibold()
-                    .child("▦  因子库"),
-            )
+            .child(Self::page_link(
+                "▦  因子库",
+                "factors",
+                0,
+                self.active_page == "factors",
+                cx,
+            ))
             .child(
                 div()
                     .pt_3()
                     .text_xs()
                     .font_bold()
                     .text_color(MUTED)
-                    .child("WEB 工作台  ↗"),
+                    .child("研究与交易"),
             );
         for (index, (label, page)) in [
             ("回测分析", "backtest"),
@@ -562,7 +590,13 @@ impl Render for QuantLab {
         .into_iter()
         .enumerate()
         {
-            rail = rail.child(Self::web_link(label, page, index, cx));
+            rail = rail.child(Self::page_link(
+                label,
+                page,
+                index + 1,
+                self.active_page == page,
+                cx,
+            ));
         }
         rail = rail.child(
             v_flex()
@@ -588,7 +622,7 @@ impl Render for QuantLab {
                     div()
                         .text_xs()
                         .text_color(MUTED)
-                        .child("Web 功能需先启动 cargo run"),
+                        .child("页面在当前窗口打开"),
                 ),
         );
 
@@ -736,12 +770,30 @@ impl Render for QuantLab {
                     )
                     .child(detail),
             );
+        let content = if self.active_page == "factors" {
+            main
+        } else {
+            v_flex().flex_1().h_full().p_6().bg(BG).when_some(
+                self.navigation_error.clone(),
+                |this, error| {
+                    this.child(
+                        v_flex()
+                            .p_5()
+                            .gap_3()
+                            .bg(PANEL)
+                            .rounded_lg()
+                            .child(div().text_lg().font_semibold().child("内置页面无法打开"))
+                            .child(div().text_color(MUTED).child(error)),
+                    )
+                },
+            )
+        };
         h_flex()
             .size_full()
             .bg(BG)
             .text_color(TEXT)
             .child(rail)
-            .child(main)
+            .child(content)
     }
 }
 

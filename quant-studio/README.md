@@ -64,8 +64,8 @@ quant-studio/
 
 ## 桌面版迁移
 
-GPUI Kit 桌面入口现支持因子库浏览，启动方式及迁移范围见 [desktop/README.md](desktop/README.md)。
-其余功能暂时继续使用下方 Web 工作台。
+GPUI Kit 桌面入口支持因子库浏览；回测、模拟交易等模块也可在同一个桌面窗口打开，
+通过内嵌页面复用 Web 工作台功能。启动方式及实现范围见 [desktop/README.md](desktop/README.md)。
 
 ## 跑起来
 
