@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "symbol": "002594.SZ",
+  "trade_date": "2026-11-04",
+  "revision": 1,
+  "data_as_of": "2026-11-04T07:00:00Z",
+  "generated_at": "2026-11-04T07:36:06Z",
+  "report_kind": "closing",
+  "outlook": "Bullish",
+  "analysis_quality": "degraded",
+  "headline": "小涨0.24%但明显落后指数，仍受约86元压力簇约束",
+  "summary": "收85.15元，上涨0.24%；高低点较前日抬升，MA5/20约83.68/82.682，RSI56.02、正柱扩大。日高85.95接近MA60约85.995和20日高86.18；观察84.19、83.68与85.95–86.18，新赔率门槛未通过。",
+  "market_snapshot": {
+    "close": 85.15,
+    "previous_close": 84.95,
+    "change_pct": 0.23543261,
+    "open": 84.94,
+    "high": 85.95,
+    "low": 84.19
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 83.68,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MA10",
+      "value": 82.699,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MA20",
+      "value": 82.682,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MA60",
+      "value": 85.99516667,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MA200",
+      "value": 92.0798,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MACD DIF",
+      "value": -0.27290216,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MACD DEA",
+      "value": -0.8210898,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "MACD histogram",
+      "value": 1.09637528,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "Previous MACD histogram",
+      "value": 0.93791898,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 56.02084706,
+      "unit": "0-100",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "Wilder ATR14",
+      "value": 1.88903278,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "Volume ratio",
+      "value": 1.15312063,
+      "unit": "x",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "Raw regular volume",
+      "value": 300480,
+      "unit": "供应商原始量单位",
+      "note": "成交量保留供应商原始单位，不擅自换算手、股或资金流"
+    },
+    {
+      "name": "20D high",
+      "value": 86.18,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "20D low",
+      "value": 78.49,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    },
+    {
+      "name": "60D low",
+      "value": 78.49,
+      "unit": "CNY",
+      "note": "最近300根已完成Intraday日K独立计算；量比分母为前20日、不含当日"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "常规盘结构与独立动量",
+      "direction": "positive",
+      "evidence": "开84.94、高85.95、低84.19，最终85.15仅略高于前收84.95，且仍低于前日高85.20。量比1.15略增，但相对大盘上涨明显落后；DIF仍在零轴下，不能以正柱扩大确认长期反转。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "公开经营、方法背景与证据边界",
+      "direction": "mixed",
+      "evidence": "重新核对10月30日三季报：单季收入2214.88亿元、归母净利润100.20亿元，同比增13.59%和28.08%；前三季度归母净利润223.45亿元仍同比降4.24%。公司官网既有标题确认10月销量超49万辆，销量不代替单车利润。当天智驾方案传闻及海外注册量二手报道未逐项回读原始材料，不写成确定经营变化或股价原因。",
+      "source_ids": [
+        "quarter",
+        "sales"
+      ]
+    },
+    {
+      "title": "同日市场基准对照",
+      "direction": "mixed",
+      "evidence": "同日上证指数上涨2.16%，创业板指数上涨6.40%，后者相对前者领先4.24个百分点。本标的相对上证指数单日涨跌幅差-1.93个百分点；不是风险调整超额收益或确定因果。",
+      "source_ids": [
+        "price",
+        "sse",
+        "chinext"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": "should_execute=false；后续需独立核实完整趋势、触发、失效、交易摩擦及风险收益。",
+    "invalidation": "观察结构失效时重新研究；旧候选按原期限到期，不自动激活、续期或移动边界。",
+    "basis": "没有同时通过趋势、分钟触发、费用和风险收益联合门槛的新组合；真实结构观察不自动转为执行价位。"
+  },
+  "scenarios": [
+    {
+      "name": "保守：修复转弱",
+      "price": 83.68,
+      "condition": "若失守84.19、83.90并完整收盘跌破MA5约83.68，修复假设削弱。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    },
+    {
+      "name": "基准：压力下整理",
+      "price": 85.15,
+      "condition": "若守住84.19但未持续突破85.95–86.18，维持偏多结构中的压力消化观察。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    },
+    {
+      "name": "乐观：突破确认",
+      "price": 86.18,
+      "condition": "需完整站稳MA60与86.18，并在后续常规盘保持，才重评更远均线修复。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "观察价位与适用范围",
+      "body": "近端风险84.19（本日低）、83.90（前日低）及83.68（MA5）；更低82.682（MA20）。突破检验85.95（本日高），压力85.995–86.18（MA60/20日高）；不为凑赔率抬高目标或压缩风险边界。"
+    },
+    {
+      "heading": "结论与证据评分",
+      "body": "outlook=Bullish；should_execute=false。strategy_fit_score=53/100；趋势与相对强弱17/25；技术确认13/20；量价与资金9/15；驱动质量与时效7/15；基本面与估值5/10；风险收益与可执行性2/15。分数为公开证据主观筛选，不是胜率；driver_strength=null，未完成异常显著性和策略回测。趋势与技术扣分对应尚未通过的后续确认，驱动/估值扣分对应时效和证据缺口，指数的估值/直接执行维度不适用记0，不否定其基准价值。"
+    },
+    {
+      "heading": "交易日、截止与独立计算",
+      "body": "Longbridge取数当前时间2026-11-04T07:31:14.176292268Z，CN为Closed，日历确认2026-11-04为全日交易日。15:00常规收盘已结束，行情和资讯统一截止2026-11-04T07:00:00Z，不使用之后信息；当时香港仍交易，不使用未完成港股最终行情。固定日期end=2026-11-04、trade_sessions=intraday、forward_adjust=true，取最近300根，自2025-08-07起，全部返回Intraday；转Asia/Shanghai日期后核对唯一、递增和截断。末两日OHLCV另与不复权核对，当日再与最终常规快照一致。日K前日16:00Z为本地日期标签，不冒充收盘成交时刻。MA简单均值；EMA12/26首收盘初始化，DIF为差，DEA为DIF的EMA9，柱=2×(DIF−DEA)。RSI14以首14个涨跌均值初始化后Wilder递推；ATR14以首14个TR均值后Wilder递推，首TR为高减低。量比=当日原始量/前20日均量，不含当日。图表展示30根真实收盘，未补造历史判断。实际生成2026-11-04T07:36:06Z，为当期收盘后新初版。"
+    },
+    {
+      "heading": "三情景与有效期边界",
+      "body": "情景仅以已发生高低点、前收或均线作条件锚，观察未来1–5个实际交易日；没有校准概率，不提供到达保证。强反弹需后续完整收盘确认，新低反证保留。没有新入场、止损、目标及有效期组合，不将情景转换为交易指令，不计算个人数量；旧候选按原期限结束。"
+    },
+    {
+      "heading": "风险收益否决示例",
+      "body": "仅作透明筛选演示，以85.15收盘、日低84.19下方0.25ATR缓冲得到约83.71模型风险线，风险约1.44；MA60约85.995与20日高86.18对应毛风险收益比分别约0.59/0.72，都低于2.0，费用后更低。因此没有新候选。0.25ATR是假设、未经回测，示例不写入执行价位，不通过收紧风险线或抬高目标凑数。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-11-03",
+    "narrative": "11月3日Bullish、收84.95，约86.10–86.18为压力。今日高85.95仍未跨越当前MA60约85.995，收85.15小升；正柱改善但相对指数走弱，方向保持Bullish并降低对即时突破的把握。11月2日V2旧候选已在11月3日到期，继续不续期。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge 002594.SZ固定日期Intraday前复权日K，末300根计算；不复权末两日与常规快照OHLCV核对；网页非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/002594.SZ",
+      "published_at": null
+    },
+    {
+      "id": "sse",
+      "label": "Longbridge上证指数000001.SH当日/前日Intraday日K，常规盘截断",
+      "url": "https://longbridge.com/zh-CN/quote/000001.SH",
+      "published_at": null
+    },
+    {
+      "id": "chinext",
+      "label": "Longbridge创业板指数399006.SZ当日/前日Intraday日K，常规盘截断",
+      "url": "https://longbridge.com/zh-CN/quote/399006.SZ",
+      "published_at": null
+    },
+    {
+      "id": "quarter",
+      "label": "比亚迪10月30日第三季度报告，本次主要财务表已回读",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-10-30/1225641442.PDF",
+      "published_at": null
+    },
+    {
+      "id": "sales",
+      "label": "比亚迪官方10月销量超49万辆标题；未重录图示精确值",
+      "url": "https://www.byd.com/cn/detail638",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "单一行情供应商，复权/不复权与快照核对不是独立第二行情源；历史数据可能修订。",
+    "没有完整估值、回测、分钟触发顺序及交易摩擦验证；观察不证明发生任何委托或成交。",
+    "未完整核实最新估值、一致预期及智驾传闻原文；首档压力近、现价示范风险收益不足，旧模型不得复活。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-09-16",
+      "close": 83.96
+    },
+    {
+      "date": "2026-09-17",
+      "close": 84.97
+    },
+    {
+      "date": "2026-09-18",
+      "close": 84.3
+    },
+    {
+      "date": "2026-09-21",
+      "close": 85.22
+    },
+    {
+      "date": "2026-09-22",
+      "close": 86.58
+    },
+    {
+      "date": "2026-09-23",
+      "close": 85.85
+    },
+    {
+      "date": "2026-09-24",
+      "close": 84.34
+    },
+    {
+      "date": "2026-09-28",
+      "close": 83.35
+    },
+    {
+      "date": "2026-09-29",
+      "close": 82.02
+    },
+    {
+      "date": "2026-09-30",
+      "close": 83.31
+    },
+    {
+      "date": "2026-10-08",
+      "close": 81.72
+    },
+    {
+      "date": "2026-10-09",
+      "close": 84.95
+    },
+    {
+      "date": "2026-10-12",
+      "close": 84.6
+    },
+    {
+      "date": "2026-10-13",
+      "close": 82.18
+    },
+    {
+      "date": "2026-10-14",
+      "close": 81.44
+    },
+    {
+      "date": "2026-10-15",
+      "close": 82.24
+    },
+    {
+      "date": "2026-10-16",
+      "close": 82.72
+    },
+    {
+      "date": "2026-10-19",
+      "close": 83.5
+    },
+    {
+      "date": "2026-10-20",
+      "close": 82.6
+    },
+    {
+      "date": "2026-10-21",
+      "close": 80.7
+    },
+    {
+      "date": "2026-10-22",
+      "close": 80.02
+    },
+    {
+      "date": "2026-10-23",
+      "close": 81.42
+    },
+    {
+      "date": "2026-10-26",
+      "close": 82.4
+    },
+    {
+      "date": "2026-10-27",
+      "close": 82.01
+    },
+    {
+      "date": "2026-10-28",
+      "close": 82.74
+    },
+    {
+      "date": "2026-10-29",
+      "close": 82.5
+    },
+    {
+      "date": "2026-10-30",
+      "close": 81.65
+    },
+    {
+      "date": "2026-11-02",
+      "close": 84.15
+    },
+    {
+      "date": "2026-11-03",
+      "close": 84.95
+    },
+    {
+      "date": "2026-11-04",
+      "close": 85.15
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge completed Intraday public daily candles; public issuer, regulatory and exchange disclosures",
+    "note": "实际生成2026-11-04T07:36:06Z，行情与信息截止2026-11-04T07:00:00Z；仅新增最近已完成交易日初版，不改历史、不补造更早空档；指数以点计，各端发布以实际回读为准。"
+  }
+}
