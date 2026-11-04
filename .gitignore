@@ -1,1 +1,4 @@
 settings.json
+_site/
+__pycache__/
+*.pyc

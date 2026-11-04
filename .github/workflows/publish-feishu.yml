@@ -1,0 +1,194 @@
+name: Publish research to Feishu
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research/**'
+      - 'scripts/feishu*.py'
+      - 'scripts/publish_feishu.py'
+      - 'scripts/validate_research.py'
+      - 'tests/test_*.py'
+      - 'requirements-feishu.txt'
+      - '.github/workflows/publish-feishu.yml'
+  pull_request:
+    paths:
+      - 'research/**'
+      - 'scripts/feishu*.py'
+      - 'scripts/publish_feishu.py'
+      - 'scripts/validate_research.py'
+      - 'tests/test_*.py'
+      - 'requirements-feishu.txt'
+      - '.github/workflows/publish-feishu.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'validate: offline; check: read-only access; publish: write research'
+        required: true
+        type: choice
+        default: check
+        options:
+          - validate
+          - check
+          - publish
+      symbol:
+        description: 'Optional registered symbol, for example 002594.SZ; empty means all'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate:
+    name: Validate without credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-feishu.txt
+      - name: Install renderer dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-feishu.txt
+      - name: Run unit tests without Feishu credentials
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Validate reports and preserve existing revisions
+        env:
+          RESEARCH_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$RESEARCH_BASE_REF" ] && [ "$RESEARCH_BASE_REF" != "0000000000000000000000000000000000000000" ]; then
+            python scripts/validate_research.py --root . --base-ref "$RESEARCH_BASE_REF"
+          else
+            python scripts/validate_research.py --root .
+          fi
+      - name: Validate Feishu rendering offline
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
+          RESEARCH_SYMBOL: ${{ github.event_name == 'workflow_dispatch' && inputs.symbol || '' }}
+        run: |
+          args=(--root . --mode validate)
+          if [ -n "$RESEARCH_SYMBOL" ]; then
+            args+=(--symbol "$RESEARCH_SYMBOL")
+          fi
+          python scripts/publish_feishu.py "${args[@]}"
+          printf '%s\n' '### Feishu offline validation' 'Tests, report validation, and rendering validation passed. No Feishu credentials were loaded and no Feishu API writes were made.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Enforce main branch for API modes
+        if: github.event_name == 'workflow_dispatch' && inputs.mode != 'validate' && github.ref != 'refs/heads/main'
+        run: |
+          printf '%s\n' '### Feishu API run blocked' 'The check and publish modes must be run from main. No credentials were loaded.' >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' '::error::Select the main branch for Feishu check or publish.'
+          exit 1
+
+  feishu:
+    name: Check or publish from main
+    needs: validate
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.mode != 'validate'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    # Serialize API work only: PR/offline validation cannot replace a pending
+    # publisher. Do not interrupt writes; checkout below always uses latest main.
+    concurrency:
+      group: feishu-publisher-main
+      cancel-in-progress: false
+    steps:
+      - name: Check out trusted main revision
+        uses: actions/checkout@v6
+        with:
+          # Concurrency does not guarantee FIFO. An older trigger must not
+          # publish its event snapshot after a newer research snapshot.
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-feishu.txt
+      - name: Install renderer dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-feishu.txt
+      - name: Revalidate current main before loading Feishu credentials
+        env:
+          RESEARCH_BASE_REF: ${{ github.event.before }}
+        run: |
+          if [ -n "$RESEARCH_BASE_REF" ] && [ "$RESEARCH_BASE_REF" != "0000000000000000000000000000000000000000" ]; then
+            python scripts/validate_research.py --root . --base-ref "$RESEARCH_BASE_REF"
+          else
+            python scripts/validate_research.py --root .
+          fi
+      # Secrets exist only in this non-PR API step, never in validation or artifacts.
+      - name: Check configuration and run Feishu API mode
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_WIKI_ROOT_TOKEN: ${{ secrets.FEISHU_WIKI_ROOT_TOKEN || vars.FEISHU_WIKI_ROOT_TOKEN }}
+          FEISHU_WIKI_BASE_URL: ${{ vars.FEISHU_WIKI_BASE_URL }}
+          RESEARCH_PAGES_URL: ${{ vars.RESEARCH_PAGES_URL }}
+          FEISHU_ROOT_TITLE: ${{ vars.FEISHU_ROOT_TITLE || '复盘分析（自动发布）' }}
+          FEISHU_RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'publish' }}
+          FEISHU_TRIGGER: ${{ github.event_name }}
+          RESEARCH_SYMBOL: ${{ github.event_name == 'workflow_dispatch' && inputs.symbol || '' }}
+        run: |
+          missing=()
+          for key in FEISHU_APP_ID FEISHU_APP_SECRET FEISHU_WIKI_ROOT_TOKEN; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ -n "$FEISHU_WIKI_ROOT_TOKEN" ] && [[ "$FEISHU_WIKI_ROOT_TOKEN" != https://* ]] && [ -z "$FEISHU_WIKI_BASE_URL" ]; then
+            missing+=('FEISHU_WIKI_BASE_URL (required when the root is a token instead of a full Wiki URL)')
+          fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '%s\n' '### Feishu configuration required' 'No Feishu API call was made. Missing configuration names:' >> "$GITHUB_STEP_SUMMARY"
+            printf -- '- `%s`\n' "${missing[@]}" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$FEISHU_TRIGGER" = 'push' ]; then
+              printf '%s\n' 'Automatic publication was skipped. Add the required repository secrets, then run check followed by publish from main.' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            printf '%s\n' '::error::Manual Feishu check/publish requires complete repository configuration. See the run summary.'
+            exit 1
+          fi
+          # Mask optional private origin and a root configured through Variables too.
+          printf '::add-mask::%s\n' "$FEISHU_WIKI_ROOT_TOKEN"
+          if [ -n "$FEISHU_WIKI_BASE_URL" ]; then
+            printf '::add-mask::%s\n' "$FEISHU_WIKI_BASE_URL"
+          fi
+          case "$FEISHU_RUN_MODE" in
+            check|publish) ;;
+            *)
+              printf '%s\n' '::error::Unsupported Feishu API mode.'
+              exit 1
+              ;;
+          esac
+          args=(--root . --mode "$FEISHU_RUN_MODE")
+          if [ -n "$RESEARCH_SYMBOL" ]; then
+            args+=(--symbol "$RESEARCH_SYMBOL")
+          fi
+          python scripts/publish_feishu.py "${args[@]}"
+          if [ "$FEISHU_RUN_MODE" = 'check' ]; then
+            printf '%s\n' '### Feishu read-only check passed' 'Authentication and target-node reads succeeded. No document or node was created or edited. Creation, editing, and image-upload permissions still require a publish run to verify.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '%s\n' '### Feishu publisher completed' 'The publisher finished successfully. Inspect the generated research branch through your configured Feishu entry. Private document URLs and tokens are intentionally omitted from this summary.' >> "$GITHUB_STEP_SUMMARY"
+          fi

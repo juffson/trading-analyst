@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "symbols": [
+    {
+      "symbol": "002463.SZ",
+      "name": "沪电股份",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "002463-sz"
+    },
+    {
+      "symbol": "002594.SZ",
+      "name": "比亚迪",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "002594-sz"
+    },
+    {
+      "symbol": "513130.SH",
+      "name": "恒生科技ETF",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "513130-sh"
+    },
+    {
+      "symbol": "688350.SH",
+      "name": "富淼科技",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "688350-sh"
+    },
+    {
+      "symbol": "9988.HK",
+      "name": "阿里巴巴",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "9988-hk"
+    },
+    {
+      "symbol": "1810.HK",
+      "name": "小米集团",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "1810-hk"
+    },
+    {
+      "symbol": "3032.HK",
+      "name": "恒生科技ETF",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "3032-hk"
+    },
+    {
+      "symbol": "QCOM.US",
+      "name": "高通",
+      "market": "US",
+      "currency": "USD",
+      "slug": "qcom-us"
+    },
+    {
+      "symbol": "GOOG.US",
+      "name": "Alphabet",
+      "market": "US",
+      "currency": "USD",
+      "slug": "goog-us"
+    },
+    {
+      "symbol": "LASE.US",
+      "name": "Laser Photonics",
+      "market": "US",
+      "currency": "USD",
+      "slug": "lase-us"
+    },
+    {
+      "symbol": "601138.SH",
+      "name": "工业富联",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "601138-sh"
+    },
+    {
+      "symbol": "MCD.US",
+      "name": "麦当劳",
+      "market": "US",
+      "currency": "USD",
+      "slug": "mcd-us"
+    },
+    {
+      "symbol": "300476.SZ",
+      "name": "胜宏科技",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "300476-sz"
+    },
+    {
+      "symbol": "2476.HK",
+      "name": "胜宏科技",
+      "market": "HK",
+      "currency": "HKD",
+      "slug": "2476-hk"
+    },
+    {
+      "symbol": "603588.SH",
+      "name": "高能环境",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "603588-sh"
+    },
+    {
+      "symbol": "688322.SH",
+      "name": "奥比中光-W",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "688322-sh"
+    },
+    {
+      "symbol": "000636.SZ",
+      "name": "风华高科",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "000636-sz"
+    },
+    {
+      "symbol": "000001.SH",
+      "name": "上证指数",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "000001-sh"
+    },
+    {
+      "symbol": "399006.SZ",
+      "name": "创业板指数",
+      "market": "CN",
+      "currency": "CNY",
+      "slug": "399006-sz"
+    }
+  ]
+}

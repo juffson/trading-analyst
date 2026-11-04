@@ -1,0 +1,376 @@
+{
+  "schema_version": 1,
+  "symbol": "GOOG.US",
+  "trade_date": "2026-11-03",
+  "revision": 1,
+  "data_as_of": "2026-11-03T21:00:00Z",
+  "generated_at": "2026-11-03T23:36:40Z",
+  "report_kind": "closing",
+  "outlook": "Bearish",
+  "analysis_quality": "degraded",
+  "headline": "272刷新60日低点后收回，但微涨不足以确认止跌",
+  "summary": "收278.27美元，涨0.08%；盘中272创20/60日新低，收盘仍低于开盘及全部主要均线。RSI21.27、MACD负柱略收敛；观察272/277.78及280.34/285.21，量能口径继续降级。",
+  "market_snapshot": {
+    "close": 278.27,
+    "previous_close": 278.04,
+    "change_pct": 0.08272191,
+    "open": 279.19,
+    "high": 280.34,
+    "low": 272
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 287.748,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA10",
+      "value": 303.875,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA20",
+      "value": 323.968,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA60",
+      "value": 334.57676667,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA200",
+      "value": 337.866905,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD DIF",
+      "value": -15.36220382,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD DEA",
+      "value": -9.13983847,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD histogram",
+      "value": -12.44473071,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Previous MACD histogram",
+      "value": -12.76849564,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 21.26842007,
+      "unit": "0-100",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Wilder ATR14",
+      "value": 9.89818673,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Regular volume",
+      "value": null,
+      "unit": "shares",
+      "note": "成交量接口返回不一致，未作为确定数据或量价结论使用"
+    },
+    {
+      "name": "Volume ratio",
+      "value": null,
+      "unit": "x",
+      "note": "成交量接口返回不一致，未作为确定数据或量价结论使用"
+    },
+    {
+      "name": "20D high",
+      "value": 355.25,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "20D low",
+      "value": 272,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "60D low",
+      "value": 272,
+      "unit": "USD",
+      "note": "最近300根已完成Intraday日K独立计算"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "常规盘结构与动量",
+      "direction": "mixed",
+      "evidence": "开279.19、高280.34、低272，最终回到前收278.04上方但未守住开盘。DIF由−13.9685进一步降至−15.3622，负柱从−12.7685略缩至−12.4447，是下跌动量减弱而非MACD转多。新低与弱收盘仍构成空方证据，超卖不能当反转确认。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "截止前公开公司与事件证据",
+      "direction": "mixed",
+      "evidence": "重新核对10月28日SEC第三季业绩附件：收入1275.77亿美元，同比增长25%，Cloud收入307亿美元、增长103%；当季经营现金流422.90亿美元、购置固定资产513.55亿美元，自由现金流−90.65亿美元。增长与现金投入并存。当天债券结构及搜索竞争的二手报道未逐项获得原始条款支持，不推定单日涨跌原因或最新内在价值。",
+      "source_ids": [
+        "results"
+      ]
+    },
+    {
+      "title": "同日有限市场代理",
+      "direction": "mixed",
+      "evidence": "本次核验SPY由752.10升至754.35，涨0.30%；QQQ由681.09升至685.28，涨0.62%。本标的相对SPY单日涨跌幅差-0.22个百分点，不是风险调整超额收益或因果证据。QQQ前值681.09与此前已归档681.04有0.05差异，本次日K与最新常规快照一致，记录供应商历史修订风险，不回写旧报告。仅为有限ETF代理，不代表市场广度或资金流。",
+      "source_ids": [
+        "price",
+        "spy",
+        "qqq"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": null,
+    "entry_high": null,
+    "target": null,
+    "stop": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "target_type": null,
+    "target_horizon": null,
+    "entry_valid_until": null,
+    "status": "unavailable",
+    "trigger": "should_execute=false；后续需独立重新核实触发、趋势、交易摩擦及风险收益。",
+    "invalidation": "结构失效时重新研究，旧模型到期不续期、不因触价自动激活。",
+    "basis": "缺少同时通过趋势确认、分钟路径、稳定量能、费用与风险收益的新组合；结构观察不转成执行价位。"
+  },
+  "scenarios": [
+    {
+      "name": "保守：继续破位",
+      "price": 272,
+      "condition": "若完整常规收盘失守272且不能收回，偏空结构加强，不猜测未核验支撑。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    },
+    {
+      "name": "基准：弱整理",
+      "price": 280.34,
+      "condition": "守住272并维持277.78附近，但不能完整收复280.34时，继续观察弱整理。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    },
+    {
+      "name": "乐观：扩大修复",
+      "price": 287.748,
+      "condition": "需先持续站稳285.21，再检验MA5约287.748，且重新核实量价与经营证据。",
+      "horizon": "后续1–5个实际交易日的条件研究观察，不自动执行"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "观察价位与适用范围",
+      "body": "风险观察272（本日/20日/60日低）；短线回收检验277.78（前日低）；修复压力280.34（本日高）及285.21（前日高）；287.748（MA5）为更强修复锚。"
+    },
+    {
+      "heading": "结论与证据评分",
+      "body": "outlook=Bearish；should_execute=false。strategy_fit_score=26/100；趋势与相对强弱4/25；技术确认6/20；量价与资金2/15；驱动质量与时效8/15；基本面与估值5/10；风险收益与可执行性1/15。分数为有限公开证据的主观筛选，不是胜率；driver_strength=null，未进行异常显著性与策略回测。量能冲突限制量价评分，事件和估值缺口限制驱动及基本面评分，风险收益硬门槛未通过。方向研究与是否形成方案分别判断。"
+    },
+    {
+      "heading": "交易日、时区与收盘截断",
+      "body": "Longbridge当前时间2026-11-03T23:32:40.801068181Z，US为Post-Market，11月3日完整常规盘已结束；交易日历无半日市标记，时段查询为美东09:30–16:00。America/New_York已是EST UTC−5，16:00对应2026-11-03T21:00:00Z、北京时间11月4日05:00。所有行情与资讯均按此截止，只采固定日期trade_sessions=intraday、forward_adjust=true返回的已完成日K。日K的05:00Z是本地日期标签，不是收盘成交时刻。常规快照只用于OHLC旁证，不使用其盘前、盘后或夜盘字段；部分常规标签为收盘后一秒，不据此延长研究信息截止。实际生成2026-11-03T23:36:40Z，为当期收盘后新研究，不冒充收盘即时发布。"
+    },
+    {
+      "heading": "样本与独立计算",
+      "body": "固定日期2025-07-01至2026-11-03获得339根Intraday，取最近300根，自2025-08-26起；转America/New_York日期核对唯一递增、不晚于目标日，末两日OHLC与不复权一致。MA简单均值；EMA12/26从首收盘初始化，DIF为其差，DEA为DIF的EMA9，柱=2×(DIF−DEA)。RSI14首14个涨跌均值初始化后Wilder递推；ATR14首14个TR均值后Wilder递推，首TR为高减低。展示末30个真实收盘，未补造历史判断。因日量不稳定，确定日量与量比均留空，不从价格推断资金流。"
+    },
+    {
+      "heading": "成交量冲突与降级",
+      "body": "同日显式Intraday前复权日量23218570、不复权日量23218570、常规快照量23218563；OHLC及前收一致，但数量差异原因未核实，不擅自选择一项作为确定日量。本报告Regular volume和Volume ratio均为null，无法确认放量、缩量、换手或资金承接。此处仅保存接口差异证据，不作为统一量能值。"
+    },
+    {
+      "heading": "三情景与到期边界",
+      "body": "情景只以真实高低点、前收或均线为条件锚，观察后续1–5个实际交易日；未校准概率，不输出保证收益。没有新入场、止损、目标或有效期组合；旧候选按其原截止时间到期。日K不能确定分钟触价先后，不追认委托或成交；不计算个人数量或账户结果。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-11-02",
+    "narrative": "11月2日Bearish，277.78高于前低275.35。今日272同时跌破两者，前次低点抬高并未延续；收盘278.27略升、负柱略缩，保留Bearish并明确新低反证，不把微涨称为反转。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge GOOG.US固定日期Intraday前复权日K，末300根计算；不复权末两日及常规快照OHLC核对，日量冲突降级；网页非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/GOOG.US",
+      "published_at": null
+    },
+    {
+      "id": "spy",
+      "label": "Longbridge SPY.US 11月2–3日Intraday日K及常规快照核对",
+      "url": "https://longbridge.com/zh-CN/quote/SPY.US",
+      "published_at": null
+    },
+    {
+      "id": "qqq",
+      "label": "Longbridge QQQ.US 11月2–3日Intraday日K及常规快照核对，供应商前值可能修订",
+      "url": "https://longbridge.com/zh-CN/quote/QQQ.US",
+      "published_at": null
+    },
+    {
+      "id": "hours",
+      "label": "NYSE官方常规盘时段与交易日历",
+      "url": "https://www.nyse.com/markets/hours-calendars",
+      "published_at": null
+    },
+    {
+      "id": "results",
+      "label": "Alphabet第三季SEC业绩附件及现金流表",
+      "url": "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000080/googexhibit991q32026.htm",
+      "published_at": "2026-10-28T20:01:33Z"
+    }
+  ],
+  "limitations": [
+    "单一行情供应商，复权/不复权与快照核对不是独立第二行情源；历史价格与数量可能修订。",
+    "成交量返回冲突，日量与量比明确留空；没有完整回测、估值、分钟触发及交易摩擦验证。",
+    "最新融资条款、搜索竞争量化数据及一致预期未完整核实；不得把超卖或微涨解释为机构承接。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-09-23",
+      "close": 334.98
+    },
+    {
+      "date": "2026-09-24",
+      "close": 339.01
+    },
+    {
+      "date": "2026-09-25",
+      "close": 341.08
+    },
+    {
+      "date": "2026-09-28",
+      "close": 339.16
+    },
+    {
+      "date": "2026-09-29",
+      "close": 337.32
+    },
+    {
+      "date": "2026-09-30",
+      "close": 340.74
+    },
+    {
+      "date": "2026-10-01",
+      "close": 334.93
+    },
+    {
+      "date": "2026-10-02",
+      "close": 340.35
+    },
+    {
+      "date": "2026-10-05",
+      "close": 343.83
+    },
+    {
+      "date": "2026-10-06",
+      "close": 344.59
+    },
+    {
+      "date": "2026-10-07",
+      "close": 347.37
+    },
+    {
+      "date": "2026-10-08",
+      "close": 344.86
+    },
+    {
+      "date": "2026-10-09",
+      "close": 347.86
+    },
+    {
+      "date": "2026-10-12",
+      "close": 348.97
+    },
+    {
+      "date": "2026-10-13",
+      "close": 349.52
+    },
+    {
+      "date": "2026-10-14",
+      "close": 343.65
+    },
+    {
+      "date": "2026-10-15",
+      "close": 344.91
+    },
+    {
+      "date": "2026-10-16",
+      "close": 336.91
+    },
+    {
+      "date": "2026-10-19",
+      "close": 340.16
+    },
+    {
+      "date": "2026-10-20",
+      "close": 336.4
+    },
+    {
+      "date": "2026-10-21",
+      "close": 330.95
+    },
+    {
+      "date": "2026-10-22",
+      "close": 320.76
+    },
+    {
+      "date": "2026-10-23",
+      "close": 317.28
+    },
+    {
+      "date": "2026-10-26",
+      "close": 314.19
+    },
+    {
+      "date": "2026-10-27",
+      "close": 316.83
+    },
+    {
+      "date": "2026-10-28",
+      "close": 321.89
+    },
+    {
+      "date": "2026-10-29",
+      "close": 282.32
+    },
+    {
+      "date": "2026-10-30",
+      "close": 278.22
+    },
+    {
+      "date": "2026-11-02",
+      "close": 278.04
+    },
+    {
+      "date": "2026-11-03",
+      "close": 278.27
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge completed Intraday public daily candles; issuer, regulatory and exchange disclosures",
+    "note": "实际生成2026-11-03T23:36:40Z，行情及信息截止2026-11-03T21:00:00Z；只新增最近已完成交易日初版，不改写历史、不补造更早空档；各下游发布以实际回读为准。"
+  }
+}

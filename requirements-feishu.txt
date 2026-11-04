@@ -1,0 +1,3 @@
+# The publisher itself uses the Python standard library. Matplotlib renders
+# deterministic PNG charts from the validated historical prices (Python >=3.10).
+matplotlib==3.10.8
