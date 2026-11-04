@@ -150,7 +150,7 @@ table.acct-table td,table.overview-table td { padding:12px; }
 .research-toolbar { margin-bottom:12px; padding:10px; border:1px solid var(--stroke); border-radius:8px; background:var(--card); }
 .research-state { color:var(--fg-3); font-size:10px; margin:0 0 16px; }
 .research-layout { grid-template-columns:190px minmax(0,1fr); gap:20px; }
-.research-symbol { background:transparent; border-color:transparent; padding:10px 12px; border-radius:6px; }
+.research-symbol { flex-shrink:0; background:transparent; border-color:transparent; padding:10px 12px; border-radius:6px; }
 .research-symbol.active { background:#25332b; border-color:#405542; }
 .research-symbol strong { font-size:12px; font-weight:600; }
 .research-symbol small { font-size:10px; color:var(--fg-3); margin-top:3px; }

@@ -450,7 +450,8 @@
   @media (max-width: 800px) { .research-layout { grid-template-columns: 1fr; } .research-symbols { max-height: 260px; } }
 </style>
 <link rel="stylesheet" href="/research-dashboard.css">
-<link rel="stylesheet" href="/app-theme.css">
+<link rel="stylesheet" href="/app-theme.css?v=daily-close-1">
+<link rel="stylesheet" href="/daily-close.css">
 </head>
 <body>
 <div class="shell">
@@ -464,6 +465,7 @@
     </div>
     <div class="nav-group"><div class="nav-group-label">研究工作区</div><div class="navlist">
       <button class="navitem" data-page="company"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/building-2.svg)"></span>公司分析</button>
+      <button class="navitem" data-page="daily-close"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/chart-no-axes-combined.svg)"></span>每日收盘</button>
       <button class="navitem" data-page="research"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/library.svg)"></span>研究档案</button>
       <button class="navitem active" data-page="factors"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/flask-conical.svg)"></span>因子实验室</button>
       <button class="navitem" data-page="backtest"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/chart-no-axes-combined.svg)"></span>策略回测</button>
@@ -477,6 +479,22 @@
   </nav>
 
   <div class="pages">
+
+
+    <section class="page" id="page-daily-close">
+      <div class="page-header"><div><div class="page-kicker">研究工作区 / 定时研究</div><h1>每日收盘</h1><p class="hint">跟踪三个市场的研究归档，查看关键价格变化与发布执行记录。</p></div><button id="dailyRefresh">刷新状态</button></div>
+      <div id="dailyStatus" class="dc-status" role="status">正在读取收盘研究…</div>
+      <div class="dc-markets" id="dailyMarkets"></div>
+      <section class="dc-panel">
+        <div class="dc-toolbar"><div><h2 id="dailyBatchTitle">研究批次</h2><span class="dc-status" id="dailyBatchMeta"></span></div><div class="dc-toolbar" style="margin:0"><label>交易日 <select id="dailyDate" aria-label="收盘研究交易日"></select></label><label><input type="checkbox" id="dailyMissing">仅看未归档</label></div></div>
+        <div class="dc-table-scroll"><table><thead><tr><th>研究标的</th><th>归档 / 研究质量</th><th>收盘 / 当日涨跌</th><th>目标价 / 较上期</th><th>候选入场 / 状态</th><th>止损 / 两档止盈</th><th>研究详情</th></tr></thead><tbody id="dailyRows"></tbody></table></div>
+        <div id="dailyEmpty" class="dc-empty" hidden></div>
+        <p class="dc-footnote">按当前跟踪名单统计，同日取最高修订版本；历史日期的名单可能不同。日期由计划推算，美股对应前一日；节假日与休市由原任务核验。未归档不代表执行失败。价格为研究报告中的条件方案，是否触发请查看原报告。</p>
+      </section>
+      <section class="dc-panel"><h2>发布执行记录</h2><div id="dailyPublishState" class="dc-status"></div>
+        <div class="dc-publishing"><div id="dailyPublications"></div><aside><h3>GitHub → 飞书</h3><p>左侧为仓库级发布流水，覆盖多个市场，并非当前批次专属记录。“执行通过”表示工作流通过；内容与图片是否实际发布仍需核对日志。</p><h3>Notion <span class="dc-badge">待核验</span></h3><p>尚无结构化同步回执，无法确认逐条同步结果。</p><h3>运行来源</h3><p>现有 Codex「每日收盘分析」会话。此页每分钟检查一次，GitHub 状态最多缓存 5 分钟，可手动刷新；计划启用不代表任务正在执行。任务运行、补跑与发布重试在原会话处理。</p></aside></div>
+      </section>
+    </section>
 
     <!-- ================= 因子库 ================= -->
     <section class="page active" id="page-factors">
@@ -838,6 +856,7 @@
 
 <script src="/app-shell.js"></script>
 <script src="/research-dashboard.js"></script>
+<script src="/daily-close.js"></script>
 <script src="/vendor/xterm/xterm.js"></script>
 <script src="/vendor/xterm/addon-fit.js"></script>
 <script>
@@ -859,15 +878,17 @@ function el(id) { return document.getElementById(id); }
 
 /* ---------------- page switching ---------------- */
 function showPage(name) {
-  if (!['factors', 'backtest', 'paper', 'live', 'company', 'research', 'trade-review', 'settings'].includes(name)) name = 'factors';
+  if (!['factors', 'backtest', 'paper', 'live', 'company', 'research', 'daily-close', 'trade-review', 'settings'].includes(name)) name = 'factors';
   if (activeJobKey && !activeJobKey.startsWith(`${name}/`)) closeTerminal();
   if (location.hash !== `#${name}`) location.hash = name;
+  window.ipc?.postMessage(`route:${name}`);
   document.querySelectorAll('.navitem').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${name}`));
   if (name === 'paper' && !loadedPages.has('paper')) { loadedPages.add('paper'); loadPaperTrading(); }
   if (name === 'live' && !loadedPages.has('live')) { loadedPages.add('live'); loadLiveTrading(); }
   if (name === 'company') loadJobList('company');
   if (name === 'research' && !researchLoaded) loadGithubResearch();
+  if (name === 'daily-close') { window.dailyClosePage ||= DailyClose.create(); window.dailyClosePage.load(); }
   if (name === 'trade-review' && !loadedPages.has('trade-review')) {
     loadedPages.add('trade-review');
     populateKnownSymbols();
@@ -1938,6 +1959,13 @@ function sortResearchSymbols(a, b) {
     || (researchReportsFor(b.symbol)[0]?.date || '').localeCompare(researchReportsFor(a.symbol)[0]?.date || '')
     || String(a.name).localeCompare(String(b.name), 'zh-CN');
 }
+window.openDailyResearch = function(index, symbol, filename) {
+  researchIndex = index; researchLoaded = true;
+  researchSymbol = symbol; researchReport = filename;
+  el('researchSearch').value = ''; el('researchMarket').value = 'all'; el('researchTracking').value = 'all';
+  el('researchState').textContent = `来自每日收盘 · 归档核验 ${historyDate(index.fetched_at)}${index.stale ? ' · 缓存数据' : ''}`;
+  showPage('research'); selectResearchSymbol(symbol, true);
+};
 async function loadGithubResearch(force = false) {
   const status = el('researchState');
   status.textContent = force ? '正在刷新 GitHub 研究目录…' : '正在读取 GitHub 研究目录…';

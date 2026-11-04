@@ -134,8 +134,27 @@ impl QuantLab {
         self.navigation_error = if page == "factors" {
             self.embedded.hide().err().map(|error| error.to_string())
         } else {
+            let view = cx.entity().downgrade();
+            let async_cx = cx.to_async();
             self.embedded
-                .open(page, factor, window)
+                .open(page, factor, window, move |route| {
+                    let page = match route {
+                        "company" => "company", "daily-close" => "daily-close",
+                        "research" => "research", "backtest" => "backtest",
+                        "paper" => "paper", "live" => "live",
+                        "trade-review" => "trade-review", "settings" => "settings",
+                        "factors" => "factors", _ => return,
+                    };
+                    async_cx.update(|cx| {
+                        let _ = view.update(cx, |this, cx| {
+                            if this.active_page != page {
+                                this.active_page = page;
+                                if page == "factors" { let _ = this.embedded.hide(); }
+                                cx.notify();
+                            }
+                        });
+                    });
+                })
                 .err()
                 .map(|error| error.to_string())
         };
@@ -580,6 +599,7 @@ impl Render for QuantLab {
                 "研究工作区",
                 vec![
                     ("公司分析", "company"),
+                    ("每日收盘", "daily-close"),
                     ("研究档案", "research"),
                     ("因子实验室", "factors"),
                     ("策略回测", "backtest"),

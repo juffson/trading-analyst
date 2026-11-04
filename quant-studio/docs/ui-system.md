@@ -13,7 +13,7 @@ The application uses an industrial research-terminal layout: a narrow navigation
 
 ## Information hierarchy
 
-Navigation groups research (company, archive, factors, backtest), trading (paper, live, review), and connection settings. Each page has a location label, a title, and a short task description.
+Navigation groups research (company, daily close, archive, factors, backtest), trading (paper, live, review), and connection settings. Each page has a location label, a title, and a short task description.
 
 Company analysis and trade review place their creation form above a history column and an active work area. Workflow, terminal, and report share that work area. Compare reports remain below the workspace.
 
@@ -26,3 +26,5 @@ Backtesting reserves a parameter column and a results canvas. Before a result ex
 `static/app-theme.css` owns the shared visual theme and page layouts. It loads after existing component styles and `research-dashboard.css`. `static/app-shell.js` owns settings tab selection and keyboard navigation. Existing business handlers remain in `index.html`. No framework rewrite or external font request is required.
 
 GPUI mirrors the rail width and palette in `desktop/src/main.rs`; the embedded webview offset is kept in sync in `desktop/src/embedded.rs`. Asset-version detection includes all local theme/dashboard entry files so changes are loaded on navigation.
+
+Daily close adds a three-market schedule strip, dated report table, and repository publication history. It reuses the existing automation configuration and public research archive; status limitations and refresh behavior are documented in `daily-close.md`. Internal webview navigation reports the current route to the native rail so report drill-down keeps its selected item in sync.

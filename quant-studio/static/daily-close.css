@@ -1,0 +1,45 @@
+/* Daily research operations: existing Quant Lab tokens and typography. */
+.dc-toolbar,.dc-between { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.dc-toolbar { margin-bottom:16px; flex-wrap:wrap; }
+.dc-toolbar select { width:auto; min-width:145px; }
+.dc-toolbar label { margin:0; display:flex; align-items:center; gap:7px; color:var(--fg-2); }
+.dc-toolbar input { width:auto; }
+.dc-status { font-size:11px; color:var(--fg-3); margin:0 0 18px; overflow-wrap:anywhere; }
+.dc-error { color:var(--risk-warning)!important; }
+.dc-markets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
+.dc-market { min-width:0; text-align:left; padding:18px; background:var(--card); color:var(--fg-1); border:1px solid var(--stroke); border-radius:8px; }
+.dc-market.selected { border-color:var(--brand); background:#1c2924; }
+.dc-market strong { font-size:15px; }
+.dc-market p { color:var(--fg-2); font-size:11px; margin:8px 0; }
+.dc-market b { color:var(--fg-1); font-weight:500; }
+.dc-market small { display:block; color:var(--fg-3); font-size:10px; line-height:1.6; overflow-wrap:anywhere; }
+.dc-count { font-size:32px; font-weight:600; margin:16px 0 10px; font-variant-numeric:tabular-nums; }
+.dc-count span { color:var(--fg-2); font-size:12px; font-weight:400; }
+.dc-progress { height:3px; background:var(--stroke); margin-bottom:15px; }
+.dc-progress i { display:block; height:100%; background:var(--brand); }
+.dc-badge { display:inline-block; color:var(--fg-2); background:#252f39; border-radius:4px; padding:3px 6px; font-size:10px; white-space:nowrap; }
+.dc-badge.ok { color:var(--brand); background:#2b3b2b; }
+.dc-badge.bad { color:var(--down); background:#3d2930; }
+.dc-badge.pending { color:var(--risk-warning); background:#3b3226; }
+.dc-panel { border:1px solid var(--stroke); background:var(--card); border-radius:8px; padding:18px; margin-bottom:22px; min-width:0; }
+.dc-panel h2 { font-size:15px; margin:0 0 5px; }
+.dc-panel .dc-table-scroll { overflow:auto; margin:0 -18px; }
+.dc-panel table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+.dc-panel th { color:var(--fg-3); font-size:10px; font-weight:500; text-align:left; padding:10px 14px; background:var(--bg-1); white-space:nowrap; }
+.dc-panel td { padding:14px; border-bottom:1px solid var(--stroke); font-size:12px; vertical-align:top; min-width:100px; }
+.dc-panel tbody tr:last-child td { border-bottom:0; }
+.dc-panel td small { display:block; font-size:10px; color:var(--fg-3); max-width:170px; line-height:1.5; margin-top:5px; }
+.dc-panel td button { font-size:11px; min-height:28px; padding:4px 8px; color:var(--brand); white-space:nowrap; }
+.dc-footnote { color:var(--fg-3); font-size:11px; line-height:1.8; margin:14px 0 0; }
+.dc-publishing { display:grid; grid-template-columns:minmax(0,1fr) 250px; gap:24px; margin-top:18px; }
+.dc-publishing aside { border-left:1px solid var(--stroke); padding-left:20px; color:var(--fg-2); font-size:12px; line-height:1.8; }
+.dc-publishing aside h3 { color:var(--fg-1); margin:0 0 6px; font-size:12px; }
+.dc-run { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--stroke); }
+.dc-run:last-child { border-bottom:0; }
+.dc-run div { flex:1; min-width:0; }
+.dc-run strong { display:block; font-size:11px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dc-run small { display:block; font-size:10px; color:var(--fg-3); margin-top:4px; }
+.dc-run a { color:var(--chart-blue); font-size:11px; white-space:nowrap; }
+.dc-empty { padding:26px; text-align:center; color:var(--fg-3); }
+@media(max-width:1000px) { .dc-publishing { grid-template-columns:1fr; } .dc-publishing aside { border-left:0; padding:16px 0 0; border-top:1px solid var(--stroke); } .dc-market { padding:12px; } .dc-market .dc-between { flex-wrap:wrap; gap:6px; } }
+@media(max-width:650px) { .dc-markets { grid-template-columns:1fr; } .dc-count { margin:8px 0; } }

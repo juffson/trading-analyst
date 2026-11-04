@@ -1,5 +1,6 @@
 mod cli_settings;
 mod credentials;
+mod daily_close;
 mod factors;
 mod github_research;
 mod live_trading;
@@ -45,6 +46,7 @@ struct AppState {
     trade_review_dir: PathBuf,
     sessions: SessionManager,
     github_research: GithubResearch,
+    daily_close: daily_close::DailyClose,
 }
 
 type SharedState = Arc<AppState>;
@@ -75,9 +77,17 @@ async fn main() {
         trade_review_dir: root.join("data/trade-review"),
         sessions,
         github_research: GithubResearch::new().expect("初始化 GitHub 研究目录失败"),
+        daily_close: daily_close::DailyClose::new().expect("初始化收盘看板失败"),
         trading_analyst_root,
     });
 
+    // Revalidate local assets when the embedded page reloads after an update.
+    let static_files = Router::new()
+        .fallback_service(ServeDir::new(root.join("static")))
+        .layer(axum::middleware::map_response(|mut response: axum::response::Response| async move {
+            response.headers_mut().insert(header::CACHE_CONTROL, "no-cache".parse().unwrap());
+            response
+        }));
     let app = Router::new()
         .route("/api/factors", get(list_factors))
         .route("/api/backtest", post(run_backtest))
@@ -98,6 +108,7 @@ async fn main() {
         .route("/api/live-trading", get(live_trading_snapshot))
         .route("/api/cli/available", get(cli_available))
         .route("/api/github-research", get(github_research_index))
+        .route("/api/daily-close", get(daily_close_snapshot).post(refresh_daily_close))
         .route("/api/github-research/refresh", post(refresh_github_research))
         .route("/api/github-research/{symbol}/{filename}", get(github_research_report))
         .route("/api/cli/{kind}/{slug}/terminal", get(cli_terminal))
@@ -121,7 +132,7 @@ async fn main() {
         )
         .route("/api/trade-review/{slug}/status", get(trade_review_status))
         .route("/api/trade-review/{slug}/report", get(trade_review_report))
-        .fallback_service(ServeDir::new(root.join("static")))
+        .fallback_service(static_files)
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:4870")
@@ -143,6 +154,17 @@ async fn github_research_index(State(state): State<SharedState>) -> impl IntoRes
         Ok(value) => (StatusCode::OK, JsonResponse(value)).into_response(),
         Err(error) => err_response(error).into_response(),
     }
+}
+
+async fn daily_close_snapshot(State(state): State<SharedState>) -> impl IntoResponse {
+    JsonResponse(state.daily_close.snapshot(&state.github_research, false).await)
+}
+
+async fn refresh_daily_close(State(state): State<SharedState>, headers: HeaderMap) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (StatusCode::FORBIDDEN, JsonResponse(json!({"error": "只允许本地页面刷新收盘看板"}))).into_response();
+    }
+    JsonResponse(state.daily_close.snapshot(&state.github_research, true).await).into_response()
 }
 
 async fn refresh_github_research(State(state): State<SharedState>, headers: HeaderMap) -> impl IntoResponse {

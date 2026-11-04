@@ -32,7 +32,7 @@ impl EmbeddedPages {
         }
     }
 
-    pub fn open(&mut self, page: &str, factor: Option<&str>, window: &mut Window) -> Result<()> {
+    pub fn open(&mut self, page: &str, factor: Option<&str>, window: &mut Window, on_route: impl Fn(&str) + 'static) -> Result<()> {
         self.ensure_backend()?;
         let asset_version = static_version();
         let url = format!(
@@ -58,6 +58,13 @@ impl EmbeddedPages {
             self.webview = Some(
                 WebViewBuilder::new()
                     .with_url(&url)
+                    .with_ipc_handler(move |request| {
+                        if request.uri().authority().map(|a| a.as_str()) == Some(SERVER) {
+                            if let Some(page) = request.body().strip_prefix("route:") {
+                                on_route(page);
+                            }
+                        }
+                    })
                     .with_bounds(Self::rect(window))
                     .with_on_page_load_handler(move |event, _| {
                         page_ready
@@ -180,6 +187,8 @@ fn static_version() -> u128 {
         "app-shell.js",
         "research-dashboard.css",
         "research-dashboard.js",
+        "daily-close.js",
+        "daily-close.css",
     ]
     .iter()
     .filter_map(|name| root.join(name).metadata().ok()?.modified().ok())
