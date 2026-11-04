@@ -614,7 +614,7 @@
         </div>
         <form class="settings-card" id="credentialsForm" autocomplete="off">
           <h2>更新凭据</h2>
-          <p>已有配置可只填写需要更换的字段，留空会保留原值。首次配置需填写前三项。</p>
+          <p>已有配置可只填写需要更换的字段，留空会保留原值。也可把三行 <code>LONGPORT_...=...</code> 粘贴到任一凭据框，自动填入对应字段。</p>
           <label for="settingsAppKey">App Key</label>
           <input id="settingsAppKey" spellcheck="false" autocomplete="off" placeholder="留空则保留原值">
           <label for="settingsAppSecret">App Secret</label>
@@ -736,6 +736,32 @@ async function saveCredentials(event) {
   } finally {
     button.disabled = false;
   }
+}
+
+function parseLongportEnv(text) {
+  const values = {};
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?(LONGPORT_APP_KEY|LONGPORT_APP_SECRET|LONGPORT_ACCESS_TOKEN)\s*=\s*(.*?)\s*$/);
+    if (!match) continue;
+    let value = match[2];
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (value) values[match[1]] = value;
+  }
+  return values;
+}
+
+function pasteLongportEnv(event) {
+  const values = parseLongportEnv(event.clipboardData?.getData('text') || '');
+  if (!Object.keys(values).length) return;
+  event.preventDefault();
+  if (values.LONGPORT_APP_KEY) el('settingsAppKey').value = values.LONGPORT_APP_KEY;
+  if (values.LONGPORT_APP_SECRET) el('settingsAppSecret').value = values.LONGPORT_APP_SECRET;
+  if (values.LONGPORT_ACCESS_TOKEN) el('settingsAccessToken').value = values.LONGPORT_ACCESS_TOKEN;
+  const message = el('credentialsMessage');
+  message.className = 'status';
+  message.textContent = `已识别 ${Object.keys(values).length} 项凭据，请检查后点击保存。`;
 }
 
 /* ---------------- 因子库 ---------------- */
@@ -1636,6 +1662,7 @@ el('modeComposeBtn').addEventListener('click', () => setMode('compose'));
 el('factorSearch').addEventListener('input', renderFactorList);
 el('runBtn').addEventListener('click', runBacktest);
 el('credentialsForm').addEventListener('submit', saveCredentials);
+el('credentialsForm').addEventListener('paste', pasteLongportEnv);
 el('goBacktestBtn').addEventListener('click', () => showPage('backtest'));
 
 initCharts();

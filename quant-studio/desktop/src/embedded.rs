@@ -6,7 +6,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, UNIX_EPOCH};
 use wry::dpi::{LogicalPosition, LogicalSize};
 use wry::{PageLoadEvent, Rect, WebView, WebViewBuilder};
 
@@ -18,6 +18,7 @@ pub struct EmbeddedPages {
     backend: Option<Child>,
     bounds: Option<(f64, f64)>,
     page_ready: Arc<AtomicBool>,
+    asset_version: u128,
 }
 
 impl EmbeddedPages {
@@ -27,19 +28,24 @@ impl EmbeddedPages {
             backend: None,
             bounds: None,
             page_ready: Arc::new(AtomicBool::new(false)),
+            asset_version: 0,
         }
     }
 
     pub fn open(&mut self, page: &str, factor: Option<&str>, window: &mut Window) -> Result<()> {
         self.ensure_backend()?;
+        let asset_version = static_version();
         let url = format!(
-            "http://{SERVER}/?embedded=1{}#{page}",
+            "http://{SERVER}/?embedded=1&v={asset_version}{}#{page}",
             factor
                 .map(|id| format!("&factor={}", encode_query(id)))
                 .unwrap_or_default()
         );
         if let Some(webview) = &self.webview {
-            if factor.is_some() || !self.page_ready.load(Ordering::Acquire) {
+            if factor.is_some()
+                || asset_version != self.asset_version
+                || !self.page_ready.load(Ordering::Acquire)
+            {
                 webview.load_url(&url).context("打开回测页面失败")?;
             } else {
                 webview
@@ -61,6 +67,7 @@ impl EmbeddedPages {
                     .context("创建内置页面失败")?,
             );
         }
+        self.asset_version = asset_version;
         self.resize(window)?;
         Ok(())
     }
@@ -163,6 +170,17 @@ fn encode_query(value: &str) -> String {
             }
         })
         .collect()
+}
+
+fn static_version() -> u128 {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../static/index.html")
+        .metadata()
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default()
 }
 
 fn backend_is_current(root: &std::path::Path, binary: &std::path::Path) -> bool {

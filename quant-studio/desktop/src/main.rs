@@ -12,6 +12,12 @@ use gpui_kit::*;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+actions!(quant_lab, [Quit]);
+
+fn quit(_: &Quit, cx: &mut App) {
+    cx.quit();
+}
+
 const fn color(hex: u32) -> Rgba {
     Rgba {
         r: ((hex >> 16) & 0xff) as f32 / 255.0,
@@ -801,6 +807,21 @@ impl Render for QuantLab {
 fn main() {
     gpui_kit::application().run(|cx| {
         gpui_kit::init(cx);
+        cx.on_action(quit);
+        cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
+        cx.set_menus([
+            Menu::new("Quant Lab").items([MenuItem::action("退出 Quant Lab", Quit)]),
+            Menu::new("编辑").items([
+                MenuItem::os_action("剪切", gpui_kit::component::input::Cut, OsAction::Cut),
+                MenuItem::os_action("复制", gpui_kit::component::input::Copy, OsAction::Copy),
+                MenuItem::os_action("粘贴", gpui_kit::component::input::Paste, OsAction::Paste),
+                MenuItem::os_action(
+                    "全选",
+                    gpui_kit::component::input::SelectAll,
+                    OsAction::SelectAll,
+                ),
+            ]),
+        ]);
         Theme::change(ThemeMode::Dark, None, cx);
         let bounds = Bounds {
             origin: point(px(36.), px(32.)),
