@@ -1688,6 +1688,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tower-http 0.7.0",
+ "url",
 ]
 
 [[package]]

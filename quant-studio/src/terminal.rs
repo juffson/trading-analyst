@@ -1,5 +1,6 @@
 //! Interactive, local CLI sessions. Only the two named executables can be launched;
 //! prompts are passed as arguments, never through a shell.
+use crate::cli_settings::{CliSettings, ProviderSettings};
 use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, PtySize, native_pty_system};
@@ -71,6 +72,7 @@ impl SessionManager {
         root: &Path,
         prompt: &str,
         report_filename: &str,
+        settings_path: &Path,
     ) -> Result<()> {
         if runner == Runner::Manual {
             bail!("手动模式不能启动内置终端");
@@ -80,6 +82,11 @@ impl SessionManager {
         let mut command = CommandBuilder::new(executable);
         command.cwd(root);
         command.env("TERM", "xterm-256color");
+        let settings = CliSettings::load(settings_path)?;
+        let provider = settings.provider(runner);
+        if let Some(provider) = provider.filter(|provider| provider.enabled) {
+            apply_provider(&mut command, runner, provider)?;
+        }
         match runner {
             Runner::Codex => {
                 command.args(["--no-alt-screen", "-C"]);
@@ -189,6 +196,58 @@ impl SessionManager {
             }
         }
     }
+}
+
+fn apply_provider(
+    command: &mut CommandBuilder,
+    runner: Runner,
+    provider: &ProviderSettings,
+) -> Result<()> {
+    provider.validate(runner)?;
+    match runner {
+        Runner::Codex => {
+            command.env("QUANT_STUDIO_CODEX_API_KEY", &provider.api_key);
+            command.args(["-c", "model_provider=\"quant_studio\""]);
+            command.args(["-c", "model_providers.quant_studio.name=\"Quant Lab\""]);
+            command.args([
+                "-c",
+                &format!(
+                    "model_providers.quant_studio.base_url={}",
+                    serde_json::to_string(&provider.endpoint)?
+                ),
+            ]);
+            command.args([
+                "-c",
+                "model_providers.quant_studio.env_key=\"QUANT_STUDIO_CODEX_API_KEY\"",
+            ]);
+            command.args(["-c", "model_providers.quant_studio.wire_api=\"responses\""]);
+            command.args([
+                "-c",
+                "model_providers.quant_studio.requires_openai_auth=false",
+            ]);
+            command.args([
+                "-c",
+                "model_providers.quant_studio.supports_websockets=false",
+            ]);
+            command.args(["-m", &provider.model]);
+        }
+        Runner::Claude => {
+            command.env_remove("ANTHROPIC_AUTH_TOKEN");
+            command.env_remove("ANTHROPIC_API_KEY");
+            command.env("ANTHROPIC_BASE_URL", &provider.endpoint);
+            let key_name = if provider.auth_header == "bearer" {
+                "ANTHROPIC_AUTH_TOKEN"
+            } else {
+                "ANTHROPIC_API_KEY"
+            };
+            command.env(key_name, &provider.api_key);
+            if !provider.model.is_empty() {
+                command.args(["--model", &provider.model]);
+            }
+        }
+        Runner::Manual => bail!("手动模式无需 API 配置"),
+    }
+    Ok(())
 }
 
 pub struct Session {
@@ -332,4 +391,65 @@ fn find_cli(name: &str) -> Option<PathBuf> {
         .map(|dir| dir.join(name))
         .find(|path| path.is_file())
         .and_then(|path| path.canonicalize().ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn custom_cli_keys_are_in_child_environment_not_arguments() {
+        let provider = ProviderSettings {
+            enabled: true,
+            endpoint: "https://gateway.example.com/v1".into(),
+            api_key: "private-test-key".into(),
+            model: "gpt-test".into(),
+            auth_header: String::new(),
+        };
+        let mut codex = CommandBuilder::new("codex");
+        apply_provider(&mut codex, Runner::Codex, &provider).unwrap();
+        let args = codex
+            .get_argv()
+            .iter()
+            .map(|arg| arg.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert!(args.contains("model_provider=\"quant_studio\""));
+        assert!(args.contains("model_providers.quant_studio.name="));
+        assert!(args.contains("model_providers.quant_studio.base_url="));
+        assert!(!args.contains("private-test-key"));
+        assert_eq!(
+            codex.get_env("QUANT_STUDIO_CODEX_API_KEY").unwrap(),
+            "private-test-key"
+        );
+
+        let mut claude = CommandBuilder::new("claude");
+        claude.env("ANTHROPIC_AUTH_TOKEN", "old-token");
+        apply_provider(&mut claude, Runner::Claude, &provider).unwrap();
+        assert!(claude.get_env("ANTHROPIC_AUTH_TOKEN").is_none());
+        assert_eq!(
+            claude.get_env("ANTHROPIC_API_KEY").unwrap(),
+            "private-test-key"
+        );
+        assert_eq!(
+            claude.get_env("ANTHROPIC_BASE_URL").unwrap(),
+            "https://gateway.example.com/v1"
+        );
+        assert!(
+            !claude
+                .get_argv()
+                .iter()
+                .any(|arg| arg == "private-test-key")
+        );
+        let bearer = ProviderSettings {
+            auth_header: "bearer".into(),
+            ..provider
+        };
+        apply_provider(&mut claude, Runner::Claude, &bearer).unwrap();
+        assert_eq!(
+            claude.get_env("ANTHROPIC_AUTH_TOKEN").unwrap(),
+            "private-test-key"
+        );
+        assert!(claude.get_env("ANTHROPIC_API_KEY").is_none());
+    }
 }

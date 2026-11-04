@@ -33,7 +33,7 @@ quant-studio/
    要用「实盘交易」页查持仓/委托，或 auto-trader 预览下单，再开 Trade。
 3. **生成 Access Token**：在开发者平台按文档用 App Key/Secret 换取 `Access Token`
    （JWT，会过期，过期后重新生成再更新环境变量）。
-4. **写进应用内账号设置**：启动桌面版后点左侧「账号设置」，填写 App Key、App Secret、
+4. **写进应用内连接设置**：启动桌面版后点左侧「账号设置」，填写 App Key、App Secret、
    Access Token，选择账号所属站点。凭据保存在本机 `quant-studio/.local/longbridge.json`，
    权限限制为当前用户；更新 Token 后，下一次回测和实盘查询立即使用新值。
    `auto-trader` 自动化脚本仍使用自己的环境变量，需单独更新。
@@ -66,6 +66,20 @@ quant-studio/
    ```
 
 凭证问题排查见 [`../skills/trading-analyst/references/longbridge-api.md`](../skills/trading-analyst/references/longbridge-api.md)。
+
+## 配置本地 AI CLI 的自定义 API
+
+在左侧「账号设置」→「AI CLI · 自定义 API」分别配置 Codex 或 Claude。两者都需要先在本机安装
+对应 CLI；可继续使用 CLI 自身已有登录，也可切换到自定义 API。Endpoint、Key 和模型只影响
+之后从应用启动的新任务，不改动 `~/.codex`、`~/.claude` 或 shell 配置。Key 保存在本机
+`quant-studio/.local/cli-settings.json`（仅当前用户可读写，不提交），界面只显示是否已保存。
+
+- Codex：Endpoint 需指向兼容 OpenAI Responses API 的基础路径（通常以 `/v1` 结尾），并填写该站点的模型名。
+- Claude：Endpoint 需兼容 Anthropic Messages API；按服务端要求选择 `x-api-key` 或 `Authorization: Bearer`，模型名可留空。
+- 「清除自定义配置」会删除该 CLI 在应用内保存的 Endpoint、Key 和模型，并恢复使用 CLI 自身登录。
+
+应用将配置仅传给新启动的 CLI 子进程，不在任务命令参数中放入 Key。若 Claude 项目设置里另有
+`env` 覆盖了这些变量，可在 Claude CLI 的 `/status` 核对实际连接来源。
 
 ## 桌面版迁移
 
@@ -134,6 +148,7 @@ python3 auto-trader/scripts/render_dashboard.py
     机器直接读，不走 HTTP）——待处理信号统计、状态分布、每个标的的阶段流转历史、calibrating
     定的回测基线、模拟成交记录，跟 auto-trader 自己的 `render_dashboard.py` 是同一套数据源。
     auto-trader 还没跑过就是空的，不是 bug。
+
   - **实盘交易**：直接调 `longport::trade::TradeContext::stock_positions()` /
     `today_orders()` 查 Longbridge 账户当前真实持仓和今日委托——auto-trader 里
     `executor.confirm_order()` 只能手动调，没有自动路径产生"实盘成交记录"这种本地数据可读，
@@ -141,7 +156,8 @@ python3 auto-trader/scripts/render_dashboard.py
   - **公司分析 / 交易记录分析**：把 `../skills/company-deep-dive` / `../skills/trading-analyst` 的
     工作流接进页面，可选择本机 Codex CLI、Claude CLI 或手动命令。内置模式以 PTY 启动交互式
     CLI，页面终端可输入、查看输出、响应权限确认和停止任务；不使用跳过权限检查的参数。
-    `prompt` 里写明 SKILL.md 的绝对路径，不依赖 skill 全局安装。CLI 需要事先在本机安装并登录。
+    `prompt` 里写明 SKILL.md 的绝对路径，不依赖 skill 全局安装。CLI 需要事先在本机安装，
+    可使用原有登录，也可在「账号设置」配置自定义 API。
     任务目录在 `data/company-analysis/<slug>/`、`data/trade-review/<slug>/`，其中 `terminal.log`
     保存最多 8 MiB 输出；CLI 退出后检查 `deep_dive.html`/`review.html` 并在页面展示报告。
     重启服务会把未完成会话标记为中断，历史输出仍可查看。

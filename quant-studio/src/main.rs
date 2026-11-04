@@ -1,4 +1,5 @@
 mod credentials;
+mod cli_settings;
 mod factors;
 mod live_trading;
 mod longbridge;
@@ -22,6 +23,7 @@ use serde_json::{Value, json};
 use tower_http::services::ServeDir;
 
 use credentials::{Credentials, CredentialsUpdate};
+use cli_settings::{CliSettings, ProviderUpdate};
 use factors::FactorLib;
 use performance::PerformanceLog;
 use terminal::{Runner, SessionManager};
@@ -29,6 +31,7 @@ use terminal::{Runner, SessionManager};
 struct AppState {
     factor_lib_path: PathBuf,
     credentials_path: PathBuf,
+    cli_settings_path: PathBuf,
     perf: PerformanceLog,
     auto_trader_config_path: PathBuf,
     auto_trader_watchlist_dir: PathBuf,
@@ -57,6 +60,7 @@ async fn main() {
         // 因子库只有一份：auto-trader/strategy-kit/strategy_kit.json（Python CLI 和本服务共用）
         factor_lib_path: auto_trader_root.join("strategy-kit/strategy_kit.json"),
         credentials_path: root.join(".local/longbridge.json"),
+        cli_settings_path: root.join(".local/cli-settings.json"),
         perf: PerformanceLog::new(root.join("data/performance")),
         auto_trader_config_path: auto_trader_root.join("config/strategies.json"),
         auto_trader_watchlist_dir: auto_trader_root.join("watchlist"),
@@ -77,6 +81,8 @@ async fn main() {
             "/api/settings/longbridge",
             get(longbridge_settings).post(update_longbridge_settings),
         )
+        .route("/api/settings/cli", get(cli_settings_status))
+        .route("/api/settings/cli/{runner}", post(update_cli_settings))
         .route("/api/performance/{key}", get(performance_history))
         .route("/api/paper-trading", get(paper_trading_snapshot))
         .route("/api/live-trading", get(live_trading_snapshot))
@@ -141,6 +147,33 @@ async fn update_longbridge_settings(
         }
     }
     match Credentials::update(&state.credentials_path, update) {
+        Ok(status) => (StatusCode::OK, JsonResponse(status)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn cli_settings_status(State(state): State<SharedState>) -> impl IntoResponse {
+    match CliSettings::status(&state.cli_settings_path) {
+        Ok(status) => (StatusCode::OK, JsonResponse(status)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn update_cli_settings(
+    State(state): State<SharedState>,
+    AxumPath(runner): AxumPath<String>,
+    headers: HeaderMap,
+    JsonResponse(update): JsonResponse<ProviderUpdate>,
+) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (StatusCode::FORBIDDEN, JsonResponse(json!({ "error": "只允许本地页面修改 AI CLI 配置" }))).into_response();
+    }
+    let runner = match runner.as_str() {
+        "codex" => Runner::Codex,
+        "claude" => Runner::Claude,
+        _ => return err_response(anyhow::anyhow!("未知 CLI 类型")).into_response(),
+    };
+    match CliSettings::update(&state.cli_settings_path, runner, update) {
         Ok(status) => (StatusCode::OK, JsonResponse(status)).into_response(),
         Err(error) => err_response(error).into_response(),
     }
@@ -598,6 +631,7 @@ async fn start_company_analysis(
             &state.trading_analyst_root,
             &prompt,
             "deep_dive.html",
+            &state.cli_settings_path,
         ) {
             let _ = terminal::write_status(&job_dir, "failed", req.runner, None);
             return err_response(error).into_response();
@@ -749,6 +783,7 @@ async fn start_trade_review(
             &state.trading_analyst_root,
             &prompt,
             "review.html",
+            &state.cli_settings_path,
         ) {
             let _ = terminal::write_status(&job_dir, "failed", req.runner, None);
             return err_response(error).into_response();
