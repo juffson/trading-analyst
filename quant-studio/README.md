@@ -23,8 +23,8 @@ quant-studio/
 
 ## 配置自己的 Longbridge 账号
 
-仓库不含任何真实凭据。首次使用需要自己申请并配置，**不要**把真实 key/token 写进仓库任何文件
-（`.env` 和 `auto-trader/config/strategies.json` 已在 `.gitignore`）。
+仓库不含任何真实凭据。首次使用需要自己申请并配置，**不要提交**真实 key/token。
+应用内凭据目录 `.local/`、`.env` 和 `auto-trader/config/strategies.json` 均已忽略。
 
 1. **注册 / 登录 Longbridge 账户**（已开户则跳过），确保有要分析的市场行情权限。
 2. **申请 OpenAPI**：打开 [Longbridge 开发者平台](https://open.longbridge.com/docs)（open.longbridge.com），
@@ -33,7 +33,12 @@ quant-studio/
    要用「实盘交易」页查持仓/委托，或 auto-trader 预览下单，再开 Trade。
 3. **生成 Access Token**：在开发者平台按文档用 App Key/Secret 换取 `Access Token`
    （JWT，会过期，过期后重新生成再更新环境变量）。
-4. **写进本机环境**（二选一）：
+4. **写进应用内账号设置**：启动桌面版后点左侧「账号设置」，填写 App Key、App Secret、
+   Access Token，选择账号所属站点。凭据保存在本机 `quant-studio/.local/longbridge.json`，
+   权限限制为当前用户；更新 Token 后，下一次回测和实盘查询立即使用新值。
+   `auto-trader` 自动化脚本仍使用自己的环境变量，需单独更新。
+
+   也可用环境变量或项目 `.env` 配置（应用内配置优先）：
 
    ```bash
    # 方式 A：写进 shell 配置（~/.zshrc 等）

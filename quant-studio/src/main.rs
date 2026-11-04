@@ -1,3 +1,4 @@
+mod credentials;
 mod factors;
 mod live_trading;
 mod longbridge;
@@ -8,21 +9,23 @@ mod skill_runner;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use axum::Router;
 use axum::extract::{Path as AxumPath, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{Html, IntoResponse, Json as JsonResponse};
 use axum::routing::{get, post};
-use axum::Router;
 use chrono::NaiveDate;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tower_http::services::ServeDir;
 
+use credentials::{Credentials, CredentialsUpdate};
 use factors::FactorLib;
 use performance::PerformanceLog;
 
 struct AppState {
     factor_lib_path: PathBuf,
+    credentials_path: PathBuf,
     perf: PerformanceLog,
     auto_trader_config_path: PathBuf,
     auto_trader_watchlist_dir: PathBuf,
@@ -41,11 +44,12 @@ async fn main() {
     let root = std::env::current_dir().expect("cwd");
     // auto-trader 已收进 quant-studio/，是同一个产品的自动化运行器
     let auto_trader_root = root.join("auto-trader");
-    let trading_analyst_root = std::fs::canonicalize(root.join(".."))
-        .unwrap_or_else(|_| root.join(".."));
+    let trading_analyst_root =
+        std::fs::canonicalize(root.join("..")).unwrap_or_else(|_| root.join(".."));
     let state = Arc::new(AppState {
         // 因子库只有一份：auto-trader/strategy-kit/strategy_kit.json（Python CLI 和本服务共用）
         factor_lib_path: auto_trader_root.join("strategy-kit/strategy_kit.json"),
+        credentials_path: root.join(".local/longbridge.json"),
         perf: PerformanceLog::new(root.join("data/performance")),
         auto_trader_config_path: auto_trader_root.join("config/strategies.json"),
         auto_trader_watchlist_dir: auto_trader_root.join("watchlist"),
@@ -61,6 +65,10 @@ async fn main() {
     let app = Router::new()
         .route("/api/factors", get(list_factors))
         .route("/api/backtest", post(run_backtest))
+        .route(
+            "/api/settings/longbridge",
+            get(longbridge_settings).post(update_longbridge_settings),
+        )
         .route("/api/performance/{key}", get(performance_history))
         .route("/api/paper-trading", get(paper_trading_snapshot))
         .route("/api/live-trading", get(live_trading_snapshot))
@@ -97,6 +105,33 @@ fn err_response(err: anyhow::Error) -> (StatusCode, JsonResponse<Value>) {
         StatusCode::BAD_REQUEST,
         JsonResponse(json!({ "error": err.to_string() })),
     )
+}
+
+async fn longbridge_settings(State(state): State<SharedState>) -> impl IntoResponse {
+    match Credentials::status(&state.credentials_path) {
+        Ok(status) => (StatusCode::OK, JsonResponse(status)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn update_longbridge_settings(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    JsonResponse(update): JsonResponse<CredentialsUpdate>,
+) -> impl IntoResponse {
+    if let Some(origin) = headers.get(header::ORIGIN) {
+        if origin.to_str().ok() != Some("http://127.0.0.1:4870") {
+            return (
+                StatusCode::FORBIDDEN,
+                JsonResponse(json!({ "error": "只允许本地应用修改凭据" })),
+            )
+                .into_response();
+        }
+    }
+    match Credentials::update(&state.credentials_path, update) {
+        Ok(status) => (StatusCode::OK, JsonResponse(status)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
 }
 
 async fn list_factors(State(state): State<SharedState>) -> impl IntoResponse {
@@ -180,7 +215,10 @@ async fn run_backtest(
         "paired" => {
             let base = match &req.base_name {
                 Some(b) => b.clone(),
-                None => return err_response(anyhow::anyhow!("mode=paired 需要 base_name")).into_response(),
+                None => {
+                    return err_response(anyhow::anyhow!("mode=paired 需要 base_name"))
+                        .into_response();
+                }
             };
             let key = match lib.paired_key(&base) {
                 Ok(k) => k,
@@ -194,7 +232,10 @@ async fn run_backtest(
         "compose" => {
             let (entry, exit) = match (&req.entry_id, &req.exit_id) {
                 (Some(e), Some(x)) => (e.clone(), x.clone()),
-                _ => return err_response(anyhow::anyhow!("mode=compose 需要 entry_id 和 exit_id")).into_response(),
+                _ => {
+                    return err_response(anyhow::anyhow!("mode=compose 需要 entry_id 和 exit_id"))
+                        .into_response();
+                }
             };
             let key = format!("{entry}+{exit}");
             match lib.compose(&entry, &exit, req.qty, req.capital) {
@@ -203,7 +244,8 @@ async fn run_backtest(
             }
         }
         other => {
-            return err_response(anyhow::anyhow!("未知 mode={other}，只接受 paired|compose")).into_response();
+            return err_response(anyhow::anyhow!("未知 mode={other}，只接受 paired|compose"))
+                .into_response();
         }
     };
 
@@ -213,16 +255,41 @@ async fn run_backtest(
 
     let inputs_json = req.inputs_json.unwrap_or_else(|| "[]".to_string());
 
+    let credentials = match Credentials::load(&state.credentials_path) {
+        Ok(credentials) => credentials,
+        Err(error) => return err_response(error).into_response(),
+    };
+
     let result = if let (Some(start_s), Some(end_s)) = (&req.start, &req.end) {
         let parse = |s: &str| NaiveDate::parse_from_str(s, "%Y-%m-%d");
         match (parse(start_s), parse(end_s)) {
             (Ok(start), Ok(end)) => {
-                longbridge::run_backtest_range(&req.symbol, &script, start, end, &req.period, &inputs_json).await
+                longbridge::run_backtest_range(
+                    &credentials,
+                    &req.symbol,
+                    &script,
+                    start,
+                    end,
+                    &req.period,
+                    &inputs_json,
+                )
+                .await
             }
-            _ => return err_response(anyhow::anyhow!("start/end 需要 YYYY-MM-DD 格式")).into_response(),
+            _ => {
+                return err_response(anyhow::anyhow!("start/end 需要 YYYY-MM-DD 格式"))
+                    .into_response();
+            }
         }
     } else {
-        longbridge::run_backtest(&req.symbol, &script, req.lookback_days, &req.period, &inputs_json).await
+        longbridge::run_backtest(
+            &credentials,
+            &req.symbol,
+            &script,
+            req.lookback_days,
+            &req.period,
+            &inputs_json,
+        )
+        .await
     };
 
     let backtest = match result {
@@ -261,7 +328,9 @@ async fn performance_history(
         return err_response(anyhow::anyhow!("非法 factor key: {key}")).into_response();
     }
     match state.perf.history(&key) {
-        Ok(history) => (StatusCode::OK, JsonResponse(json!({ "history": history }))).into_response(),
+        Ok(history) => {
+            (StatusCode::OK, JsonResponse(json!({ "history": history }))).into_response()
+        }
         Err(e) => err_response(e).into_response(),
     }
 }
@@ -281,8 +350,12 @@ async fn paper_trading_snapshot(State(state): State<SharedState>) -> impl IntoRe
 
 /// "实盘交易"只读视图——直接查 Longbridge 账户真实持仓 + 今日委托（TradeContext），
 /// 不经过本地文件，因为 auto-trader 里没有任何自动路径会产生真实成交记录可读。
-async fn live_trading_snapshot() -> impl IntoResponse {
-    match live_trading::snapshot().await {
+async fn live_trading_snapshot(State(state): State<SharedState>) -> impl IntoResponse {
+    let credentials = match Credentials::load(&state.credentials_path) {
+        Ok(credentials) => credentials,
+        Err(error) => return err_response(error).into_response(),
+    };
+    match live_trading::snapshot(&credentials).await {
         Ok(data) => (StatusCode::OK, JsonResponse(data)).into_response(),
         Err(e) => err_response(e).into_response(),
     }
@@ -383,7 +456,8 @@ async fn company_analysis_report(
     if !skill_runner::is_safe_slug(&slug) {
         return err_response(anyhow::anyhow!("非法 slug: {slug}")).into_response();
     }
-    match skill_runner::read_report_html(&state.company_analysis_dir.join(&slug), "deep_dive.html") {
+    match skill_runner::read_report_html(&state.company_analysis_dir.join(&slug), "deep_dive.html")
+    {
         Ok(html) => Html(html).into_response(),
         Err(e) => err_response(anyhow::anyhow!("报告还没生成或读取失败: {e}")).into_response(),
     }
@@ -419,12 +493,18 @@ async fn start_trade_review(
     let paper_symbol = paper
         .get("symbols")
         .and_then(Value::as_array)
-        .and_then(|arr| arr.iter().find(|s| s["symbol"].as_str() == Some(symbol.as_str())))
+        .and_then(|arr| {
+            arr.iter()
+                .find(|s| s["symbol"].as_str() == Some(symbol.as_str()))
+        })
         .cloned()
         .unwrap_or(Value::Null);
-    let live = live_trading::snapshot()
-        .await
-        .unwrap_or(json!({ "positions": [], "today_orders": [] }));
+    let live = match Credentials::load(&state.credentials_path) {
+        Ok(credentials) => live_trading::snapshot(&credentials)
+            .await
+            .unwrap_or(json!({ "positions": [], "today_orders": [] })),
+        Err(_) => json!({ "positions": [], "today_orders": [] }),
+    };
     let live_filtered = json!({
         "positions": live.get("positions").and_then(Value::as_array)
             .map(|arr| arr.iter().filter(|p| p["symbol"].as_str() == Some(symbol.as_str())).cloned().collect::<Vec<_>>())
@@ -516,7 +596,9 @@ mod tests {
         assert!(script.contains("plot(rsiValue"));
         assert!(script.contains("plot(close"));
 
-        let combo = lib.compose("breakout", "bearish_divergence", 100, 100000.0).unwrap();
+        let combo = lib
+            .compose("breakout", "bearish_divergence", 100, 100000.0)
+            .unwrap();
         println!("{combo}");
         assert!(combo.contains("plot(macdHist"));
         assert!(combo.contains("plot(bbUpper"));

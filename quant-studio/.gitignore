@@ -6,6 +6,7 @@
 /data/company-analysis/
 /data/trade-review/
 .env
+/.local/
 
 # auto-trader 个人数据——具体标的、持仓、模拟成交记录，不提交
 # watchlist/ 下是具体标的的个人数据，不提交；但目录结构说明要留在版本库里，

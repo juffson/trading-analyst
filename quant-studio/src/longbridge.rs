@@ -1,6 +1,6 @@
 //! 调 Longbridge `/v2/quant/run_script` 跑回测。
 //!
-//! 用官方 `longport` Rust crate 的 `HttpClient`（`HttpClientConfig::from_apikey_env()`），
+//! 用官方 `longport` Rust crate 的 `HttpClient`，凭据来自应用内设置或环境变量，
 //! 和 auto-trader 的 Python 版 signal_from_backtest.py 走的是同一套鉴权/请求体字段
 //! （counter_id/start_time/end_time/script/inputs_json/line_type/exclude_chart），
 //! 移植过来时保持字段名一致。
@@ -9,15 +9,12 @@
 //! 这里统一再 parse 成 `serde_json::Value`，不建强类型 struct——这套接口的字段命名有过
 //! 实测确认才靠得住（比如 chart_json 里是驼峰 filledOrders，不是文档写的 filled_orders），
 //! 用 Value 动态取字段比强行套一个可能对不上的结构体更稳。
+use crate::credentials::Credentials;
 use anyhow::{Context, Result};
 use chrono::{Duration, NaiveDate, Utc};
 use longport::counter::symbol_to_counter_id;
 use longport::httpclient::{HttpClient, HttpClientConfig, Json, Method};
 use serde_json::{Value, json};
-
-/// 这个账号所在的 region 站点。`.com` 是全球站，实测对本账号返回 403；
-/// crate 自己路由到的 `openapi.longport.cn` 已退役（无 DNS）。
-const DEFAULT_HTTP_URL: &str = "https://openapi.longbridge.cn";
 
 pub struct BacktestResult {
     pub report: Value,
@@ -42,6 +39,7 @@ fn line_type_for_period(period: &str) -> Result<i32> {
 
 /// language: 1 = pine（目前唯一支持的——navi 没有策略语义，见 auto-trader 那边的调研记录）
 pub async fn run_backtest(
+    credentials: &Credentials,
     symbol: &str,
     script: &str,
     lookback_days: i64,
@@ -50,10 +48,11 @@ pub async fn run_backtest(
 ) -> Result<BacktestResult> {
     let end = Utc::now().date_naive();
     let start = end - Duration::days(lookback_days);
-    run_backtest_range(symbol, script, start, end, period, inputs_json).await
+    run_backtest_range(credentials, symbol, script, start, end, period, inputs_json).await
 }
 
 pub async fn run_backtest_range(
+    credentials: &Credentials,
     symbol: &str,
     script: &str,
     start: NaiveDate,
@@ -72,17 +71,13 @@ pub async fn run_backtest_range(
         .and_utc()
         .timestamp();
 
-    let config = HttpClientConfig::from_apikey_env()
-        .context("HttpClientConfig::from_apikey_env 失败——检查 LONGPORT_APP_KEY/APP_SECRET/ACCESS_TOKEN")?;
-    // crate 默认 endpoint 是 openapi.longportapp.com，但它会按账号 region 再路由到
-    // openapi.longport.cn——那个域名**已经停了，DNS 都解析不出来**（2026-10 实测），
-    // 于是请求连 TCP 都建不起来。品牌域迁到了 longbridge.*，CLI 一直打的就是这个，
-    // 所以 CLI 好用、SDK 不好用。这里显式钉死，不依赖 crate 的 region 路由。
-    // 需要换站（比如全球站 openapi.longbridge.com）就设 LONGPORT_HTTP_URL 覆盖。
-    let config = match std::env::var("LONGPORT_HTTP_URL") {
-        Ok(url) if !url.is_empty() => config.http_url(url),
-        _ => config.http_url(DEFAULT_HTTP_URL),
-    };
+    let config = HttpClientConfig::from_apikey(
+        &credentials.app_key,
+        &credentials.app_secret,
+        &credentials.access_token,
+    );
+    // 显式指定应用内选择的 Longbridge 站点，不依赖 SDK 的默认路由。
+    let config = config.http_url(&credentials.http_url);
     let client = HttpClient::new(config);
 
     let body = json!({
@@ -187,9 +182,15 @@ pub fn extract_candles(events: &Value) -> Vec<Value> {
     };
     let mut candles: Vec<(i64, Value)> = Vec::new();
     for ev in arr {
-        let Some(bar_start) = ev.get("barStart") else { continue };
-        let Some(idx) = bar_start.get("barIndex").and_then(Value::as_i64) else { continue };
-        let Some(c) = bar_start.get("candlestick") else { continue };
+        let Some(bar_start) = ev.get("barStart") else {
+            continue;
+        };
+        let Some(idx) = bar_start.get("barIndex").and_then(Value::as_i64) else {
+            continue;
+        };
+        let Some(c) = bar_start.get("candlestick") else {
+            continue;
+        };
         let (Some(time_ms), Some(open), Some(high), Some(low), Some(close)) = (
             c.get("time").and_then(Value::as_i64),
             c.get("open").and_then(Value::as_f64),

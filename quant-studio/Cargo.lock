@@ -1622,6 +1622,7 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
+ "dotenv",
  "longport",
  "serde",
  "serde_json",

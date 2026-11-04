@@ -586,6 +586,7 @@ impl Render for QuantLab {
             ("实盘查询", "live"),
             ("公司分析", "company"),
             ("交易记录", "trade-review"),
+            ("账号设置", "settings"),
         ]
         .into_iter()
         .enumerate()

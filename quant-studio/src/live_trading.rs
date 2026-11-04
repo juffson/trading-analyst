@@ -4,16 +4,21 @@
 //! 所以本地没有"实盘成交记录"这种数据可读；这里换个思路，直接问 Longbridge 账户当前
 //! 真实持仓 + 今天的委托单，这才是"实盘交易"最准确的定义——不管这笔单子是不是手动下的。
 //! 只读，这个模块不提供任何下单接口。
+use crate::credentials::Credentials;
 use anyhow::{Context, Result};
-use longport::trade::TradeContext;
 use longport::Config;
-use serde_json::{json, Value};
+use longport::trade::TradeContext;
+use serde_json::{Value, json};
 use std::sync::Arc;
 
-pub async fn snapshot() -> Result<Value> {
+pub async fn snapshot(credentials: &Credentials) -> Result<Value> {
     let config = Arc::new(
-        Config::from_apikey_env()
-            .context("Config::from_apikey_env 失败——检查 LONGPORT_APP_KEY/APP_SECRET/ACCESS_TOKEN")?,
+        Config::from_apikey(
+            &credentials.app_key,
+            &credentials.app_secret,
+            &credentials.access_token,
+        )
+        .http_url(&credentials.http_url),
     );
     let (ctx, _push_rx) = TradeContext::new(config);
 

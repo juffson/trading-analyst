@@ -107,11 +107,11 @@ impl EmbeddedPages {
             .canonicalize()
             .context("定位 quant-studio 目录失败")?;
         let binary = root.join("target/debug/quant-studio");
-        let mut command = if binary.is_file() {
+        let mut command = if backend_is_current(&root, &binary) {
             Command::new(binary)
         } else {
-            let mut cargo = Command::new("cargo");
-            cargo.arg("run");
+            let mut cargo = Command::new(option_env!("CARGO").unwrap_or("cargo"));
+            cargo.arg("run").arg("--locked").arg("--quiet");
             cargo
         };
         let child = command
@@ -121,7 +121,7 @@ impl EmbeddedPages {
             .spawn()
             .context("启动 Quant Lab 服务失败")?;
         self.backend = Some(child);
-        for _ in 0..300 {
+        for _ in 0..1200 {
             if server_ready() {
                 return Ok(());
             }
@@ -163,4 +163,34 @@ fn encode_query(value: &str) -> String {
             }
         })
         .collect()
+}
+
+fn backend_is_current(root: &std::path::Path, binary: &std::path::Path) -> bool {
+    let Ok(built_at) = binary.metadata().and_then(|metadata| metadata.modified()) else {
+        return false;
+    };
+    let mut paths = vec![
+        root.join("Cargo.toml"),
+        root.join("Cargo.lock"),
+        root.join("src"),
+    ];
+    while let Some(path) = paths.pop() {
+        if path.is_dir() {
+            let Ok(entries) = std::fs::read_dir(path) else {
+                return false;
+            };
+            paths.extend(entries.filter_map(|entry| entry.ok().map(|entry| entry.path())));
+        } else if (path.extension().is_some_and(|extension| extension == "rs")
+            || path
+                .file_name()
+                .is_some_and(|name| name == "Cargo.toml" || name == "Cargo.lock"))
+            && path
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .is_ok_and(|modified| modified > built_at)
+        {
+            return false;
+        }
+    }
+    true
 }
