@@ -395,7 +395,10 @@
   .job-badge.failed, .job-badge.incomplete, .job-badge.interrupted, .job-badge.cancelled { background: rgba(255,100,100,0.16); color: var(--risk-danger); }
   .terminal-shell { margin-top: var(--sp-3); border: 1px solid var(--stroke); border-radius: var(--radius-lg); overflow: hidden; background: #0b111b; }
   .terminal-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); padding: 8px 12px; color: #aab8ca; font-size: 12px; border-bottom: 1px solid #253344; }
-  .terminal-heading button { cursor: pointer; color: #ffaaaa; background: transparent; border: 1px solid #6b3434; padding: 4px 10px; }
+  .terminal-heading-actions { display: flex; align-items: center; gap: 8px; }
+  .terminal-heading button { cursor: pointer; color: var(--fg-2); background: transparent; border: 1px solid var(--stroke); padding: 4px 10px; }
+  .terminal-heading .terminal-stop { color: #ffaaaa; border-color: #6b3434; }
+  .terminal-note { padding: 8px 12px; color: var(--fg-2); font-size: 12px; border-bottom: 1px solid #253344; }
   .terminal-view { height: 420px; padding: 8px; }
   .terminal-view .xterm { height: 100%; }
   .report-frame { width: 100%; height: 80vh; border: 1px solid var(--stroke); border-radius: var(--radius-lg);
@@ -1585,6 +1588,7 @@ let jobPolling = null;
 let activeJobKey = null;
 let lastActiveStatus = null;
 let autoOpeningJob = null;
+const closedDetails = { company: false, 'trade-review': false };
 const historyJobs = { company: [], 'trade-review': [] };
 const selectedReports = { company: new Set(), 'trade-review': new Set() };
 for (const [kind, cfg] of Object.entries(SKILL_KINDS)) {
@@ -1601,6 +1605,7 @@ function closeTerminal() {
   if (jobPolling) clearInterval(jobPolling);
   jobPolling = null;
   if (activeTerminal) {
+    if (activeTerminal.socket) activeTerminal.socket.onclose = null;
     activeTerminal.socket?.close();
     activeTerminal.resizeObserver?.disconnect();
     activeTerminal.term?.dispose();
@@ -1625,6 +1630,7 @@ loadCliAvailability();
 
 function renderCommandArea(kind, slug, command, runner = 'manual', status = 'waiting_for_manual_run', workflow) {
   closeTerminal();
+  closedDetails[kind] = false;
   activeJobKey = `${kind}/${slug}`;
   const cfg = SKILL_KINDS[kind];
   const manual = runner === 'manual';
@@ -1633,10 +1639,11 @@ function renderCommandArea(kind, slug, command, runner = 'manual', status = 'wai
     <div class="command-box">
       <div id="workflow-${escapeHtml(slug)}" class="workflow-board"></div>
       <div class="steps" id="jobInstructions-${escapeHtml(slug)}">${manual ? '复制命令到外部终端运行；完成后检查报告。' : live ? '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。' : '此任务的 CLI 会话已结束；下方为只读的历史输出。可用历史列表中的「再次分析 / 再次复盘」重新发起。'}</div>
-      ${manual ? `<details class="manual-command"><summary>查看外部终端命令</summary><pre id="cmdText-${escapeHtml(slug)}"></pre></details>` : `<div class="terminal-shell"><div class="terminal-heading"><span id="terminalLabel-${escapeHtml(slug)}">${escapeHtml(runner.toUpperCase())} · ${live ? '本地会话' : '历史输出（只读）'}</span><button id="stopJob-${escapeHtml(slug)}" ${live ? '' : 'hidden'}>停止任务</button></div><div class="terminal-view" id="terminal-${escapeHtml(slug)}"></div></div>`}
+      ${manual ? `<details class="manual-command"><summary>查看外部终端命令</summary><pre id="cmdText-${escapeHtml(slug)}"></pre></details>` : `<div class="terminal-shell"><div class="terminal-heading"><span id="terminalLabel-${escapeHtml(slug)}">${escapeHtml(runner.toUpperCase())} · ${live ? '本地会话' : '历史输出（只读）'}</span><div class="terminal-heading-actions"><button id="reconnectJob-${escapeHtml(slug)}" hidden>重新连接</button><button id="toggleLog-${escapeHtml(slug)}" ${live ? 'hidden' : ''}>查看终端记录</button><button class="terminal-stop" id="stopJob-${escapeHtml(slug)}" ${live ? '' : 'hidden'}>停止任务</button></div></div><div class="terminal-note" id="terminalNote-${escapeHtml(slug)}">${live ? '连接中… 点击终端后可输入和确认。' : '会话已结束。历史记录只能查看，不能继续输入。'}</div><div class="terminal-view" id="terminal-${escapeHtml(slug)}" ${live ? '' : 'hidden'}></div></div>`}
       <div class="command-actions">
         ${manual ? `<button id="copyJob-${escapeHtml(slug)}">复制命令</button>` : ''}
         <button class="primary" id="checkJob-${escapeHtml(slug)}">检查状态</button>
+        <button id="closeJob-${escapeHtml(slug)}">关闭详情</button>
       </div>
       <div class="status" id="jobStatus-${escapeHtml(slug)}"></div>
       <div id="jobReport-${escapeHtml(slug)}"></div>
@@ -1646,14 +1653,24 @@ function renderCommandArea(kind, slug, command, runner = 'manual', status = 'wai
     el(`copyJob-${slug}`).onclick = () => copyCommand(slug);
   } else {
     el(`stopJob-${slug}`).onclick = () => stopJob(kind, slug);
-    openTerminal(kind, slug, status);
+    el(`reconnectJob-${slug}`).onclick = () => reconnectTerminal(kind, slug);
+    el(`toggleLog-${slug}`).onclick = () => toggleTerminalLog(kind, slug);
+    if (live) openTerminal(kind, slug, status);
   }
   el(`checkJob-${slug}`).onclick = () => checkJobDone(kind, slug);
+  el(`closeJob-${slug}`).onclick = () => closeJobDetail(kind);
   updateJobView(kind, slug, { status, workflow, runner });
   if (workflow === undefined) checkJobDone(kind, slug, true);
   if (status === 'running' || status === 'stopping') {
     jobPolling = setInterval(() => checkJobDone(kind, slug, true), 1500);
   }
+}
+
+function closeJobDetail(kind) {
+  closeTerminal();
+  closedDetails[kind] = true;
+  renderWorkflowPreview(kind);
+  renderHistoryList(kind);
 }
 
 function renderWorkflowPreview(kind) {
@@ -1702,38 +1719,92 @@ function copyCommand(slug) {
 
 async function openTerminal(kind, slug, status) {
   const container = el(`terminal-${slug}`);
-  if (!container || typeof Terminal === 'undefined' || !window.FitAddon) {
+  if (!container) return;
+  if (typeof Terminal === 'undefined' || !window.FitAddon) {
     container.textContent = '终端组件未加载，请重新打开页面。';
     return;
   }
-  const term = new Terminal({ cursorBlink: status === 'running', convertEol: true, fontSize: 13,
+  const live = status === 'running' || status === 'stopping';
+  const term = new Terminal({ cursorBlink: live, disableStdin: !live, convertEol: true, fontSize: 13,
     fontFamily: 'Menlo, Monaco, monospace', theme: { background: '#0b111b', foreground: '#d8e3ef' } });
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open(container);
   fit.fit();
-  const state = { term, fit, socket: null, resizeObserver: null };
+  const state = { term, fit, socket: null, resizeObserver: null, resetOnConnect: false };
   activeTerminal = state;
+  if (live) {
+    container.addEventListener('click', () => { if (activeTerminal === state) term.focus(); });
+    term.focus();
+    term.onData(data => {
+      if (state.socket?.readyState === WebSocket.OPEN) state.socket.send(JSON.stringify({ type: 'input', data }));
+    });
+  }
   const resizeObserver = new ResizeObserver(() => {
     fit.fit();
     if (state.socket?.readyState === WebSocket.OPEN) state.socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
   });
   resizeObserver.observe(container);
   state.resizeObserver = resizeObserver;
-  const url = `/api/cli/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/terminal`;
-  if (status === 'running' || status === 'stopping') {
-    const socket = new WebSocket(`ws://${location.host}${url}`);
-    socket.binaryType = 'arraybuffer';
-    state.socket = socket;
-    socket.onopen = () => socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-    socket.onmessage = event => {
-      if (activeTerminal === state) term.write(event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : event.data);
-    };
-    socket.onclose = () => { if (activeTerminal === state) checkJobDone(kind, slug, true); };
-    term.onData(data => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data })); });
+  if (live) {
+    connectTerminal(kind, slug, state);
   } else {
     const resp = await fetch(`/api/cli/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/log`);
     if (resp.ok && activeTerminal === state) term.write(new Uint8Array(await resp.arrayBuffer()));
+  }
+}
+
+function setTerminalConnection(slug, message, reconnect = false) {
+  const note = el(`terminalNote-${slug}`);
+  if (note) note.textContent = message;
+  const button = el(`reconnectJob-${slug}`);
+  if (button) button.hidden = !reconnect;
+}
+
+function connectTerminal(kind, slug, state) {
+  if (activeTerminal !== state || state.socket) return;
+  setTerminalConnection(slug, '连接中… 点击终端后可输入和确认。');
+  const url = `/api/cli/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/terminal`;
+  const socket = new WebSocket(`ws://${location.host}${url}`);
+  socket.binaryType = 'arraybuffer';
+  state.socket = socket;
+  socket.onopen = () => {
+    if (activeTerminal !== state) return;
+    if (state.resetOnConnect) {
+      state.term.reset();
+      state.resetOnConnect = false;
+    }
+    setTerminalConnection(slug, '已连接。点击终端后可输入和确认。');
+    socket.send(JSON.stringify({ type: 'resize', cols: state.term.cols, rows: state.term.rows }));
+  };
+  socket.onmessage = event => {
+    if (activeTerminal === state) state.term.write(event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : event.data);
+  };
+  socket.onclose = async () => {
+    if (activeTerminal !== state || state.socket !== socket) return;
+    state.socket = null;
+    await checkJobDone(kind, slug, true);
+    if (activeTerminal === state && ['running', 'stopping'].includes(lastActiveStatus)) {
+      setTerminalConnection(slug, '终端连接已断开，可重新连接。', true);
+    }
+  };
+}
+
+function reconnectTerminal(kind, slug) {
+  if (!activeTerminal || activeJobKey !== `${kind}/${slug}`) return;
+  activeTerminal.resetOnConnect = true;
+  connectTerminal(kind, slug, activeTerminal);
+}
+
+function toggleTerminalLog(kind, slug) {
+  const container = el(`terminal-${slug}`);
+  const button = el(`toggleLog-${slug}`);
+  if (!container || !button) return;
+  container.hidden = !container.hidden;
+  button.textContent = container.hidden ? '查看终端记录' : '收起终端记录';
+  if (!container.hidden) {
+    if (!activeTerminal) openTerminal(kind, slug, 'interrupted');
+    else activeTerminal.fit.fit();
   }
 }
 
@@ -1756,7 +1827,7 @@ function updateJobView(kind, slug, data) {
   const terminalLabel = el(`terminalLabel-${slug}`);
   if (terminalLabel) terminalLabel.textContent = `${String(data.runner || '').toUpperCase()} · ${live ? '本地会话' : '历史输出（只读）'}`;
   const instructions = el(`jobInstructions-${slug}`);
-  if (instructions && terminalLabel && !live) instructions.textContent = '此任务的 CLI 会话已结束；下方为只读的历史输出。可从历史列表重新发起。';
+  if (instructions && terminalLabel && !live) instructions.textContent = '此任务的 CLI 会话已结束；终端记录只能查看。可从历史列表重新发起。';
   renderWorkflow(kind, slug, data.workflow);
   if (data.status !== lastActiveStatus) {
     lastActiveStatus = data.status;
@@ -1771,6 +1842,12 @@ function updateJobView(kind, slug, data) {
     ['failed', 'incomplete', 'interrupted'].includes(data.status));
   const stop = el(`stopJob-${slug}`);
   if (stop) stop.hidden = !['running', 'stopping'].includes(data.status);
+  const toggleLog = el(`toggleLog-${slug}`);
+  if (toggleLog) {
+    toggleLog.hidden = live;
+    const container = el(`terminal-${slug}`);
+    toggleLog.textContent = container?.hidden ? '查看终端记录' : '收起终端记录';
+  }
   const report = el(`jobReport-${slug}`);
   if (data.status === 'done' && report && !report.firstChild) {
     report.innerHTML = `<iframe class="report-frame" sandbox="allow-scripts" src="${cfg.api}/${encodeURIComponent(slug)}/report"></iframe>`;
@@ -1782,6 +1859,11 @@ function updateJobView(kind, slug, data) {
     activeTerminal.socket.onclose = null;
     activeTerminal.socket.close();
     activeTerminal.socket = null;
+  }
+  if (!live && activeTerminal?.term) {
+    activeTerminal.term.options.disableStdin = true;
+    activeTerminal.term.options.cursorBlink = false;
+    setTerminalConnection(slug, '会话已结束。历史记录只能查看，不能继续输入。');
   }
 }
 
@@ -1915,7 +1997,7 @@ async function loadJobList(kind) {
       if (!activeJobKey && document.getElementById(`page-${kind}`).classList.contains('active')) renderWorkflowPreview(kind);
       return;
     }
-    if (!activeJobKey && !autoOpeningJob && document.getElementById(`page-${kind}`).classList.contains('active')) {
+    if (!activeJobKey && !closedDetails[kind] && !autoOpeningJob && document.getElementById(`page-${kind}`).classList.contains('active')) {
       const featured = jobs.find(job => ['running', 'stopping'].includes(job.status))
         || jobs.find(job => job.status === 'done')
         || jobs.find(job => job.status === 'waiting_for_manual_run');
