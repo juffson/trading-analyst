@@ -51,7 +51,7 @@
     {key:'close', label:'收盘价', color:'#83c4fb'},
     {key:'target', label:'研究目标价', color:'#b8ee80'},
     {key:'high', label:'情景最高价', color:'#e8bb79', dashed:true},
-    {key:'low', label:'情景最低价', color:'#b69af3', dashed:true},
+    {key:'low', label:'情景最低价', color:'#d7919e', dashed:true},
   ];
   function chartMarkup(points, lines, label, unit, width = 760) {
     const values = points.flatMap(p=>lines.map(l=>number(p[l.key]))).filter(v=>v!==null);

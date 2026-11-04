@@ -450,6 +450,7 @@
   @media (max-width: 800px) { .research-layout { grid-template-columns: 1fr; } .research-symbols { max-height: 260px; } }
 </style>
 <link rel="stylesheet" href="/research-dashboard.css">
+<link rel="stylesheet" href="/app-theme.css">
 </head>
 <body>
 <div class="shell">
@@ -461,31 +462,30 @@
         <div class="brand-sub">量化研究工作台</div>
       </div>
     </div>
-    <div class="navlist">
-      <button class="navitem active" data-page="factors"><span class="navicon">&#9670;</span>因子库</button>
-      <button class="navitem" data-page="backtest"><span class="navicon">&#9776;</span>回测</button>
-      <button class="navitem" data-page="paper"><span class="navicon">&#9678;</span>模拟交易</button>
-      <button class="navitem" data-page="live"><span class="navicon">&#9889;</span>实盘交易<span class="navbadge" id="liveBadge" style="display:none;"></span></button>
-      <button class="navitem" data-page="company"><span class="navicon">&#9737;</span>公司分析</button>
-      <button class="navitem" data-page="research"><span class="navicon">&#9783;</span>研究档案</button>
-      <button class="navitem" data-page="trade-review"><span class="navicon">&#9998;</span>交易记录分析</button>
-      <button class="navitem" data-page="settings"><span class="navicon">&#9881;</span>账号设置</button>
-    </div>
+    <div class="nav-group"><div class="nav-group-label">研究工作区</div><div class="navlist">
+      <button class="navitem" data-page="company"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/building-2.svg)"></span>公司分析</button>
+      <button class="navitem" data-page="research"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/library.svg)"></span>研究档案</button>
+      <button class="navitem active" data-page="factors"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/flask-conical.svg)"></span>因子实验室</button>
+      <button class="navitem" data-page="backtest"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/chart-no-axes-combined.svg)"></span>策略回测</button>
+    </div></div>
+    <div class="nav-group"><div class="nav-group-label">交易跟踪</div><div class="navlist">
+      <button class="navitem" data-page="paper"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/notebook-pen.svg)"></span>模拟交易</button>
+      <button class="navitem" data-page="live"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/wallet.svg)"></span>实盘账户<span class="navbadge" id="liveBadge" style="display:none;"></span></button>
+      <button class="navitem" data-page="trade-review"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/history.svg)"></span>交易复盘</button>
+    </div></div>
+    <div class="sidebar-footer"><button class="navitem" data-page="settings"><span class="navicon" aria-hidden="true" style="--icon:url(/vendor/lucide/settings-2.svg)"></span>连接设置</button><div class="workspace-label"><i></i>本地工作区<span>QUANT LAB</span></div></div>
   </nav>
 
   <div class="pages">
 
     <!-- ================= 因子库 ================= -->
     <section class="page active" id="page-factors">
-      <div class="page-header">
-        <h1>因子库</h1>
-        <span class="hint">点因子卡片选中，再去「回测」页运行</span>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">研究工作区 / 信号库</div><h1>因子实验室</h1><p class="hint">浏览策略信号，选择因子组合进入回测。</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
       <div class="factor-toolbar">
-        <input id="factorSearch" placeholder="搜索因子 id / 说明…">
+        <input aria-label="搜索因子" id="factorSearch" placeholder="搜索因子 id / 说明…">
         <div class="mode-toggle">
-          <button id="modePairedBtn" class="active">Paired（同指标反转）</button>
-          <button id="modeComposeBtn">Compose（自选组合）</button>
+          <button id="modePairedBtn" class="active">指标配对</button>
+          <button id="modeComposeBtn">自由组合</button>
         </div>
       </div>
       <div class="factor-grid" id="factorList"></div>
@@ -497,15 +497,13 @@
 
     <!-- ================= 回测 ================= -->
     <section class="page" id="page-backtest">
-      <div class="page-header">
-        <h1>回测</h1>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">研究工作区 / 策略验证</div><h1>策略回测</h1><p class="hint">设置交易参数，比较收益、风险与历史表现。</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
       <div class="backtest-layout">
         <div class="run-panel">
           <div class="current-selection" id="currentSelectionPanel">
             未选择因子 · <a id="pickFactorLink">去因子库选一个 &rarr;</a>
           </div>
-          <label for="symbolInput">Symbol</label>
+          <label for="symbolInput">标的代码</label>
           <input id="symbolInput" value="AAPL.US" placeholder="AAPL.US / 700.HK / 600519.SH">
           <div class="row2">
             <div>
@@ -528,11 +526,11 @@
           </div>
           <div class="row2">
             <div>
-              <label for="qtyInput">Qty</label>
+              <label for="qtyInput">交易数量</label>
               <input id="qtyInput" type="number" value="100" min="1">
             </div>
             <div>
-              <label for="capitalInput">Capital</label>
+              <label for="capitalInput">初始资金</label>
               <input id="capitalInput" type="number" value="100000" min="1">
             </div>
           </div>
@@ -543,12 +541,12 @@
         <div class="results">
           <!-- 6 个头条指标不进 tab：切到哪一页都要能看见这次跑出来是好是坏 -->
           <div class="metrics" id="metricsRow">
-            <div class="metric"><div class="k">Sharpe</div><div class="v" id="mSharpe">&mdash;</div></div>
-            <div class="metric"><div class="k">Max Drawdown</div><div class="v down" id="mDD">&mdash;</div></div>
-            <div class="metric"><div class="k">Win Rate</div><div class="v" id="mWin">&mdash;</div></div>
-            <div class="metric"><div class="k">Closed Trades</div><div class="v" id="mClosed">&mdash;</div></div>
-            <div class="metric"><div class="k">Open Trades</div><div class="v" id="mOpen">&mdash;</div></div>
-            <div class="metric"><div class="k">Net Profit</div><div class="v" id="mNet">&mdash;</div></div>
+            <div class="metric"><div class="k">夏普比率</div><div class="v" id="mSharpe">&mdash;</div></div>
+            <div class="metric"><div class="k">最大回撤</div><div class="v down" id="mDD">&mdash;</div></div>
+            <div class="metric"><div class="k">胜率</div><div class="v" id="mWin">&mdash;</div></div>
+            <div class="metric"><div class="k">已平仓交易</div><div class="v" id="mClosed">&mdash;</div></div>
+            <div class="metric"><div class="k">未平仓交易</div><div class="v" id="mOpen">&mdash;</div></div>
+            <div class="metric"><div class="k">净收益</div><div class="v" id="mNet">&mdash;</div></div>
           </div>
 
           <div class="subtabs" id="resultTabs">
@@ -561,6 +559,7 @@
           </div>
 
           <div class="tabpanel active" id="tab-charts">
+            <div class="backtest-welcome"><span class="welcome-icon" aria-hidden="true"></span><h2>准备验证你的策略</h2><p>确认左侧的标的、周期与资金设置，然后运行回测。</p><div><span>01 选择因子</span><span>02 配置参数</span><span>03 查看结果</span></div></div>
             <div class="chart-card">
               <h3>价格 + 买卖点</h3>
               <div id="priceChart"></div>
@@ -590,7 +589,7 @@
           <div class="tabpanel" id="tab-perf">
             <div class="chart-card">
               <div class="card-head"><h3>全部指标</h3></div>
-              <div class="card-sub">report.performanceAll / performanceLong / performanceShort &mdash; 多空分开看，才知道收益是哪一边赚的</div>
+              <div class="card-sub">按全部交易、做多和做空分别比较收益与风险</div>
               <div class="perf-grid" id="perfGrid"><div class="empty-note">（还没跑过回测）</div></div>
             </div>
           </div>
@@ -650,7 +649,7 @@
               <div id="perfChart"></div>
               <table class="hist-table" id="histTable">
                 <thead><tr>
-                  <th>时间</th><th>Symbol</th><th>Sharpe</th><th>Sortino</th><th>Max DD</th><th>Win Rate</th><th>PF</th><th>Closed</th><th>Open</th><th>Net Profit</th><th>B&amp;H</th>
+                  <th>时间</th><th>标的</th><th>Sharpe</th><th>Sortino</th><th>Max DD</th><th>Win Rate</th><th>PF</th><th>Closed</th><th>Open</th><th>Net Profit</th><th>B&amp;H</th>
                 </tr></thead>
                 <tbody id="histTableBody"><tr><td colspan="11" style="color:var(--fg-2);">还没有历史记录</td></tr></tbody>
               </table>
@@ -670,45 +669,40 @@
 
     <!-- ================= 模拟交易 ================= -->
     <section class="page" id="page-paper">
-      <div class="page-header">
-        <h1>模拟交易</h1>
-        <span class="hint">只读 &middot; 数据来自 ../auto-trader（signal_only / auto_paper 产出的交易计划，仍是 dry-run 预览，不是真实成交）</span>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">交易跟踪 / 模拟环境</div><h1>模拟交易</h1><p class="hint">查看模拟信号与交易计划；此处为预览记录。</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
       <div id="paperContent"><div class="empty-note">加载中…</div></div>
     </section>
 
     <!-- ================= 实盘交易 ================= -->
     <section class="page" id="page-live">
-      <div class="page-header">
-        <h1>实盘交易</h1>
-        <span class="hint">只读 &middot; 直接查询 Longbridge 账户当前持仓与今日委托，本页不提供任何下单入口</span>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">交易跟踪 / 账户概览</div><h1>实盘账户</h1><p class="hint">查看当前持仓与今日委托 · 只读</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
       <div id="liveContent"><div class="empty-note">加载中…</div></div>
     </section>
 
     <!-- ================= 公司分析 ================= -->
     <section class="page" id="page-company">
-      <div class="page-header">
-        <h1>公司分析</h1>
-        <span class="hint">选择本机 CLI 或已配置的 API，在内置终端里查看分析进度</span>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">研究工作区 / 公司研究</div><h1>公司分析</h1><p class="hint">从研究对象到完整报告，跟踪每一步分析进展。</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
+      <div class="task-composer"><div class="composer-heading"><strong>新建分析</strong><span>选择标的和分析工具</span></div>
       <div class="skill-form">
-        <input id="companyNameInput" placeholder="公司名或代码，比如 贵州茅台 / 600519 / AAPL">
+        <input aria-label="研究标的" id="companyNameInput" placeholder="公司名或代码，比如 贵州茅台 / 600519 / AAPL">
         <select id="companyRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="api">自定义 API</option><option value="manual">手动命令</option></select>
         <select id="companyApiProfileSelect" class="api-profile-select" aria-label="API 服务商"></select>
         <button id="companyGenBtn">开始分析</button>
       </div>
-      <h3>历史分析</h3>
+      </div>
+      <div class="analysis-workspace"><aside class="analysis-history"><div class="section-caption">历史分析</div>
       <div class="history-toolbar"><input id="companyHistorySearch" placeholder="搜索标的或任务时间" aria-label="搜索公司分析记录"><select id="companyHistoryFilter" aria-label="筛选分析状态"><option value="all">全部状态</option><option value="done">已完成</option><option value="active">进行中</option><option value="other">其他</option></select><span class="history-count" id="companyHistoryCount"></span><button id="companyCompareBtn" disabled>对比报告 (0/4)</button></div>
       <div class="job-list" id="companyJobList"><div class="empty-note">还没有分析记录</div></div>
-      <div class="comparison-area" id="companyComparisonArea"></div>
-      <h3 class="history-detail-title">所选分析</h3>
+
+      </aside><div class="analysis-detail"><div class="section-caption">分析工作区<span>进度 · 会话 · 报告</span></div>
       <div id="companyCommandArea"></div>
+      </div></div>
+      <div class="comparison-area" id="companyComparisonArea"></div>
     </section>
 
     <!-- ================= GitHub 研究档案 ================= -->
     <section class="page" id="page-research">
-      <div class="page-header"><h1>研究档案</h1><span class="hint">价格走势 · 预测变化 · 关键买卖点位</span></div>
+      <div class="page-header"><div><div class="page-kicker">研究工作区 / 研究资料</div><h1>研究档案</h1><p class="hint">查看价格走势、预测变化与关键买卖点位。</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
       <div class="research-toolbar">
         <input id="researchSearch" placeholder="搜索标的名称或代码" aria-label="搜索研究标的">
         <select id="researchMarket" aria-label="筛选市场"><option value="all">全部市场</option><option value="CN">A股</option><option value="HK">港股</option><option value="US">美股</option></select>
@@ -724,43 +718,43 @@
 
     <!-- ================= 交易记录分析 ================= -->
     <section class="page" id="page-trade-review">
-      <div class="page-header">
-        <h1>交易记录分析</h1>
-        <span class="hint">用本机 CLI 或已配置的 API 复盘模拟与实盘记录</span>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">交易跟踪 / 研究复盘</div><h1>交易复盘</h1><p class="hint">按标的查看历史复盘，比较不同分析结果。</p></div><span class="page-context">QUANT LAB / WORKSPACE</span></div>
+      <div class="task-composer"><div class="composer-heading"><strong>新建复盘</strong><span>选择标的和分析工具</span></div>
       <div class="skill-form">
-        <input id="reviewSymbolInput" list="knownSymbolsList" placeholder="标的代码，比如 AAPL.US / 700.HK">
+        <input aria-label="复盘标的" id="reviewSymbolInput" list="knownSymbolsList" placeholder="标的代码，比如 AAPL.US / 700.HK">
         <datalist id="knownSymbolsList"></datalist>
         <select id="reviewRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="api">自定义 API</option><option value="manual">手动命令</option></select>
         <select id="reviewApiProfileSelect" class="api-profile-select" aria-label="API 服务商"></select>
         <button id="reviewGenBtn">开始复盘</button>
       </div>
-      <h3>历史复盘</h3>
+      </div>
+      <div class="analysis-workspace"><aside class="analysis-history"><div class="section-caption">历史复盘</div>
       <div class="history-toolbar"><input id="reviewHistorySearch" placeholder="搜索标的或任务时间" aria-label="搜索交易复盘记录"><select id="reviewHistoryFilter" aria-label="筛选复盘状态"><option value="all">全部状态</option><option value="done">已完成</option><option value="active">进行中</option><option value="other">其他</option></select><span class="history-count" id="reviewHistoryCount"></span><button id="reviewCompareBtn" disabled>对比报告 (0/4)</button></div>
       <div class="job-list" id="reviewJobList"><div class="empty-note">还没有复盘记录</div></div>
-      <div class="comparison-area" id="reviewComparisonArea"></div>
-      <h3 class="history-detail-title">所选复盘</h3>
+
+      </aside><div class="analysis-detail"><div class="section-caption">复盘工作区<span>进度 · 会话 · 报告</span></div>
       <div id="reviewCommandArea"></div>
+      </div></div>
+      <div class="comparison-area" id="reviewComparisonArea"></div>
     </section>
 
     <!-- ================= 账号设置 ================= -->
     <section class="page" id="page-settings">
-      <div class="page-header">
-        <h1>连接设置</h1>
-        <span class="hint">管理 Longbridge、AI 服务商与本机 CLI 连接</span>
-      </div>
+      <div class="page-header"><div><div class="page-kicker">工作区 / 偏好设置</div><h1>连接设置</h1><p class="hint">管理行情账户、AI 服务商和本机分析工具。</p></div><span class="page-context">连接管理</span></div>
+<div class="settings-tabs" role="tablist" aria-label="连接设置分类"><button id="settingsTab-market" role="tab" aria-selected="true" aria-controls="settingsPanel-market" data-settings-tab="market" tabindex="0">行情账户</button><button id="settingsTab-providers" role="tab" aria-selected="false" aria-controls="settingsPanel-providers" data-settings-tab="providers" tabindex="-1">AI 服务商</button><button id="settingsTab-tools" role="tab" aria-selected="false" aria-controls="settingsPanel-tools" data-settings-tab="tools" tabindex="-1">本机 CLI</button></div>
+<div id="settingsPanel-market" class="settings-panel" role="tabpanel" aria-labelledby="settingsTab-market" >
       <h2 class="settings-section-title">Longbridge OpenAPI</h2>
       <div class="settings-layout">
         <div class="settings-card">
           <h2>当前连接</h2>
           <div class="settings-status" id="credentialsStatus">读取中…</div>
           <p id="credentialsSource"></p>
-          <p>收到 <code>401003 token expired</code> 时，请到 Longbridge 开发者平台重新获取 Access Token，再填入右侧保存。</p>
+          <p>Token 过期时，可从 Longbridge 开发者平台获取新凭据后更新。</p>
           <div class="settings-note">这里不会显示已保存的 App Secret 和 Access Token。保存后下一次回测或查询立即生效，不用重启应用。</div>
         </div>
         <form class="settings-card" id="credentialsForm" autocomplete="off">
           <h2>更新凭据</h2>
-          <p>已有配置可只填写需要更换的字段，留空会保留原值。也可把三行 <code>LONGPORT_...=...</code> 粘贴到任一凭据框，自动填入对应字段。</p>
+          <p>已有配置可只填写需要更换的字段，留空会保留原值。支持粘贴完整的 LONGPORT 环境变量配置。</p>
           <label for="settingsAppKey">App Key</label>
           <input id="settingsAppKey" spellcheck="false" autocomplete="off" placeholder="留空则保留原值">
           <label for="settingsAppSecret">App Secret</label>
@@ -777,23 +771,27 @@
           <div class="status" id="credentialsMessage" role="status"></div>
         </form>
       </div>
+</div>
+<div id="settingsPanel-providers" class="settings-panel" role="tabpanel" aria-labelledby="settingsTab-providers" hidden>
       <h2 class="settings-section-title">API 服务商</h2>
       <p class="settings-note">保存多个服务商配置，在公司分析或交易复盘中选择。Chat Completions 可直接运行完整工作流；Responses 和 Anthropic Messages 分别调用本机 Codex、Claude CLI。</p>
       <div class="settings-card">
         <div class="provider-presets" id="apiProviderPresets"></div>
         <div class="saved-profiles" id="savedApiProfiles"></div>
         <form id="apiProfileForm" class="api-profile-form" autocomplete="off">
-          <label for="apiProfileId">Provider ID</label><input id="apiProfileId" placeholder="my-provider" spellcheck="false" required>
-          <label for="apiProfileName">Name</label><input id="apiProfileName" placeholder="自定义服务商" required>
-          <label for="apiProfileEndpoint">Endpoint</label><input id="apiProfileEndpoint" type="url" placeholder="https://example.com/v1" spellcheck="false" required>
-          <label for="apiProfileProtocol">API protocol</label><select id="apiProfileProtocol"><option value="chat_completions">/chat/completions（OpenAI-compatible）</option><option value="responses">/responses（Codex CLI）</option><option value="anthropic">/v1/messages（Claude CLI）</option></select>
-          <label for="apiProfileModel">Model</label><input id="apiProfileModel" placeholder="服务商模型名" spellcheck="false" required>
+          <label for="apiProfileId">服务商标识</label><input id="apiProfileId" placeholder="my-provider" spellcheck="false" required>
+          <label for="apiProfileName">显示名称</label><input id="apiProfileName" placeholder="自定义服务商" required>
+          <label for="apiProfileEndpoint">API 地址</label><input id="apiProfileEndpoint" type="url" placeholder="https://example.com/v1" spellcheck="false" required>
+          <label for="apiProfileProtocol">接口协议</label><select id="apiProfileProtocol"><option value="chat_completions">/chat/completions（OpenAI-compatible）</option><option value="responses">/responses（Codex CLI）</option><option value="anthropic">/v1/messages（Claude CLI）</option></select>
+          <label for="apiProfileModel">模型名称</label><input id="apiProfileModel" placeholder="服务商模型名" spellcheck="false" required>
           <label for="apiProfileKey">API Key</label><input id="apiProfileKey" type="password" placeholder="API Key" autocomplete="new-password">
           <label for="apiProfileAuth">Anthropic 凭据方式</label><select id="apiProfileAuth"><option value="api_key">x-api-key</option><option value="bearer">Authorization: Bearer</option></select>
           <div class="api-actions"><button type="button" id="testApiProfileBtn" class="secondary-action">测试连接</button><button type="submit">保存服务商</button><button type="button" id="deleteApiProfileBtn" class="secondary-action" hidden>删除配置</button></div>
           <div class="status" id="apiProfileMessage" role="status"></div>
         </form>
       </div>
+</div>
+<div id="settingsPanel-tools" class="settings-panel" role="tabpanel" aria-labelledby="settingsTab-tools" hidden>
       <h2 class="settings-section-title">本机 CLI 连接</h2>
       <p class="settings-note">切换 Codex 或 Claude，分别管理本机 CLI 的登录与 API 连接。保存后用于下一个新任务；留空 Key 会保留原值。</p>
       <div class="settings-card cli-unified">
@@ -832,11 +830,13 @@
           <div class="status" id="cliMessageClaude" role="status"></div>
         </form>
       </div>
+</div>
     </section>
 
   </div>
 </div>
 
+<script src="/app-shell.js"></script>
 <script src="/research-dashboard.js"></script>
 <script src="/vendor/xterm/xterm.js"></script>
 <script src="/vendor/xterm/addon-fit.js"></script>
@@ -887,8 +887,8 @@ function setStatus(msg, isError) {
 
 function authErrorMessage(error) {
   const message = String(error.message || error);
-  if (/401003|token expired/i.test(message)) return 'Access Token 已过期（401003）。请在左侧「账号设置」更新后重试。';
-  if (/缺少 LONGPORT_/.test(message)) return '尚未配置 Longbridge OpenAPI 凭据。请在左侧「账号设置」填写。';
+  if (/401003|token expired/i.test(message)) return 'Access Token 已过期（401003）。请在左侧「连接设置」更新后重试。';
+  if (/缺少 LONGPORT_/.test(message)) return '尚未配置 Longbridge OpenAPI 凭据。请在左侧「连接设置」填写。';
   return message;
 }
 
@@ -991,7 +991,12 @@ function updateCliFormState(runner) {
   const custom = el(`cliMode${suffix}`).value === 'custom';
   for (const field of ['Endpoint', 'Key', 'Model', 'Auth']) {
     const input = el(`cli${field}${suffix}`);
-    if (input) input.disabled = !custom;
+    if (input) {
+      input.disabled = !custom;
+      input.hidden = !custom;
+      const label = document.querySelector(`label[for="${input.id}"]`);
+      if (label) label.hidden = !custom;
+    }
   }
 }
 
@@ -1039,6 +1044,11 @@ function profileFields() {
     auth_header: el('apiProfileAuth').value,
   };
 }
+function updateApiProtocolFields() {
+  const hidden = el('apiProfileProtocol').value !== 'anthropic';
+  el('apiProfileAuth').hidden = hidden;
+  document.querySelector('label[for="apiProfileAuth"]').hidden = hidden;
+}
 function selectApiProfile(profile = {}) {
   editingProfileId = profile.id || '';
   el('apiProfileId').value = profile.id || '';
@@ -1050,6 +1060,7 @@ function selectApiProfile(profile = {}) {
   el('apiProfileKey').value = '';
   el('apiProfileKey').placeholder = profile.has_key ? '留空保留已保存的 Key' : 'API Key';
   el('apiProfileAuth').value = profile.auth_header || 'api_key';
+  updateApiProtocolFields();
   el('deleteApiProfileBtn').hidden = !apiProfiles.some(item => item.id === profile.id);
   el('apiProfileMessage').textContent = '';
   renderApiProfiles();
@@ -1207,10 +1218,10 @@ function updateSelectionSummary() {
   let text;
   if (selection.mode === 'paired') {
     text = selection.pairedBase
-      ? `Paired: <b>${selection.pairedBase}</b>（long 开仓 / short 平仓）`
+      ? `指标配对 · <b>${selection.pairedBase}</b>（做多开仓 / 反向平仓）`
       : '点一个因子卡片选它（自动配对 long/short）';
   } else {
-    text = `Entry: <b>${selection.entryId || '未选'}</b> &middot; Exit: <b>${selection.exitId || '未选'}</b>`;
+    text = `开仓 <b>${selection.entryId || '未选'}</b> &middot; 平仓 <b>${selection.exitId || '未选'}</b>`;
   }
   s.innerHTML = text;
   panel.innerHTML = selectionValid()
@@ -1668,6 +1679,8 @@ async function runBacktest() {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
 
+    document.querySelector('.results').classList.add('has-results');
+    resizeCharts(Object.keys(CHART_BY_ID));
     el('scriptView').textContent = data.script;
 
     const perf = (data.report && data.report.performanceAll) || {};
@@ -1778,7 +1791,7 @@ async function loadPaperTrading() {
     }).join('');
     const overviewTable = `
       <table class="overview-table">
-        <thead><tr><th>标的</th><th>阶段</th><th>execution_mode</th><th>Sharpe</th><th>Max DD</th><th>Win Rate</th><th>待处理</th><th>最近信号</th></tr></thead>
+        <thead><tr><th>标的</th><th>阶段</th><th>执行模式</th><th>夏普比率</th><th>最大回撤</th><th>胜率</th><th>待处理</th><th>最近信号</th></tr></thead>
         <tbody>${overviewRows}</tbody>
       </table>`;
 
@@ -1816,9 +1829,9 @@ async function loadPaperTrading() {
               <ul class="history-list">${historyHtml}</ul>
             </div>
             <div>
-              <h3>回测基线（calibrating 阶段定的）</h3>
+              <h3>回测基线</h3>
               <div style="font-size:12px;color:var(--fg-2);">
-                strategy_file: ${s.strategy_file || '—'}<br>
+                策略文件：${s.strategy_file || '—'}<br>
                 sharpe=${fmtNum(b.sharpe_ratio)} &middot; max_dd=${fmtPct(b.max_drawdown_pct)} &middot;
                 win_rate=${fmtPct(b.win_rate_pct)} &middot; trades=${b.total_trades ?? '—'}
               </div>
@@ -1831,7 +1844,7 @@ async function loadPaperTrading() {
         </div>`;
     }).join('');
 
-    target.innerHTML = signalStrip + overviewTable + symbolCards;
+    target.innerHTML = signalStrip + `<div class="table-surface">${overviewTable}</div>` + symbolCards;
   } catch (e) {
     target.innerHTML = `<div class="empty-note">加载失败：${String(e.message || e)}</div>`;
   }
@@ -1853,7 +1866,7 @@ async function loadLiveTrading() {
 
     const posTable = positions.length ? `
       <table class="acct-table">
-        <thead><tr><th>Symbol</th><th>名称</th><th>持仓</th><th>可用</th><th>成本价</th><th>币种</th></tr></thead>
+        <thead><tr><th>标的</th><th>名称</th><th>持仓</th><th>可用</th><th>成本价</th><th>币种</th></tr></thead>
         <tbody>${positions.map(p => `
           <tr><td>${p.symbol}</td><td>${p.symbol_name}</td><td>${p.quantity}</td>
               <td>${p.available_quantity}</td><td>${p.cost_price}</td><td>${p.currency}</td></tr>`).join('')}
@@ -1862,7 +1875,7 @@ async function loadLiveTrading() {
 
     const orderTable = orders.length ? `
       <table class="acct-table">
-        <thead><tr><th>时间</th><th>Symbol</th><th>方向</th><th>状态</th><th>数量</th><th>成交价</th></tr></thead>
+        <thead><tr><th>时间</th><th>标的</th><th>方向</th><th>状态</th><th>数量</th><th>成交价</th></tr></thead>
         <tbody>${orders.map(o => `
           <tr><td>${fmtTs(o.submitted_at)}</td><td>${o.symbol}</td>
               <td class="side ${o.side}">${o.side}</td><td>${o.status}</td>
@@ -2171,7 +2184,7 @@ function renderWorkflowPreview(kind) {
     <div class="workflow-topline"><strong>${kind === 'company' ? '公司研究工作流' : '交易复盘工作流'}</strong><span>流程预览 · 开始任务后显示真实进度</span></div>
     <div class="workflow-stages">${WORKFLOW_PREVIEW[kind].map((title, index) => `
       <article class="workflow-stage"><div class="workflow-stage-head"><span class="workflow-number">${index + 1}</span><h4>${title}</h4><span class="workflow-stage-state">待开始</span></div></article>`).join('')}</div>
-  </div>`;
+  </div><div class="workspace-welcome"><span class="welcome-icon" aria-hidden="true"></span><h2>准备好开始${kind === 'company' ? '公司研究' : '交易复盘'}了吗</h2><p>在上方输入标的，或从左侧选择一条历史记录。</p><p class="welcome-note">运行进度、会话和最终报告会集中显示在这里。</p></div>`;
 }
 
 function renderWorkflow(kind, slug, workflow) {
@@ -2532,7 +2545,7 @@ el('companyGenBtn').addEventListener('click', async () => {
   if (!name) return;
   const runner = el('companyRunnerSelect').value;
   if (runner === 'api' && !el('companyApiProfileSelect').value) {
-    el('companyCommandArea').textContent = '请先到账号设置保存 API 服务商配置。'; return;
+    el('companyCommandArea').textContent = '请先到连接设置保存 API 服务商配置。'; return;
   }
   el('companyGenBtn').disabled = true;
   try {
@@ -2555,7 +2568,7 @@ el('reviewGenBtn').addEventListener('click', async () => {
   if (!symbol) return;
   const runner = el('reviewRunnerSelect').value;
   if (runner === 'api' && !el('reviewApiProfileSelect').value) {
-    el('reviewCommandArea').textContent = '请先到账号设置保存 API 服务商配置。'; return;
+    el('reviewCommandArea').textContent = '请先到连接设置保存 API 服务商配置。'; return;
   }
   el('reviewGenBtn').disabled = true;
   try {
@@ -2614,6 +2627,8 @@ for (const [runner, { suffix }] of Object.entries(CLI_SETTINGS_IDS)) {
   });
 }
 selectCliRunner(activeCliRunner);
+el('apiProfileProtocol').addEventListener('change', updateApiProtocolFields);
+updateApiProtocolFields();
 el('apiProfileForm').addEventListener('submit', async event => {
   event.preventDefault();
   const body = profileFields();

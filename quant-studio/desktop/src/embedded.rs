@@ -11,7 +11,7 @@ use wry::dpi::{LogicalPosition, LogicalSize};
 use wry::{PageLoadEvent, Rect, WebView, WebViewBuilder};
 
 const SERVER: &str = "127.0.0.1:4870";
-const RAIL_WIDTH: f64 = 228.0;
+const RAIL_WIDTH: f64 = 204.0;
 
 pub struct EmbeddedPages {
     webview: Option<WebView>,
@@ -173,14 +173,20 @@ fn encode_query(value: &str) -> String {
 }
 
 fn static_version() -> u128 {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../static/index.html")
-        .metadata()
-        .and_then(|metadata| metadata.modified())
-        .ok()
-        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
-        .map(|duration| duration.as_nanos())
-        .unwrap_or_default()
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../static");
+    [
+        "index.html",
+        "app-theme.css",
+        "app-shell.js",
+        "research-dashboard.css",
+        "research-dashboard.js",
+    ]
+    .iter()
+    .filter_map(|name| root.join(name).metadata().ok()?.modified().ok())
+    .filter_map(|modified| modified.duration_since(UNIX_EPOCH).ok())
+    .map(|duration| duration.as_nanos())
+    .max()
+    .unwrap_or_default()
 }
 
 fn backend_is_current(root: &std::path::Path, binary: &std::path::Path) -> bool {

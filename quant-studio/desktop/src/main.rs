@@ -27,16 +27,16 @@ const fn color(hex: u32) -> Rgba {
     }
 }
 
-const BG: Rgba = color(0x0b111b);
-const RAIL: Rgba = color(0x0e1723);
-const PANEL: Rgba = color(0x141f2e);
-const HOVER: Rgba = color(0x1d2d3e);
-const LINE: Rgba = color(0x29394c);
-const TEXT: Rgba = color(0xf1f5f8);
-const MUTED: Rgba = color(0x9babbc);
-const GREEN: Rgba = color(0xb8ee80);
-const BLUE: Rgba = color(0x83c4fb);
-const AMBER: Rgba = color(0xf4c982);
+const BG: Rgba = color(0x10151c);
+const RAIL: Rgba = color(0x131a22);
+const PANEL: Rgba = color(0x171e27);
+const HOVER: Rgba = color(0x202a35);
+const LINE: Rgba = color(0x2b3542);
+const TEXT: Rgba = color(0xe6edf3);
+const MUTED: Rgba = color(0x9caabc);
+const GREEN: Rgba = color(0xb8de8f);
+const BLUE: Rgba = color(0x84b6d9);
+const AMBER: Rgba = color(0xdcb67b);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Direction {
@@ -152,10 +152,13 @@ impl QuantLab {
         div()
             .id(("page-nav", index))
             .w_full()
-            .px_4()
-            .py_3()
-            .rounded_lg()
-            .bg(if active { color(0x263d31) } else { RAIL })
+            .px_3()
+            .h(px(38.))
+            .flex()
+            .items_center()
+            .text_size(px(13.))
+            .rounded_md()
+            .bg(if active { color(0x25332b) } else { RAIL })
             .text_color(if active { GREEN } else { MUTED })
             .cursor_pointer()
             .hover(|style| style.bg(HOVER).text_color(TEXT))
@@ -168,21 +171,21 @@ impl QuantLab {
     fn stat(label: &'static str, value: usize, note: &'static str, color: Rgba) -> Div {
         v_flex()
             .flex_1()
-            .min_w(px(135.))
-            .p_4()
-            .gap_2()
+            .min_w(px(100.))
+            .p_3()
+            .gap_1()
             .bg(PANEL)
             .border_1()
             .border_color(LINE)
-            .rounded_lg()
+            .rounded_md()
             .child(div().text_xs().text_color(MUTED).child(label))
             .child(
                 h_flex()
                     .items_end()
-                    .gap_2()
+                    .gap_1()
                     .child(
                         div()
-                            .text_3xl()
+                            .text_size(px(22.))
                             .font_bold()
                             .text_color(color)
                             .child(value.to_string()),
@@ -232,9 +235,9 @@ impl QuantLab {
         v_flex()
             .id(("factor", index))
             .w_full()
-            .p_4()
-            .gap_2()
-            .rounded_lg()
+            .p_3()
+            .gap_1()
+            .rounded_md()
             .border_1()
             .border_color(if active { GREEN } else { LINE })
             .bg(if active { color(0x1b302a) } else { PANEL })
@@ -260,12 +263,6 @@ impl QuantLab {
             )
             .child(div().text_xs().text_color(MUTED).child(id.to_owned()))
             .child(
-                div()
-                    .text_sm()
-                    .text_color(MUTED)
-                    .child(factor.description.clone()),
-            )
-            .child(
                 h_flex()
                     .justify_between()
                     .child(
@@ -273,9 +270,9 @@ impl QuantLab {
                             .text_xs()
                             .text_color(if factor.implemented { GREEN } else { AMBER })
                             .child(if factor.implemented {
-                                "● 已实现"
+                                "已实现"
                             } else {
-                                "● 待实现"
+                                "待实现"
                             }),
                     )
                     .child(div().text_xs().text_color(MUTED).child("查看详情 →")),
@@ -355,10 +352,10 @@ impl QuantLab {
             .id("factor-detail")
             .flex_1()
             .h_full()
-            .min_w(px(370.))
+            .min_w(px(280.))
             .overflow_y_scroll()
-            .p_6()
-            .gap_5()
+            .p_5()
+            .gap_3()
             .bg(PANEL)
             .border_1()
             .border_color(LINE)
@@ -368,14 +365,14 @@ impl QuantLab {
                     .text_xs()
                     .font_bold()
                     .text_color(GREEN)
-                    .child("FACTOR PROFILE  /  因子详情"),
+                    .child("因子详情"),
             )
             .child(
                 v_flex()
                     .gap_2()
                     .child(
                         div()
-                            .text_3xl()
+                            .text_size(px(23.))
                             .font_bold()
                             .text_color(TEXT)
                             .child(factor.name.clone()),
@@ -393,9 +390,9 @@ impl QuantLab {
                     .gap_3()
                     .child(Self::tag(
                         if factor.direction == "long" {
-                            "↗ LONG · 做多"
+                            "LONG · 做多"
                         } else {
-                            "↘ SHORT · 做空"
+                            "SHORT · 做空"
                         },
                         if factor.direction == "long" {
                             GREEN
@@ -415,7 +412,7 @@ impl QuantLab {
             .when(factor.implemented, |this| {
                 this.child(
                     Button::new("open-backtest")
-                        .label("在应用内回测 →")
+                        .label("运行策略回测 →")
                         .on_click(cx.listener(move |this, _, window, cx| {
                             this.navigate("backtest", Some(&launch_id), window, cx);
                         })),
@@ -532,23 +529,26 @@ impl Render for QuantLab {
         };
 
         let mut rail = v_flex()
-            .w(px(228.))
+            .w(px(204.))
             .h_full()
             .flex_shrink_0()
-            .p_5()
-            .gap_4()
+            .px_3()
+            .py_5()
+            .gap_1()
             .bg(RAIL)
             .border_r_1()
             .border_color(LINE)
             .child(
                 h_flex()
+                    .px_2()
+                    .pb_5()
                     .gap_3()
                     .items_center()
                     .child(
                         div()
-                            .w(px(34.))
-                            .h(px(34.))
-                            .rounded_lg()
+                            .w(px(28.))
+                            .h(px(28.))
+                            .rounded_md()
                             .bg(GREEN)
                             .text_color(BG)
                             .font_bold()
@@ -559,87 +559,95 @@ impl Render for QuantLab {
                     )
                     .child(
                         v_flex()
-                            .child(div().font_bold().text_color(TEXT).child("QUANT LAB"))
-                            .child(div().text_xs().text_color(MUTED).child("RESEARCH DESKTOP")),
+                            .child(
+                                div()
+                                    .text_size(px(14.))
+                                    .font_bold()
+                                    .text_color(TEXT)
+                                    .child("Quant Lab"),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(10.))
+                                    .text_color(MUTED)
+                                    .child("量化研究工作台"),
+                            ),
                     ),
-            )
-            .child(
-                div()
-                    .pt_5()
-                    .text_xs()
-                    .font_bold()
-                    .text_color(MUTED)
-                    .child("WORKSPACE"),
-            )
-            .child(Self::page_link(
-                "▦  因子库",
-                "factors",
-                0,
-                self.active_page == "factors",
-                cx,
-            ))
-            .child(
-                div()
-                    .pt_3()
-                    .text_xs()
-                    .font_bold()
-                    .text_color(MUTED)
-                    .child("研究与交易"),
             );
-        for (index, (label, page)) in [
-            ("回测分析", "backtest"),
-            ("模拟交易", "paper"),
-            ("实盘查询", "live"),
-            ("公司分析", "company"),
-            ("研究档案", "research"),
-            ("交易记录", "trade-review"),
-            ("账号设置", "settings"),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            rail = rail.child(Self::page_link(
-                label,
-                page,
-                index + 1,
-                self.active_page == page,
-                cx,
-            ));
+        let mut nav_index = 0;
+        for (group, links) in [
+            (
+                "研究工作区",
+                vec![
+                    ("公司分析", "company"),
+                    ("研究档案", "research"),
+                    ("因子实验室", "factors"),
+                    ("策略回测", "backtest"),
+                ],
+            ),
+            (
+                "交易跟踪",
+                vec![
+                    ("模拟交易", "paper"),
+                    ("实盘账户", "live"),
+                    ("交易复盘", "trade-review"),
+                ],
+            ),
+        ] {
+            rail = rail.child(
+                div()
+                    .px_3()
+                    .pt_4()
+                    .pb_2()
+                    .text_size(px(10.))
+                    .text_color(MUTED)
+                    .child(group),
+            );
+            for (label, page) in links {
+                rail = rail.child(Self::page_link(
+                    label,
+                    page,
+                    nav_index,
+                    self.active_page == page,
+                    cx,
+                ));
+                nav_index += 1;
+            }
         }
         rail = rail.child(
             v_flex()
                 .mt_auto()
-                .p_4()
-                .gap_2()
-                .bg(PANEL)
-                .rounded_lg()
+                .pt_4()
+                .border_t_1()
+                .border_color(LINE)
+                .gap_3()
+                .child(Self::page_link(
+                    "连接设置",
+                    "settings",
+                    nav_index,
+                    self.active_page == "settings",
+                    cx,
+                ))
                 .child(
-                    div()
-                        .text_xs()
-                        .font_bold()
-                        .text_color(GREEN)
-                        .child("● 本地因子库"),
-                )
-                .child(
-                    div()
-                        .text_xs()
-                        .text_color(MUTED)
-                        .child("数据来自 strategy_kit.json"),
-                )
-                .child(
-                    div()
-                        .text_xs()
-                        .text_color(MUTED)
-                        .child("页面在当前窗口打开"),
+                    h_flex()
+                        .px_3()
+                        .gap_2()
+                        .child(div().text_size(px(10.)).text_color(GREEN).child("•"))
+                        .child(
+                            div()
+                                .text_size(px(10.))
+                                .text_color(MUTED)
+                                .child("本地工作区"),
+                        ),
                 ),
         );
 
         let main = v_flex()
             .flex_1()
             .h_full()
-            .min_w(px(760.))
-            .p_6()
-            .gap_5()
+            .min_w(px(640.))
+            .p_5()
+            .gap_4()
             .bg(BG)
             .child(
                 h_flex()
@@ -653,11 +661,11 @@ impl Render for QuantLab {
                                     .text_xs()
                                     .font_bold()
                                     .text_color(GREEN)
-                                    .child("RESEARCH  /  FACTOR LIBRARY"),
+                                    .child("研究工作区 / 信号库"),
                             )
                             .child(
                                 div()
-                                    .text_3xl()
+                                    .text_size(px(23.))
                                     .font_bold()
                                     .text_color(TEXT)
                                     .child("因子实验室"),
@@ -666,12 +674,12 @@ impl Render for QuantLab {
                                 div()
                                     .text_sm()
                                     .text_color(MUTED)
-                                    .child("浏览信号、检查参数与逻辑，快速找到下一次回测的起点。"),
+                                    .child("浏览策略信号，检查参数与逻辑，选择因子进入回测。"),
                             ),
                     )
                     .child(
                         Button::new("refresh")
-                            .label("↻  刷新因子库")
+                            .label("刷新因子库")
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.reload();
                                 cx.notify();
@@ -703,7 +711,7 @@ impl Render for QuantLab {
                     .gap_4()
                     .child(
                         v_flex()
-                            .w(px(380.))
+                            .w(px(300.))
                             .h_full()
                             .flex_shrink_0()
                             .gap_3()
@@ -758,9 +766,9 @@ impl Render for QuantLab {
                                     .text_sm()
                                     .text_color(if self.implemented_only { GREEN } else { MUTED })
                                     .child(if self.implemented_only {
-                                        "☑  仅看已实现"
+                                        "✓  仅看已实现"
                                     } else {
-                                        "☐  仅看已实现"
+                                        "仅看已实现"
                                     })
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.implemented_only = !this.implemented_only;
@@ -798,6 +806,7 @@ impl Render for QuantLab {
         };
         h_flex()
             .size_full()
+            .text_size(px(13.))
             .bg(BG)
             .text_color(TEXT)
             .child(rail)
