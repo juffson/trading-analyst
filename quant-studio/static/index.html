@@ -449,6 +449,7 @@
   .research-meta { color: var(--fg-3); font-size: 11px; }
   @media (max-width: 800px) { .research-layout { grid-template-columns: 1fr; } .research-symbols { max-height: 260px; } }
 </style>
+<link rel="stylesheet" href="/research-dashboard.css">
 </head>
 <body>
 <div class="shell">
@@ -707,7 +708,7 @@
 
     <!-- ================= GitHub 研究档案 ================= -->
     <section class="page" id="page-research">
-      <div class="page-header"><h1>研究档案</h1><span class="hint">同步 GitHub 公开研究日报 · 按标的、交易日期和修订浏览</span></div>
+      <div class="page-header"><h1>研究档案</h1><span class="hint">价格走势 · 预测变化 · 关键买卖点位</span></div>
       <div class="research-toolbar">
         <input id="researchSearch" placeholder="搜索标的名称或代码" aria-label="搜索研究标的">
         <select id="researchMarket" aria-label="筛选市场"><option value="all">全部市场</option><option value="CN">A股</option><option value="HK">港股</option><option value="US">美股</option></select>
@@ -836,6 +837,7 @@
   </div>
 </div>
 
+<script src="/research-dashboard.js"></script>
 <script src="/vendor/xterm/xterm.js"></script>
 <script src="/vendor/xterm/addon-fit.js"></script>
 <script>
@@ -1907,6 +1909,9 @@ let researchIndex = null;
 let researchSymbol = '';
 let researchReport = '';
 let researchRequest = 0;
+let researchSelection = 0;
+const researchCache = new Map();
+const researchHistories = new Map();
 const RESEARCH_OUTLOOK = { 'Strong Bullish': '强看多', Bullish: '偏多', Neutral: '中性', Bearish: '偏空', 'Strong Bearish': '强看空', Unknown: '未形成判断' };
 const RESEARCH_QUALITY = { pass: '通过', degraded: '受限', blocked: '阻塞' };
 function researchReportsFor(symbol) {
@@ -1930,6 +1935,7 @@ async function loadGithubResearch(force = false) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
     researchIndex = data; researchLoaded = true;
+    if (force) { researchCache.clear(); researchHistories.clear(); }
     status.textContent = `${data.symbols.length} 个标的 · ${data.reports.length} 份报告${data.stale ? ' · GitHub 暂不可用，显示上次读取的目录' : ''} · 最近同步 ${historyDate(data.fetched_at)}`;
     if (!researchSymbolData(researchSymbol)) {
       researchSymbol = [...data.symbols].sort(sortResearchSymbols)
@@ -1966,19 +1972,55 @@ function renderResearchSymbols() {
 }
 function selectResearchSymbol(symbol, preserveReport = false) {
   researchSymbol = symbol;
+  for (const observer of el('researchDashboard')?.researchObservers || []) observer.disconnect();
+  ++researchSelection;
+  ++researchRequest;
   const item = researchSymbolData(symbol);
   const reports = researchReportsFor(symbol);
   if (!item) { el('researchDetail').innerHTML = '<div class="empty-note">选择标的查看研究记录</div>'; return; }
   if (!preserveReport || !reports.some(report => report.filename === researchReport)) researchReport = reports[0]?.filename || '';
   renderResearchSymbols();
-  el('researchDetail').innerHTML = `<h2>${escapeHtml(item.name)} <span class="research-meta">${escapeHtml(item.symbol)}</span></h2>
-    <div class="research-meta">${escapeHtml(item.market)} · ${escapeHtml(item.currency)} · ${item.tracked ? '当前跟踪' : '历史档案（停止日常跟踪）'} · ${reports.length} 份报告</div>
-    <div class="research-report-list">${reports.length ? reports.map(report => `<button data-research-file="${escapeHtml(report.filename)}" class="${report.filename === researchReport ? 'active' : ''}">${escapeHtml(report.date)}${report.revision > 1 ? ` · v${report.revision}` : ''}</button>`).join('') : '暂无研究报告'}</div>
-    <div id="researchReportBody" class="research-report"><div class="empty-note">${reports.length ? '正在读取报告…' : '此标的尚无报告'}</div></div>`;
-  el('researchDetail').querySelectorAll('[data-research-file]').forEach(button => {
-    button.onclick = () => openGithubReport(symbol, button.dataset.researchFile);
-  });
+  el('researchDetail').innerHTML = `<div class="research-detail-header"><div><h2>${escapeHtml(item.name)} <span class="research-meta">${escapeHtml(item.symbol)}</span></h2>
+    <div class="research-meta">${escapeHtml(item.market)} · ${escapeHtml(item.currency)} · ${item.tracked ? '当前跟踪' : '历史档案'} · ${reports.length} 份报告</div></div>
+    <div class="research-version"><label for="researchVersion">查看报告版本</label><select id="researchVersion">${reports.map(report => `<option value="${escapeHtml(report.filename)}" ${report.filename === researchReport ? 'selected' : ''}>${escapeHtml(report.date)} · v${report.revision}${report === reports[0] ? '（最新）' : ''}</option>`).join('')}</select></div></div>
+    <div id="researchDashboard"></div><div id="researchReportBody" class="research-report"><div class="empty-note">${reports.length ? '正在读取报告…' : '此标的尚无报告'}</div></div>`;
+  el('researchVersion').onchange = event => openGithubReport(symbol, event.target.value);
   if (researchReport) openGithubReport(symbol, researchReport);
+}
+async function fetchGithubReport(symbol, filename) {
+  const key = `${symbol}/${filename}`;
+  if (!researchCache.has(key)) {
+    const request = fetch(`/api/github-research/${encodeURIComponent(symbol)}/${encodeURIComponent(filename)}`)
+      .then(async response => {
+        const report = await response.json();
+        if (!response.ok) throw new Error(report.error || `HTTP ${response.status}`);
+        return report;
+      });
+    researchCache.set(key, request);
+    request.catch(() => { if (researchCache.get(key) === request) researchCache.delete(key); });
+  }
+  return researchCache.get(key);
+}
+async function loadResearchHistory(symbol, selection) {
+  const refs = researchReportsFor(symbol);
+  const dates = new Map();
+  for (const ref of refs) {
+    if (!dates.has(ref.date) || dates.get(ref.date).revision < ref.revision) dates.set(ref.date, ref);
+  }
+  const queue = [...dates.values()];
+  const reports = []; const missing = [];
+  await Promise.all(Array.from({length: Math.min(4, queue.length)}, async () => {
+    while (queue.length && selection === researchSelection) {
+      const ref = queue.shift();
+      try { reports.push(await fetchGithubReport(symbol, ref.filename)); }
+      catch (_) { missing.push(ref); }
+    }
+  }));
+  if (selection !== researchSelection) return null;
+  // Keep unread dates as gaps instead of joining predictions across failed requests.
+  const result = { reports: [...reports, ...missing.map(ref => ({symbol, trade_date:ref.date, revision:ref.revision}))], failed: missing.length };
+  if (!missing.length) researchHistories.set(symbol, result);
+  return result;
 }
 function researchValue(value) {
   if (value === null || value === undefined || value === '') return '—';
@@ -2016,17 +2058,35 @@ function renderGithubReport(report, filename) {
 async function openGithubReport(symbol, filename) {
   researchReport = filename;
   const requestId = ++researchRequest;
-  el('researchDetail').querySelectorAll('[data-research-file]').forEach(button => button.classList.toggle('active', button.dataset.researchFile === filename));
+  const selection = researchSelection;
+  el('researchVersion').value = filename;
   const body = el('researchReportBody');
+  const dashboard = el('researchDashboard');
   body.innerHTML = '<div class="empty-note">正在读取报告…</div>';
+  for (const observer of dashboard.researchObservers || []) observer.disconnect();
+  dashboard.innerHTML = '';
+  const isCurrent = () => requestId === researchRequest && researchSymbol === symbol;
   try {
-    const response = await fetch(`/api/github-research/${encodeURIComponent(symbol)}/${encodeURIComponent(filename)}`);
-    const report = await response.json();
-    if (!response.ok) throw new Error(report.error || `HTTP ${response.status}`);
-    if (requestId !== researchRequest || researchSymbol !== symbol) return;
-    body.innerHTML = renderGithubReport(report, filename);
+    const report = await fetchGithubReport(symbol, filename);
+    if (!isCurrent()) return;
+    body.innerHTML = `<details class="rd-full-report"><summary>完整研究报告 · 指标、驱动因素与公开来源</summary>${renderGithubReport(report, filename)}</details>`;
+    const draw = (history, loading = false, failed = 0) => {
+      if (!isCurrent()) return;
+      const timeZone = {CN:'Asia/Shanghai',HK:'Asia/Hong_Kong',US:'America/New_York'}[researchSymbolData(symbol)?.market] || 'UTC';
+      const dateParts = Object.fromEntries(new Intl.DateTimeFormat('en', {timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part => [part.type, part.value]));
+      const today = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+      ResearchDashboard.render(dashboard, report, history, {
+        unit: ['000001.SH','399006.SZ'].includes(symbol) ? '点' : researchSymbolData(symbol)?.currency,
+        today, loading, failed, onSelect: selected => openGithubReport(symbol, selected),
+      });
+    };
+    const cached = researchHistories.get(symbol);
+    if (cached) { draw(cached.reports); return; }
+    draw([report], true);
+    const history = await loadResearchHistory(symbol, selection);
+    if (history) draw(history.reports, false, history.failed);
   } catch (error) {
-    if (requestId === researchRequest) body.textContent = `报告读取失败：${String(error.message || error)}`;
+    if (isCurrent()) body.textContent = `报告读取失败：${String(error.message || error)}`;
   }
 }
 function closeTerminal() {
