@@ -1,6 +1,5 @@
-//! Interactive, local CLI sessions. Only the two named executables can be launched;
-//! prompts are passed as arguments, never through a shell.
-use crate::cli_settings::{CliSettings, ProviderSettings};
+//! Interactive local analysis sessions. Prompts are passed as arguments or private files.
+use crate::cli_settings::{ApiProfile, CliSettings, ProviderSettings};
 use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, PtySize, native_pty_system};
@@ -25,6 +24,7 @@ pub enum Runner {
     Manual,
     Codex,
     Claude,
+    Api,
 }
 
 impl Default for Runner {
@@ -39,6 +39,7 @@ impl Runner {
             Self::Manual => "manual",
             Self::Codex => "codex",
             Self::Claude => "claude",
+            Self::Api => "api",
         }
     }
 }
@@ -73,30 +74,68 @@ impl SessionManager {
         prompt: &str,
         report_filename: &str,
         settings_path: &Path,
+        profile_id: Option<&str>,
     ) -> Result<()> {
         if runner == Runner::Manual {
             bail!("手动模式不能启动内置终端");
         }
-        let name = runner.name();
-        let executable = find_cli(name).with_context(|| format!("未找到本地 {name} CLI"))?;
+        let settings = CliSettings::load(settings_path)?;
+        let profile = if runner == Runner::Api {
+            let id = profile_id.context("请选择自定义 API 服务商")?;
+            let profile = settings.profile(id)?;
+            profile.validate()?;
+            Some(profile)
+        } else {
+            None
+        };
+        let actual_runner = match profile.as_ref().map(|profile| profile.protocol.as_str()) {
+            Some("responses") => Runner::Codex,
+            Some("anthropic") => Runner::Claude,
+            _ => runner,
+        };
+        let executable = if actual_runner == Runner::Api {
+            let script = root.join("quant-studio/scripts/chat_agent.py");
+            if !script.exists() {
+                bail!("找不到 Chat Completions 运行器");
+            }
+            find_cli("python3")
+                .or_else(|| Some(PathBuf::from("/usr/bin/python3")))
+                .context("未找到本地 Python 3")?
+        } else {
+            find_cli(actual_runner.name())
+                .with_context(|| format!("未找到本地 {} CLI", actual_runner.name()))?
+        };
         let mut command = CommandBuilder::new(executable);
         command.cwd(root);
         command.env("TERM", "xterm-256color");
-        let settings = CliSettings::load(settings_path)?;
-        let provider = settings.provider(runner);
-        if let Some(provider) = provider.filter(|provider| provider.enabled) {
+        if let Some(profile) = profile.as_ref() {
+            apply_api_profile(&mut command, actual_runner, profile)?;
+        } else if let Some(provider) = settings
+            .provider(runner)
+            .filter(|provider| provider.enabled)
+        {
             apply_provider(&mut command, runner, provider)?;
         }
-        match runner {
+        match actual_runner {
             Runner::Codex => {
                 command.args(["--no-alt-screen", "-C"]);
                 command.arg(root);
                 command.args(["-s", "workspace-write", "-a", "on-request"]);
             }
             Runner::Claude => command.args(["--permission-mode", "manual"]),
+            Runner::Api => {
+                let prompt_file = job_dir.join("agent-prompt.txt");
+                fs::write(&prompt_file, prompt)?;
+                command.arg(root.join("quant-studio/scripts/chat_agent.py"));
+                command.args(["--workspace", &root.display().to_string()]);
+                command.args(["--job-dir", &job_dir.display().to_string()]);
+                command.args(["--prompt-file", &prompt_file.display().to_string()]);
+            }
             Runner::Manual => unreachable!(),
         }
-        command.arg(prompt);
+        if actual_runner != Runner::Api {
+            command.arg(prompt);
+        }
 
         let mut sessions = self
             .sessions
@@ -246,6 +285,44 @@ fn apply_provider(
             }
         }
         Runner::Manual => bail!("手动模式无需 API 配置"),
+        Runner::Api => bail!("API 模式需要服务商配置"),
+    }
+    Ok(())
+}
+
+fn apply_api_profile(
+    command: &mut CommandBuilder,
+    runner: Runner,
+    profile: &ApiProfile,
+) -> Result<()> {
+    match runner {
+        Runner::Api => {
+            command.env("QUANT_STUDIO_API_KEY", &profile.api_key);
+            command.env("QUANT_STUDIO_API_ENDPOINT", &profile.endpoint);
+            command.env("QUANT_STUDIO_API_MODEL", &profile.model);
+        }
+        Runner::Codex | Runner::Claude => {
+            let endpoint = if runner == Runner::Codex {
+                profile
+                    .endpoint
+                    .strip_suffix("/responses")
+                    .unwrap_or(&profile.endpoint)
+            } else {
+                profile
+                    .endpoint
+                    .strip_suffix("/v1/messages")
+                    .unwrap_or(&profile.endpoint)
+            };
+            let provider = ProviderSettings {
+                enabled: true,
+                endpoint: endpoint.to_string(),
+                api_key: profile.api_key.clone(),
+                model: profile.model.clone(),
+                auth_header: profile.auth_header.clone(),
+            };
+            apply_provider(command, runner, &provider)?;
+        }
+        Runner::Manual => unreachable!(),
     }
     Ok(())
 }

@@ -1,5 +1,5 @@
-mod credentials;
 mod cli_settings;
+mod credentials;
 mod factors;
 mod live_trading;
 mod longbridge;
@@ -22,8 +22,8 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use tower_http::services::ServeDir;
 
+use cli_settings::{ApiProfileUpdate, CliSettings, ProviderUpdate};
 use credentials::{Credentials, CredentialsUpdate};
-use cli_settings::{CliSettings, ProviderUpdate};
 use factors::FactorLib;
 use performance::PerformanceLog;
 use terminal::{Runner, SessionManager};
@@ -82,6 +82,12 @@ async fn main() {
             get(longbridge_settings).post(update_longbridge_settings),
         )
         .route("/api/settings/cli", get(cli_settings_status))
+        .route("/api/settings/cli/profiles", post(save_api_profile))
+        .route("/api/settings/cli/profiles/test", post(test_api_profile))
+        .route(
+            "/api/settings/cli/profiles/{id}",
+            axum::routing::delete(delete_api_profile),
+        )
         .route("/api/settings/cli/{runner}", post(update_cli_settings))
         .route("/api/performance/{key}", get(performance_history))
         .route("/api/paper-trading", get(paper_trading_snapshot))
@@ -166,7 +172,11 @@ async fn update_cli_settings(
     JsonResponse(update): JsonResponse<ProviderUpdate>,
 ) -> impl IntoResponse {
     if !local_origin(&headers) {
-        return (StatusCode::FORBIDDEN, JsonResponse(json!({ "error": "只允许本地页面修改 AI CLI 配置" }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            JsonResponse(json!({ "error": "只允许本地页面修改 AI CLI 配置" })),
+        )
+            .into_response();
     }
     let runner = match runner.as_str() {
         "codex" => Runner::Codex,
@@ -175,6 +185,56 @@ async fn update_cli_settings(
     };
     match CliSettings::update(&state.cli_settings_path, runner, update) {
         Ok(status) => (StatusCode::OK, JsonResponse(status)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn save_api_profile(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    JsonResponse(update): JsonResponse<ApiProfileUpdate>,
+) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return err_response(anyhow::anyhow!("只允许本地页面修改服务商配置")).into_response();
+    }
+    match CliSettings::upsert_profile(&state.cli_settings_path, update) {
+        Ok(status) => JsonResponse(status).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn delete_api_profile(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<String>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return err_response(anyhow::anyhow!("只允许本地页面修改服务商配置")).into_response();
+    }
+    match CliSettings::delete_profile(&state.cli_settings_path, &id) {
+        Ok(status) => JsonResponse(status).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn test_api_profile(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    JsonResponse(update): JsonResponse<ApiProfileUpdate>,
+) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return err_response(anyhow::anyhow!("只允许本地页面测试服务商配置")).into_response();
+    }
+    let settings = match CliSettings::load(&state.cli_settings_path) {
+        Ok(settings) => settings,
+        Err(error) => return err_response(error).into_response(),
+    };
+    let profile = match settings.resolve_profile(update) {
+        Ok(profile) => profile,
+        Err(error) => return err_response(error).into_response(),
+    };
+    match cli_settings::test_profile(&profile).await {
+        Ok(status) => JsonResponse(status).into_response(),
         Err(error) => err_response(error).into_response(),
     }
 }
@@ -557,6 +617,7 @@ fn build_command(runner: Runner, prompt: &str, cwd: &std::path::Path) -> String 
             shell_quote(&cwd.display().to_string())
         ),
         Runner::Manual | Runner::Claude => "claude --permission-mode manual".to_string(),
+        Runner::Api => "Quant Lab 自定义 API 运行器".to_string(),
     };
     format!(
         "cd {} && {prefix} {}",
@@ -565,11 +626,28 @@ fn build_command(runner: Runner, prompt: &str, cwd: &std::path::Path) -> String 
     )
 }
 
+fn validate_api_selection(
+    state: &AppState,
+    runner: Runner,
+    profile_id: Option<&str>,
+) -> anyhow::Result<()> {
+    if runner != Runner::Api {
+        return Ok(());
+    }
+    let id = profile_id
+        .filter(|id| !id.is_empty())
+        .ok_or_else(|| anyhow::anyhow!("请先在账号设置保存 API 服务商配置"))?;
+    CliSettings::load(&state.cli_settings_path)?
+        .profile(id)?
+        .validate()
+}
+
 #[derive(Deserialize)]
 struct CompanyAnalysisRequest {
     name: String,
     #[serde(default)]
     runner: Runner,
+    profile_id: Option<String>,
 }
 
 async fn list_company_analysis(State(state): State<SharedState>) -> impl IntoResponse {
@@ -592,6 +670,9 @@ async fn start_company_analysis(
     let name = req.name.trim().to_string();
     if name.is_empty() {
         return err_response(anyhow::anyhow!("公司名/代码不能为空")).into_response();
+    }
+    if let Err(error) = validate_api_selection(&state, req.runner, req.profile_id.as_deref()) {
+        return err_response(error).into_response();
     }
     let slug = skill_runner::new_job_slug(&name);
     let job_dir = state.company_analysis_dir.join(&slug);
@@ -632,6 +713,7 @@ async fn start_company_analysis(
             &prompt,
             "deep_dive.html",
             &state.cli_settings_path,
+            req.profile_id.as_deref(),
         ) {
             let _ = terminal::write_status(&job_dir, "failed", req.runner, None);
             return err_response(error).into_response();
@@ -679,6 +761,7 @@ struct TradeReviewRequest {
     symbol: String,
     #[serde(default)]
     runner: Runner,
+    profile_id: Option<String>,
 }
 
 async fn list_trade_review(State(state): State<SharedState>) -> impl IntoResponse {
@@ -701,6 +784,9 @@ async fn start_trade_review(
     let symbol = req.symbol.trim().to_string();
     if symbol.is_empty() {
         return err_response(anyhow::anyhow!("symbol 不能为空")).into_response();
+    }
+    if let Err(error) = validate_api_selection(&state, req.runner, req.profile_id.as_deref()) {
+        return err_response(error).into_response();
     }
 
     // 把我们已经有的模拟交易 + 实盘账户记录整理成一份 JSON，喂给 trading-analyst skill 做复盘，
@@ -737,8 +823,8 @@ async fn start_trade_review(
 
     let slug = skill_runner::new_job_slug(&symbol);
     let job_dir = state.trade_review_dir.join(&slug);
-    if let Err(e) = std::fs::create_dir_all(&state.trade_review_dir)
-        .and_then(|_| std::fs::create_dir(&job_dir))
+    if let Err(e) =
+        std::fs::create_dir_all(&state.trade_review_dir).and_then(|_| std::fs::create_dir(&job_dir))
     {
         return err_response(anyhow::anyhow!("创建任务目录失败: {e}")).into_response();
     }
@@ -784,6 +870,7 @@ async fn start_trade_review(
             &prompt,
             "review.html",
             &state.cli_settings_path,
+            req.profile_id.as_deref(),
         ) {
             let _ = terminal::write_status(&job_dir, "failed", req.runner, None);
             return err_response(error).into_response();

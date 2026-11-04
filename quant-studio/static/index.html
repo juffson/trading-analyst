@@ -147,6 +147,16 @@
   .settings-card button:disabled { opacity: .5; cursor: default; }
   .settings-card select { width: 100%; }
   .settings-card .secondary-action { margin-left: var(--sp-2); background: transparent; border-color: var(--stroke); color: var(--fg-2); }
+  .provider-presets, .saved-profiles { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: var(--sp-3) 0; }
+  .provider-presets button, .saved-profiles button { width: auto; margin: 0; padding: 8px 12px; background: var(--bg-1); color: var(--fg-2); border: 1px solid var(--stroke); font-weight: 500; }
+  .provider-presets button.active, .saved-profiles button.active { color: var(--brand); border-color: var(--brand); }
+  .api-profile-form { display: grid; grid-template-columns: minmax(140px, 240px) minmax(0, 1fr); align-items: center; gap: var(--sp-3); }
+  .api-profile-form label { margin: 0; }
+  .api-profile-form .api-actions, .api-profile-form .status, .api-profile-form .settings-note { grid-column: 1 / -1; }
+  .api-profile-form .api-actions button { width: auto; }
+  .skill-form .api-profile-select { display: none; max-width: 230px; }
+  .skill-form .api-profile-select.visible { display: block; }
+  @media (max-width: 720px) { .api-profile-form { grid-template-columns: 1fr; } }
   .settings-section-title { margin: var(--sp-5) 0 var(--sp-3); font-size: 17px; }
   .settings-layout.ai-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-status { color: var(--brand); font-size: 14px; font-weight: 700; margin-bottom: var(--sp-2); }
@@ -646,11 +656,12 @@
     <section class="page" id="page-company">
       <div class="page-header">
         <h1>公司分析</h1>
-        <span class="hint">选择本机 Codex 或 Claude，在内置终端里运行并确认工具操作</span>
+        <span class="hint">选择本机 CLI 或已配置的 API，在内置终端里查看分析进度</span>
       </div>
       <div class="skill-form">
         <input id="companyNameInput" placeholder="公司名或代码，比如 贵州茅台 / 600519 / AAPL">
-        <select id="companyRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="manual">手动命令</option></select>
+        <select id="companyRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="api">自定义 API</option><option value="manual">手动命令</option></select>
+        <select id="companyApiProfileSelect" class="api-profile-select" aria-label="API 服务商"></select>
         <button id="companyGenBtn">开始分析</button>
       </div>
       <h3>历史分析</h3>
@@ -665,12 +676,13 @@
     <section class="page" id="page-trade-review">
       <div class="page-header">
         <h1>交易记录分析</h1>
-        <span class="hint">用本机 Codex 或 Claude 复盘模拟与实盘记录，在内置终端里确认工具操作</span>
+        <span class="hint">用本机 CLI 或已配置的 API 复盘模拟与实盘记录</span>
       </div>
       <div class="skill-form">
         <input id="reviewSymbolInput" list="knownSymbolsList" placeholder="标的代码，比如 AAPL.US / 700.HK">
         <datalist id="knownSymbolsList"></datalist>
-        <select id="reviewRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="manual">手动命令</option></select>
+        <select id="reviewRunnerSelect" aria-label="运行工具"><option value="codex">Codex CLI</option><option value="claude">Claude CLI</option><option value="api">自定义 API</option><option value="manual">手动命令</option></select>
+        <select id="reviewApiProfileSelect" class="api-profile-select" aria-label="API 服务商"></select>
         <button id="reviewGenBtn">开始复盘</button>
       </div>
       <h3>历史复盘</h3>
@@ -713,6 +725,23 @@
           </select>
           <button id="saveCredentialsBtn" type="submit">保存账号配置</button>
           <div class="status" id="credentialsMessage" role="status"></div>
+        </form>
+      </div>
+      <h2 class="settings-section-title">API 服务商</h2>
+      <p class="settings-note">保存多个服务商配置，在公司分析或交易复盘中选择。Chat Completions 可直接运行完整工作流；Responses 和 Anthropic Messages 分别调用本机 Codex、Claude CLI。</p>
+      <div class="settings-card">
+        <div class="provider-presets" id="apiProviderPresets"></div>
+        <div class="saved-profiles" id="savedApiProfiles"></div>
+        <form id="apiProfileForm" class="api-profile-form" autocomplete="off">
+          <label for="apiProfileId">Provider ID</label><input id="apiProfileId" placeholder="my-provider" spellcheck="false" required>
+          <label for="apiProfileName">Name</label><input id="apiProfileName" placeholder="自定义服务商" required>
+          <label for="apiProfileEndpoint">Endpoint</label><input id="apiProfileEndpoint" type="url" placeholder="https://example.com/v1" spellcheck="false" required>
+          <label for="apiProfileProtocol">API protocol</label><select id="apiProfileProtocol"><option value="chat_completions">/chat/completions（OpenAI-compatible）</option><option value="responses">/responses（Codex CLI）</option><option value="anthropic">/v1/messages（Claude CLI）</option></select>
+          <label for="apiProfileModel">Model</label><input id="apiProfileModel" placeholder="服务商模型名" spellcheck="false" required>
+          <label for="apiProfileKey">API Key</label><input id="apiProfileKey" type="password" placeholder="API Key" autocomplete="new-password">
+          <label for="apiProfileAuth">Anthropic 凭据方式</label><select id="apiProfileAuth"><option value="api_key">x-api-key</option><option value="bearer">Authorization: Bearer</option></select>
+          <div class="api-actions"><button type="button" id="testApiProfileBtn" class="secondary-action">测试连接</button><button type="submit">保存服务商</button><button type="button" id="deleteApiProfileBtn" class="secondary-action" hidden>删除配置</button></div>
+          <div class="status" id="apiProfileMessage" role="status"></div>
         </form>
       </div>
       <h2 class="settings-section-title">AI CLI · 自定义 API</h2>
@@ -918,10 +947,91 @@ async function loadCliSettingsStatus() {
         : '使用 CLI 已有登录';
       updateCliFormState(runner);
     }
+    apiProfiles = data.profiles || [];
+    renderApiProfiles();
   } catch (error) {
     for (const { suffix } of Object.values(CLI_SETTINGS_IDS)) {
       el(`cliStatus${suffix}`).textContent = `读取失败：${String(error.message || error)}`;
     }
+  }
+}
+
+const API_PRESETS = [
+  { id: '', name: '＋ 自定义 / Custom' },
+  { id: 'mimo-api', name: 'MiMo API Key' },
+  { id: 'mimo-plan', name: 'MiMo Token Plan' },
+  { id: 'deepseek', name: 'DeepSeek', endpoint: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  { id: 'kimi', name: 'Kimi' }, { id: 'zhipu-glm', name: 'Zhipu GLM' },
+  { id: 'qwen', name: 'Qwen' }, { id: 'minimax', name: 'MiniMax' },
+];
+let apiProfiles = [];
+let editingProfileId = '';
+function profileFields() {
+  return {
+    id: el('apiProfileId').value.trim(), name: el('apiProfileName').value.trim(),
+    endpoint: el('apiProfileEndpoint').value.trim(), protocol: el('apiProfileProtocol').value,
+    model: el('apiProfileModel').value.trim(), api_key: el('apiProfileKey').value.trim(),
+    auth_header: el('apiProfileAuth').value,
+  };
+}
+function selectApiProfile(profile = {}) {
+  editingProfileId = profile.id || '';
+  el('apiProfileId').value = profile.id || '';
+  el('apiProfileId').readOnly = !!apiProfiles.find(item => item.id === profile.id);
+  el('apiProfileName').value = profile.name || '';
+  el('apiProfileEndpoint').value = profile.endpoint || '';
+  el('apiProfileProtocol').value = profile.protocol || 'chat_completions';
+  el('apiProfileModel').value = profile.model || '';
+  el('apiProfileKey').value = '';
+  el('apiProfileKey').placeholder = profile.has_key ? '留空保留已保存的 Key' : 'API Key';
+  el('apiProfileAuth').value = profile.auth_header || 'api_key';
+  el('deleteApiProfileBtn').hidden = !apiProfiles.some(item => item.id === profile.id);
+  el('apiProfileMessage').textContent = '';
+  renderApiProfiles();
+}
+function renderApiProfiles() {
+  const presets = el('apiProviderPresets');
+  presets.replaceChildren();
+  for (const preset of API_PRESETS) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = preset.name;
+    button.className = editingProfileId === preset.id ? 'active' : '';
+    button.onclick = () => selectApiProfile(preset);
+    presets.append(button);
+  }
+  const saved = el('savedApiProfiles');
+  saved.replaceChildren();
+  for (const profile of apiProfiles) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = `${profile.name} · ${profile.protocol}`;
+    button.className = editingProfileId === profile.id ? 'active' : '';
+    button.onclick = () => selectApiProfile(profile);
+    saved.append(button);
+  }
+  for (const [runnerId, selectId] of [['companyRunnerSelect', 'companyApiProfileSelect'], ['reviewRunnerSelect', 'reviewApiProfileSelect']]) {
+    const select = el(selectId), old = select.value;
+    select.replaceChildren();
+    for (const profile of apiProfiles) {
+      const option = document.createElement('option'); option.value = profile.id;
+      option.textContent = `${profile.name} · ${profile.model}`; select.append(option);
+    }
+    if (apiProfiles.some(profile => profile.id === old)) select.value = old;
+    select.classList.toggle('visible', el(runnerId).value === 'api');
+  }
+}
+async function mutateApiProfile(url, method, body) {
+  const message = el('apiProfileMessage');
+  message.className = 'status'; message.textContent = method === 'POST' && url.endsWith('/test') ? '测试连接中…' : '保存中…';
+  try {
+    const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    if (url.endsWith('/test')) message.textContent = `连接成功 · HTTP ${data.status}`;
+    else { await loadCliSettingsStatus(); message.textContent = '配置已更新。'; }
+    return data;
+  } catch (error) {
+    message.className = 'status error'; message.textContent = String(error.message || error);
+    return null;
   }
 }
 
@@ -1748,15 +1858,17 @@ async function loadCliAvailability() {
     for (const id of ['companyRunnerSelect', 'reviewRunnerSelect']) {
       const select = el(id);
       for (const option of select.options) {
-        if (option.value !== 'manual') option.disabled = !available[option.value];
+        if (option.value !== 'manual' && option.value !== 'api') option.disabled = !available[option.value];
       }
       select.value = available.codex ? 'codex' : available.claude ? 'claude' : 'manual';
+      select.onchange = renderApiProfiles;
     }
   } catch (_) {
     for (const id of ['companyRunnerSelect', 'reviewRunnerSelect']) el(id).value = 'manual';
   }
 }
 loadCliAvailability();
+loadCliSettingsStatus();
 
 function renderCommandArea(kind, slug, command, runner = 'manual', status = 'waiting_for_manual_run', workflow) {
   closeTerminal();
@@ -1768,7 +1880,7 @@ function renderCommandArea(kind, slug, command, runner = 'manual', status = 'wai
   el(cfg.commandArea).innerHTML = `
     <div class="command-box">
       <div id="workflow-${escapeHtml(slug)}" class="workflow-board"></div>
-      <div class="steps" id="jobInstructions-${escapeHtml(slug)}">${manual ? '复制命令到外部终端运行；完成后检查报告。' : live ? '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。' : '此任务的 CLI 会话已结束；下方为只读的历史输出。可用历史列表中的「再次分析 / 再次复盘」重新发起。'}</div>
+      <div class="steps" id="jobInstructions-${escapeHtml(slug)}">${manual ? '复制命令到外部终端运行；完成后检查报告。' : live ? (runner === 'api' ? '自定义 API 工作流正在运行。命令需要授权时请在内置终端输入 y 确认。' : '内置终端正在使用本机 ' + escapeHtml(runner) + ' CLI。需要授权的操作请直接在终端里确认。') : '此任务的会话已结束；下方为只读的历史输出。可用历史列表中的「再次分析 / 再次复盘」重新发起。'}</div>
       ${manual ? `<details class="manual-command"><summary>查看外部终端命令</summary><pre id="cmdText-${escapeHtml(slug)}"></pre></details>` : `<div class="terminal-shell"><div class="terminal-heading"><span id="terminalLabel-${escapeHtml(slug)}">${escapeHtml(runner.toUpperCase())} · ${live ? '本地会话' : '历史输出（只读）'}</span><div class="terminal-heading-actions"><button id="reconnectJob-${escapeHtml(slug)}" hidden>重新连接</button><button id="toggleLog-${escapeHtml(slug)}" ${live ? 'hidden' : ''}>查看终端记录</button><button class="terminal-stop" id="stopJob-${escapeHtml(slug)}" ${live ? '' : 'hidden'}>停止任务</button></div></div><div class="terminal-note" id="terminalNote-${escapeHtml(slug)}">${live ? '连接中… 点击终端后可输入和确认。' : '会话已结束。历史记录只能查看，不能继续输入。'}</div><div class="terminal-view" id="terminal-${escapeHtml(slug)}" ${live ? '' : 'hidden'}></div></div>`}
       <div class="command-actions">
         ${manual ? `<button id="copyJob-${escapeHtml(slug)}">复制命令</button>` : ''}
@@ -2169,10 +2281,13 @@ el('companyGenBtn').addEventListener('click', async () => {
   const name = el('companyNameInput').value.trim();
   if (!name) return;
   const runner = el('companyRunnerSelect').value;
+  if (runner === 'api' && !el('companyApiProfileSelect').value) {
+    el('companyCommandArea').textContent = '请先到账号设置保存 API 服务商配置。'; return;
+  }
   el('companyGenBtn').disabled = true;
   try {
     const resp = await fetch('/api/company-analysis', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, runner }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, runner, profile_id: runner === 'api' ? el('companyApiProfileSelect').value : null }),
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -2189,10 +2304,13 @@ el('reviewGenBtn').addEventListener('click', async () => {
   const symbol = el('reviewSymbolInput').value.trim();
   if (!symbol) return;
   const runner = el('reviewRunnerSelect').value;
+  if (runner === 'api' && !el('reviewApiProfileSelect').value) {
+    el('reviewCommandArea').textContent = '请先到账号设置保存 API 服务商配置。'; return;
+  }
   el('reviewGenBtn').disabled = true;
   try {
     const resp = await fetch('/api/trade-review', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, runner }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, runner, profile_id: runner === 'api' ? el('reviewApiProfileSelect').value : null }),
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -2230,6 +2348,18 @@ document.querySelectorAll('.cli-settings-form').forEach(form => {
   form.querySelector('.cli-reset').addEventListener('click', () => resetCliSettings(runner));
   el(`cliMode${CLI_SETTINGS_IDS[runner].suffix}`).addEventListener('change', () => updateCliFormState(runner));
 });
+el('apiProfileForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const body = profileFields();
+  const result = await mutateApiProfile('/api/settings/cli/profiles', 'POST', body);
+  if (result) selectApiProfile(apiProfiles.find(item => item.id === body.id));
+});
+el('testApiProfileBtn').onclick = () => mutateApiProfile('/api/settings/cli/profiles/test', 'POST', profileFields());
+el('deleteApiProfileBtn').onclick = async () => {
+  if (!editingProfileId || !confirm(`删除 ${editingProfileId} 配置？`)) return;
+  const result = await mutateApiProfile(`/api/settings/cli/profiles/${encodeURIComponent(editingProfileId)}`, 'DELETE');
+  if (result) selectApiProfile();
+};
 el('goBacktestBtn').addEventListener('click', () => showPage('backtest'));
 
 initCharts();

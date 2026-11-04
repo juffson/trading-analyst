@@ -23,6 +23,32 @@ pub struct ProviderSettings {
 pub struct CliSettings {
     pub codex: ProviderSettings,
     pub claude: ProviderSettings,
+    #[serde(default)]
+    pub profiles: Vec<ApiProfile>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ApiProfile {
+    pub id: String,
+    pub name: String,
+    pub endpoint: String,
+    pub protocol: String,
+    pub api_key: String,
+    pub model: String,
+    #[serde(default)]
+    pub auth_header: String,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct ApiProfileUpdate {
+    pub id: String,
+    pub name: String,
+    pub endpoint: String,
+    pub protocol: String,
+    pub api_key: Option<String>,
+    pub model: String,
+    #[serde(default)]
+    pub auth_header: String,
 }
 
 #[derive(Deserialize)]
@@ -50,14 +76,69 @@ impl CliSettings {
         Ok(json!({
             "codex": settings.codex.public_status(),
             "claude": settings.claude.public_status(),
+            "profiles": settings.profiles.iter().map(ApiProfile::public_status).collect::<Vec<_>>(),
         }))
+    }
+
+    pub fn profile(&self, id: &str) -> Result<ApiProfile> {
+        self.profiles
+            .iter()
+            .find(|profile| profile.id == id)
+            .cloned()
+            .context("找不到所选 API 服务商，请到账号设置重新选择")
+    }
+
+    pub fn resolve_profile(&self, update: ApiProfileUpdate) -> Result<ApiProfile> {
+        let old_key = self
+            .profiles
+            .iter()
+            .find(|profile| profile.id == update.id)
+            .map(|profile| profile.api_key.as_str())
+            .unwrap_or("");
+        let profile = ApiProfile {
+            id: update.id.trim().to_string(),
+            name: update.name.trim().to_string(),
+            endpoint: update.endpoint.trim().trim_end_matches('/').to_string(),
+            protocol: update.protocol,
+            api_key: update
+                .api_key
+                .as_deref()
+                .map(str::trim)
+                .filter(|key| !key.is_empty())
+                .unwrap_or(old_key)
+                .to_string(),
+            model: update.model.trim().to_string(),
+            auth_header: update.auth_header,
+        };
+        profile.validate()?;
+        Ok(profile)
+    }
+
+    pub fn upsert_profile(path: &Path, update: ApiProfileUpdate) -> Result<Value> {
+        let mut settings = Self::load(path)?;
+        let profile = settings.resolve_profile(update)?;
+        settings.profiles.retain(|item| item.id != profile.id);
+        settings.profiles.push(profile);
+        save(path, &settings)?;
+        Self::status(path)
+    }
+
+    pub fn delete_profile(path: &Path, id: &str) -> Result<Value> {
+        let mut settings = Self::load(path)?;
+        let count = settings.profiles.len();
+        settings.profiles.retain(|profile| profile.id != id);
+        if settings.profiles.len() == count {
+            bail!("服务商配置不存在");
+        }
+        save(path, &settings)?;
+        Self::status(path)
     }
 
     pub fn provider(&self, runner: Runner) -> Option<&ProviderSettings> {
         match runner {
             Runner::Codex => Some(&self.codex),
             Runner::Claude => Some(&self.claude),
-            Runner::Manual => None,
+            Runner::Manual | Runner::Api => None,
         }
     }
 
@@ -66,7 +147,7 @@ impl CliSettings {
         let provider = match runner {
             Runner::Codex => &mut settings.codex,
             Runner::Claude => &mut settings.claude,
-            Runner::Manual => bail!("手动模式无需 API 配置"),
+            Runner::Manual | Runner::Api => bail!("此模式不使用 CLI 配置"),
         };
         if update.reset {
             *provider = ProviderSettings::default();
@@ -143,6 +224,152 @@ impl ProviderSettings {
     }
 }
 
+impl ApiProfile {
+    pub fn public_status(&self) -> Value {
+        json!({
+            "id": self.id,
+            "name": self.name,
+            "endpoint": self.endpoint,
+            "protocol": self.protocol,
+            "model": self.model,
+            "auth_header": self.auth_header,
+            "has_key": !self.api_key.is_empty(),
+        })
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if self.id.is_empty()
+            || self.id.len() > 64
+            || !self
+                .id
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-'))
+        {
+            bail!("Provider ID 只能包含字母、数字、下划线或连字符，最多 64 位");
+        }
+        if self.name.is_empty() || self.name.len() > 80 || self.name.chars().any(char::is_control) {
+            bail!("请填写有效的服务商名称");
+        }
+        if !matches!(
+            self.protocol.as_str(),
+            "responses" | "anthropic" | "chat_completions"
+        ) {
+            bail!("不支持的 API 协议");
+        }
+        if self.model.is_empty()
+            || self.model.len() > 128
+            || self.model.chars().any(char::is_control)
+        {
+            bail!("请填写服务商支持的模型名");
+        }
+        if self.api_key.is_empty() || self.api_key.chars().any(char::is_control) {
+            bail!("请填写有效的 API Key");
+        }
+        if self.protocol == "anthropic"
+            && !matches!(self.auth_header.as_str(), "" | "api_key" | "bearer")
+        {
+            bail!("Anthropic 协议的凭据类型只能是 API Key 或 Bearer Token");
+        }
+        validate_endpoint(&self.endpoint)
+    }
+}
+
+pub async fn test_profile(profile: &ApiProfile) -> Result<Value> {
+    profile.validate()?;
+    let suffix = match profile.protocol.as_str() {
+        "chat_completions" => "chat/completions",
+        "responses" => "responses",
+        "anthropic" => "messages",
+        _ => unreachable!(),
+    };
+    let base = profile.endpoint.trim_end_matches('/');
+    let url = if profile.protocol == "anthropic" {
+        if base.ends_with("/v1/messages") {
+            base.to_string()
+        } else {
+            format!(
+                "{}/{suffix}",
+                if base.ends_with("/v1") {
+                    base.to_string()
+                } else {
+                    format!("{base}/v1")
+                }
+            )
+        }
+    } else if base.ends_with(&format!("/{suffix}")) {
+        base.to_string()
+    } else {
+        format!("{base}/{suffix}")
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let mut request = client.post(url);
+    let body = match profile.protocol.as_str() {
+        "chat_completions" => json!({
+            "model": profile.model,
+            "messages": [{"role": "user", "content": "Call the ping tool."}],
+            "max_tokens": 64,
+            "tools": [{"type": "function", "function": {"name": "ping", "description": "Connection test", "parameters": {"type": "object", "properties": {}}}}],
+            "tool_choice": {"type": "function", "function": {"name": "ping"}}
+        }),
+        "responses" => json!({"model": profile.model, "input": "ping", "max_output_tokens": 16}),
+        "anthropic" => {
+            json!({"model": profile.model, "messages": [{"role": "user", "content": "ping"}], "max_tokens": 1})
+        }
+        _ => unreachable!(),
+    };
+    request = if profile.protocol == "anthropic" {
+        let request = request.header("anthropic-version", "2023-06-01");
+        if profile.auth_header == "bearer" {
+            request.bearer_auth(&profile.api_key)
+        } else {
+            request.header("x-api-key", &profile.api_key)
+        }
+    } else {
+        request.bearer_auth(&profile.api_key)
+    };
+    let response = request.json(&body).send().await.context("连接服务商失败")?;
+    if !response.status().is_success() {
+        bail!(
+            "连接测试失败：HTTP {}（请检查 Endpoint、协议、模型和 Key）",
+            response.status()
+        );
+    }
+    let status = response.status().as_u16();
+    if profile.protocol == "chat_completions" {
+        let body: Value = response.json().await.context("解析服务商响应失败")?;
+        let tool_calls = body
+            .pointer("/choices/0/message/tool_calls")
+            .and_then(Value::as_array);
+        if !tool_calls.is_some_and(|calls| !calls.is_empty()) {
+            bail!(
+                "连接成功，但模型未返回工具调用；完整工作流需要支持 Chat Completions function calling"
+            );
+        }
+    }
+    Ok(json!({"ok": true, "protocol": profile.protocol, "status": status}))
+}
+
+fn validate_endpoint(endpoint: &str) -> Result<()> {
+    let url = Url::parse(endpoint).context("Endpoint 不是有效 URL")?;
+    let loopback = matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
+    if url.scheme() != "https" && !(url.scheme() == "http" && loopback) {
+        bail!("Endpoint 需要使用 HTTPS；本机 localhost 可使用 HTTP");
+    }
+    if url.host_str().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+        || endpoint.chars().any(char::is_control)
+    {
+        bail!("Endpoint 不能包含账号、查询参数、片段或控制字符");
+    }
+    Ok(())
+}
+
 fn save(path: &Path, settings: &CliSettings) -> Result<()> {
     let parent = path.parent().context("配置目录不存在")?;
     fs::create_dir_all(parent).context("创建配置目录失败")?;
@@ -170,6 +397,42 @@ fn save(path: &Path, settings: &CliSettings) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn api_profiles_preserve_keys_without_exposing_them() {
+        let dir = std::env::temp_dir().join(format!("quant-api-profile-{}", std::process::id()));
+        let path = dir.join("cli.json");
+        let update = ApiProfileUpdate {
+            id: "deepseek".into(),
+            name: "DeepSeek".into(),
+            endpoint: "https://api.deepseek.com".into(),
+            protocol: "chat_completions".into(),
+            api_key: Some("private-test-key".into()),
+            model: "deepseek-chat".into(),
+            auth_header: "api_key".into(),
+        };
+        let status = CliSettings::upsert_profile(&path, update.clone()).unwrap();
+        assert_eq!(status["profiles"][0]["has_key"], true);
+        assert!(!status.to_string().contains("private-test-key"));
+        CliSettings::upsert_profile(
+            &path,
+            ApiProfileUpdate {
+                name: "Updated".into(),
+                api_key: Some(String::new()),
+                ..update
+            },
+        )
+        .unwrap();
+        let settings = CliSettings::load(&path).unwrap();
+        assert_eq!(
+            settings.profile("deepseek").unwrap().api_key,
+            "private-test-key"
+        );
+        assert_eq!(settings.profile("deepseek").unwrap().name, "Updated");
+        CliSettings::delete_profile(&path, "deepseek").unwrap();
+        assert!(CliSettings::load(&path).unwrap().profiles.is_empty());
+        let _ = fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn custom_provider_keeps_secret_private_and_can_reset() {
