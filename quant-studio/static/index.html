@@ -420,6 +420,34 @@
   .terminal-view .xterm { height: 100%; }
   .report-frame { width: 100%; height: 80vh; border: 1px solid var(--stroke); border-radius: var(--radius-lg);
                    background: var(--bg-1); margin-top: var(--sp-3); }
+  .research-toolbar { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-3); }
+  .research-toolbar input { flex: 1 1 240px; width: auto; }
+  .research-toolbar select { width: 145px; }
+  .research-toolbar button { width: auto; cursor: pointer; }
+  .research-state { color: var(--fg-2); font-size: 11px; margin-bottom: var(--sp-3); }
+  .research-layout { display: grid; grid-template-columns: minmax(230px, 290px) minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+  .research-symbols { display: flex; flex-direction: column; gap: 6px; max-height: 76vh; overflow: auto; }
+  .research-symbol { width: 100%; text-align: left; border: 1px solid var(--stroke); background: var(--card); padding: 12px; cursor: pointer; }
+  .research-symbol.active { border-color: var(--brand); background: rgba(184,238,128,.1); }
+  .research-symbol strong, .research-symbol small { display: block; }
+  .research-symbol small { color: var(--fg-2); margin-top: 4px; }
+  .research-detail { min-width: 0; background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius-xl); padding: var(--sp-4); }
+  .research-detail h2 { margin: 0 0 var(--sp-2); }
+  .research-report-list { display: flex; gap: 6px; flex-wrap: wrap; max-height: 145px; overflow: auto; padding: var(--sp-2) 0; border-block: 1px solid var(--stroke); margin: var(--sp-3) 0; }
+  .research-report-list button { width: auto; padding: 5px 9px; background: var(--bg-1); border: 1px solid var(--stroke); color: var(--fg-2); cursor: pointer; }
+  .research-report-list button.active { color: var(--brand); border-color: var(--brand); }
+  .research-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--sp-2); margin: var(--sp-3) 0; }
+  .research-metrics div { padding: var(--sp-2); background: var(--bg-1); border-radius: var(--radius-sm); }
+  .research-metrics span { display: block; color: var(--fg-2); font-size: 11px; }
+  .research-metrics strong { display: block; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .research-report h3 { margin: var(--sp-4) 0 var(--sp-2); }
+  .research-report p, .research-report li { color: var(--fg-2); line-height: 1.65; overflow-wrap: anywhere; }
+  .research-report ul { padding-left: 20px; }
+  .research-report article { border-top: 1px solid var(--stroke); padding: var(--sp-2) 0; }
+  .research-report article h4 { margin: 0 0 4px; }
+  .research-report a { color: var(--chart-blue); }
+  .research-meta { color: var(--fg-3); font-size: 11px; }
+  @media (max-width: 800px) { .research-layout { grid-template-columns: 1fr; } .research-symbols { max-height: 260px; } }
 </style>
 </head>
 <body>
@@ -438,6 +466,7 @@
       <button class="navitem" data-page="paper"><span class="navicon">&#9678;</span>模拟交易</button>
       <button class="navitem" data-page="live"><span class="navicon">&#9889;</span>实盘交易<span class="navbadge" id="liveBadge" style="display:none;"></span></button>
       <button class="navitem" data-page="company"><span class="navicon">&#9737;</span>公司分析</button>
+      <button class="navitem" data-page="research"><span class="navicon">&#9783;</span>研究档案</button>
       <button class="navitem" data-page="trade-review"><span class="navicon">&#9998;</span>交易记录分析</button>
       <button class="navitem" data-page="settings"><span class="navicon">&#9881;</span>账号设置</button>
     </div>
@@ -676,6 +705,22 @@
       <div id="companyCommandArea"></div>
     </section>
 
+    <!-- ================= GitHub 研究档案 ================= -->
+    <section class="page" id="page-research">
+      <div class="page-header"><h1>研究档案</h1><span class="hint">同步 GitHub 公开研究日报 · 按标的、交易日期和修订浏览</span></div>
+      <div class="research-toolbar">
+        <input id="researchSearch" placeholder="搜索标的名称或代码" aria-label="搜索研究标的">
+        <select id="researchMarket" aria-label="筛选市场"><option value="all">全部市场</option><option value="CN">A股</option><option value="HK">港股</option><option value="US">美股</option></select>
+        <select id="researchTracking" aria-label="筛选跟踪状态"><option value="all">全部档案</option><option value="tracked">当前跟踪</option><option value="archived">历史档案</option></select>
+        <button id="researchRefresh" type="button">刷新 GitHub</button>
+      </div>
+      <div class="research-state" id="researchState">正在读取 GitHub 研究目录…</div>
+      <div class="research-layout">
+        <div class="research-symbols" id="researchSymbols"><div class="empty-note">加载中…</div></div>
+        <div class="research-detail" id="researchDetail"><div class="empty-note">选择标的查看研究记录</div></div>
+      </div>
+    </section>
+
     <!-- ================= 交易记录分析 ================= -->
     <section class="page" id="page-trade-review">
       <div class="page-header">
@@ -812,7 +857,7 @@ function el(id) { return document.getElementById(id); }
 
 /* ---------------- page switching ---------------- */
 function showPage(name) {
-  if (!['factors', 'backtest', 'paper', 'live', 'company', 'trade-review', 'settings'].includes(name)) name = 'factors';
+  if (!['factors', 'backtest', 'paper', 'live', 'company', 'research', 'trade-review', 'settings'].includes(name)) name = 'factors';
   if (activeJobKey && !activeJobKey.startsWith(`${name}/`)) closeTerminal();
   if (location.hash !== `#${name}`) location.hash = name;
   document.querySelectorAll('.navitem').forEach(b => b.classList.toggle('active', b.dataset.page === name));
@@ -820,6 +865,7 @@ function showPage(name) {
   if (name === 'paper' && !loadedPages.has('paper')) { loadedPages.add('paper'); loadPaperTrading(); }
   if (name === 'live' && !loadedPages.has('live')) { loadedPages.add('live'); loadLiveTrading(); }
   if (name === 'company') loadJobList('company');
+  if (name === 'research' && !researchLoaded) loadGithubResearch();
   if (name === 'trade-review' && !loadedPages.has('trade-review')) {
     loadedPages.add('trade-review');
     populateKnownSymbols();
@@ -1856,6 +1902,133 @@ for (const [kind, cfg] of Object.entries(SKILL_KINDS)) {
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 }
+let researchLoaded = false;
+let researchIndex = null;
+let researchSymbol = '';
+let researchReport = '';
+let researchRequest = 0;
+const RESEARCH_OUTLOOK = { 'Strong Bullish': '强看多', Bullish: '偏多', Neutral: '中性', Bearish: '偏空', 'Strong Bearish': '强看空', Unknown: '未形成判断' };
+const RESEARCH_QUALITY = { pass: '通过', degraded: '受限', blocked: '阻塞' };
+function researchReportsFor(symbol) {
+  return (researchIndex?.reports || []).filter(report => report.symbol === symbol);
+}
+function researchSymbolData(symbol) {
+  return researchIndex?.symbols?.find(item => item.symbol === symbol);
+}
+function sortResearchSymbols(a, b) {
+  return Number(b.tracked) - Number(a.tracked)
+    || (researchReportsFor(b.symbol)[0]?.date || '').localeCompare(researchReportsFor(a.symbol)[0]?.date || '')
+    || String(a.name).localeCompare(String(b.name), 'zh-CN');
+}
+async function loadGithubResearch(force = false) {
+  const status = el('researchState');
+  status.textContent = force ? '正在刷新 GitHub 研究目录…' : '正在读取 GitHub 研究目录…';
+  try {
+    const response = await fetch(force ? '/api/github-research/refresh' : '/api/github-research', {
+      method: force ? 'POST' : 'GET', cache: 'no-store',
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    researchIndex = data; researchLoaded = true;
+    status.textContent = `${data.symbols.length} 个标的 · ${data.reports.length} 份报告${data.stale ? ' · GitHub 暂不可用，显示上次读取的目录' : ''} · 最近同步 ${historyDate(data.fetched_at)}`;
+    if (!researchSymbolData(researchSymbol)) {
+      researchSymbol = [...data.symbols].sort(sortResearchSymbols)
+        .find(item => researchReportsFor(item.symbol).length)?.symbol || '';
+      researchReport = '';
+    }
+    renderResearchSymbols();
+    selectResearchSymbol(researchSymbol, true);
+  } catch (error) {
+    status.textContent = `读取失败：${String(error.message || error)}`;
+    el('researchSymbols').innerHTML = '<div class="empty-note">GitHub 研究目录暂不可用，点击「刷新 GitHub」重试。</div>';
+  }
+}
+function renderResearchSymbols() {
+  if (!researchIndex) return;
+  const query = el('researchSearch').value.trim().toLocaleLowerCase();
+  const market = el('researchMarket').value;
+  const tracking = el('researchTracking').value;
+  const symbols = [...researchIndex.symbols].filter(item =>
+    (!query || `${item.name} ${item.symbol}`.toLocaleLowerCase().includes(query))
+    && (market === 'all' || item.market === market)
+    && (tracking === 'all' || (tracking === 'tracked') === !!item.tracked));
+  symbols.sort(sortResearchSymbols);
+  const target = el('researchSymbols');
+  target.innerHTML = symbols.length ? symbols.map(item => {
+    const reports = researchReportsFor(item.symbol);
+    return `<button class="research-symbol ${item.symbol === researchSymbol ? 'active' : ''}" data-research-symbol="${escapeHtml(item.symbol)}">
+      <strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.symbol)} · ${reports.length} 份报告${item.tracked ? ' · 当前跟踪' : ' · 历史档案'}</small>
+      <small>${reports.length ? `最新 ${escapeHtml(reports[0].date)}` : '暂无报告'}</small></button>`;
+  }).join('') : '<div class="empty-note">没有符合筛选条件的标的。</div>';
+  target.querySelectorAll('[data-research-symbol]').forEach(button => {
+    button.onclick = () => selectResearchSymbol(button.dataset.researchSymbol);
+  });
+}
+function selectResearchSymbol(symbol, preserveReport = false) {
+  researchSymbol = symbol;
+  const item = researchSymbolData(symbol);
+  const reports = researchReportsFor(symbol);
+  if (!item) { el('researchDetail').innerHTML = '<div class="empty-note">选择标的查看研究记录</div>'; return; }
+  if (!preserveReport || !reports.some(report => report.filename === researchReport)) researchReport = reports[0]?.filename || '';
+  renderResearchSymbols();
+  el('researchDetail').innerHTML = `<h2>${escapeHtml(item.name)} <span class="research-meta">${escapeHtml(item.symbol)}</span></h2>
+    <div class="research-meta">${escapeHtml(item.market)} · ${escapeHtml(item.currency)} · ${item.tracked ? '当前跟踪' : '历史档案（停止日常跟踪）'} · ${reports.length} 份报告</div>
+    <div class="research-report-list">${reports.length ? reports.map(report => `<button data-research-file="${escapeHtml(report.filename)}" class="${report.filename === researchReport ? 'active' : ''}">${escapeHtml(report.date)}${report.revision > 1 ? ` · v${report.revision}` : ''}</button>`).join('') : '暂无研究报告'}</div>
+    <div id="researchReportBody" class="research-report"><div class="empty-note">${reports.length ? '正在读取报告…' : '此标的尚无报告'}</div></div>`;
+  el('researchDetail').querySelectorAll('[data-research-file]').forEach(button => {
+    button.onclick = () => openGithubReport(symbol, button.dataset.researchFile);
+  });
+  if (researchReport) openGithubReport(symbol, researchReport);
+}
+function researchValue(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return escapeHtml(typeof value === 'number' ? value.toLocaleString('zh-CN', { maximumFractionDigits: 4 }) : value);
+}
+function researchSourceLink(url, label) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return escapeHtml(label);
+    return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} ↗</a>`;
+  } catch (_) { return escapeHtml(label); }
+}
+function renderGithubReport(report, filename) {
+  const snap = report.market_snapshot || {};
+  const unit = ['000001.SH', '399006.SZ'].includes(report.symbol) ? '点' : (researchSymbolData(report.symbol)?.currency || '');
+  const metrics = [['收盘', snap.close === null ? null : `${researchValue(snap.close)} ${unit}`], ['涨跌幅', snap.change_pct === null ? null : `${researchValue(snap.change_pct)}%`], ['开盘', snap.open], ['最高', snap.high], ['最低', snap.low], ['前收', snap.previous_close]];
+  const levels = report.price_levels || {};
+  const levelFields = [['观察区间下沿', 'entry_low'], ['观察区间上沿', 'entry_high'], ['目标价位', 'target'], ['失效线', 'stop'], ['目标期限', 'target_horizon'], ['触发条件', 'trigger'], ['失效条件', 'invalidation'], ['依据', 'basis']];
+  const repoUrl = `https://github.com/juffson/trading-analyst/blob/main/research/reports/${encodeURIComponent(report.symbol)}/${encodeURIComponent(filename)}`;
+  return `<div class="research-meta">交易日 ${escapeHtml(report.trade_date)} · 修订 v${researchValue(report.revision)} · ${escapeHtml(RESEARCH_OUTLOOK[report.outlook] || report.outlook)} · 质量${escapeHtml(RESEARCH_QUALITY[report.analysis_quality] || report.analysis_quality)}</div>
+    <h2>${escapeHtml(report.headline)}</h2><p>${escapeHtml(report.summary)}</p>
+    <div class="research-meta">行情截止 ${researchValue(report.data_as_of)} · 报告生成 ${researchValue(report.generated_at)} · ${researchSourceLink(repoUrl, '查看 GitHub 原始 JSON')}</div>
+    <div class="research-metrics">${metrics.map(([label, value]) => `<div><span>${label}</span><strong>${researchValue(value)}</strong></div>`).join('')}</div>
+    ${report.comparison ? `<h3>与上次分析比较</h3><p>${escapeHtml(report.comparison.narrative)}</p>` : ''}
+    ${report.indicators?.length ? `<h3>指标</h3><div class="research-metrics">${report.indicators.map(item => `<div><span>${escapeHtml(item.name)}</span><strong>${researchValue(item.value)} ${researchValue(item.unit) === '—' ? '' : researchValue(item.unit)}</strong>${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}</div>`).join('')}</div>` : ''}
+    ${report.drivers?.length ? `<h3>驱动因素</h3>${report.drivers.map(item => `<article><h4>${escapeHtml(item.title)} <span class="research-meta">${escapeHtml(item.direction)}</span></h4><p>${escapeHtml(item.evidence)}</p></article>`).join('')}` : ''}
+    ${report.price_levels ? `<h3>研究价位与条件</h3><div class="research-metrics">${levelFields.map(([label, key]) => `<div><span>${label}</span><strong>${researchValue(levels[key])}</strong></div>`).join('')}</div>` : ''}
+    ${report.scenarios?.length ? `<h3>情景</h3>${report.scenarios.map(item => `<article><h4>${escapeHtml(item.name)} · ${researchValue(item.price)}</h4><p>${escapeHtml(item.condition)}${item.horizon ? ` · ${escapeHtml(item.horizon)}` : ''}</p></article>`).join('')}` : ''}
+    ${report.sections?.length ? `<h3>研究正文</h3>${report.sections.map(item => `<article><h4>${escapeHtml(item.heading)}</h4><p>${escapeHtml(item.body)}</p></article>`).join('')}` : ''}
+    ${report.sources?.length ? `<h3>公开来源</h3><ul>${report.sources.map(item => `<li>${researchSourceLink(item.url, item.label)}${item.published_at ? ` · ${escapeHtml(item.published_at)}` : ''}</li>`).join('')}</ul>` : ''}
+    ${report.limitations?.length ? `<h3>资料限制</h3><ul>${report.limitations.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+    ${report.price_history?.length ? `<details><summary>真实历史收盘价（${report.price_history.length} 个交易日）</summary><div class="research-metrics">${report.price_history.map(item => `<div><span>${escapeHtml(item.date)}</span><strong>${researchValue(item.close)} ${escapeHtml(unit)}</strong></div>`).join('')}</div></details>` : ''}
+    <p class="research-meta">${report.provenance ? `归档类型：${escapeHtml(report.provenance.kind)} · ${escapeHtml(report.provenance.source)} · ${escapeHtml(report.provenance.note)}` : ''}</p>`;
+}
+async function openGithubReport(symbol, filename) {
+  researchReport = filename;
+  const requestId = ++researchRequest;
+  el('researchDetail').querySelectorAll('[data-research-file]').forEach(button => button.classList.toggle('active', button.dataset.researchFile === filename));
+  const body = el('researchReportBody');
+  body.innerHTML = '<div class="empty-note">正在读取报告…</div>';
+  try {
+    const response = await fetch(`/api/github-research/${encodeURIComponent(symbol)}/${encodeURIComponent(filename)}`);
+    const report = await response.json();
+    if (!response.ok) throw new Error(report.error || `HTTP ${response.status}`);
+    if (requestId !== researchRequest || researchSymbol !== symbol) return;
+    body.innerHTML = renderGithubReport(report, filename);
+  } catch (error) {
+    if (requestId === researchRequest) body.textContent = `报告读取失败：${String(error.message || error)}`;
+  }
+}
 function closeTerminal() {
   activeJobKey = null;
   lastActiveStatus = null;
@@ -2359,6 +2532,10 @@ el('factorSearch').addEventListener('input', renderFactorList);
 el('runBtn').addEventListener('click', runBacktest);
 el('credentialsForm').addEventListener('submit', saveCredentials);
 el('credentialsForm').addEventListener('paste', pasteLongportEnv);
+el('researchSearch').addEventListener('input', renderResearchSymbols);
+el('researchMarket').addEventListener('change', renderResearchSymbols);
+el('researchTracking').addEventListener('change', renderResearchSymbols);
+el('researchRefresh').addEventListener('click', () => loadGithubResearch(true));
 document.querySelectorAll('.cli-settings-form').forEach(form => {
   const runner = form.dataset.runner;
   form.addEventListener('submit', saveCliSettings);

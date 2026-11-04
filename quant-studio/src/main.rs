@@ -1,6 +1,7 @@
 mod cli_settings;
 mod credentials;
 mod factors;
+mod github_research;
 mod live_trading;
 mod longbridge;
 mod paper_trading;
@@ -25,6 +26,7 @@ use tower_http::services::ServeDir;
 use cli_settings::{ApiProfileUpdate, CliSettings, ProviderUpdate};
 use credentials::{Credentials, CredentialsUpdate};
 use factors::FactorLib;
+use github_research::GithubResearch;
 use performance::PerformanceLog;
 use terminal::{Runner, SessionManager};
 
@@ -42,6 +44,7 @@ struct AppState {
     company_analysis_dir: PathBuf,
     trade_review_dir: PathBuf,
     sessions: SessionManager,
+    github_research: GithubResearch,
 }
 
 type SharedState = Arc<AppState>;
@@ -71,6 +74,7 @@ async fn main() {
         company_analysis_dir: root.join("data/company-analysis"),
         trade_review_dir: root.join("data/trade-review"),
         sessions,
+        github_research: GithubResearch::new().expect("初始化 GitHub 研究目录失败"),
         trading_analyst_root,
     });
 
@@ -93,6 +97,9 @@ async fn main() {
         .route("/api/paper-trading", get(paper_trading_snapshot))
         .route("/api/live-trading", get(live_trading_snapshot))
         .route("/api/cli/available", get(cli_available))
+        .route("/api/github-research", get(github_research_index))
+        .route("/api/github-research/refresh", post(refresh_github_research))
+        .route("/api/github-research/{symbol}/{filename}", get(github_research_report))
         .route("/api/cli/{kind}/{slug}/terminal", get(cli_terminal))
         .route("/api/cli/{kind}/{slug}/log", get(cli_log))
         .route("/api/cli/{kind}/{slug}/stop", post(cli_stop))
@@ -129,6 +136,32 @@ fn err_response(err: anyhow::Error) -> (StatusCode, JsonResponse<Value>) {
         StatusCode::BAD_REQUEST,
         JsonResponse(json!({ "error": err.to_string() })),
     )
+}
+
+async fn github_research_index(State(state): State<SharedState>) -> impl IntoResponse {
+    match state.github_research.index(false).await {
+        Ok(value) => (StatusCode::OK, JsonResponse(value)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn refresh_github_research(State(state): State<SharedState>, headers: HeaderMap) -> impl IntoResponse {
+    if !local_origin(&headers) {
+        return (StatusCode::FORBIDDEN, JsonResponse(json!({"error": "只允许本地页面刷新研究目录"}))).into_response();
+    }
+    match state.github_research.index(true).await {
+        Ok(value) => (StatusCode::OK, JsonResponse(value)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
+}
+
+async fn github_research_report(
+    State(state): State<SharedState>, AxumPath((symbol, filename)): AxumPath<(String, String)>,
+) -> impl IntoResponse {
+    match state.github_research.report(&symbol, &filename).await {
+        Ok(value) => (StatusCode::OK, JsonResponse(value)).into_response(),
+        Err(error) => err_response(error).into_response(),
+    }
 }
 
 async fn longbridge_settings(State(state): State<SharedState>) -> impl IntoResponse {

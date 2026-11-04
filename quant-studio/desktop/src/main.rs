@@ -591,6 +591,7 @@ impl Render for QuantLab {
             ("模拟交易", "paper"),
             ("实盘查询", "live"),
             ("公司分析", "company"),
+            ("研究档案", "research"),
             ("交易记录", "trade-review"),
             ("账号设置", "settings"),
         ]
