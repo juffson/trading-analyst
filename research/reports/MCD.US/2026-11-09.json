@@ -1,0 +1,408 @@
+{
+  "schema_version": 1,
+  "symbol": "MCD.US",
+  "trade_date": "2026-11-09",
+  "revision": 1,
+  "data_as_of": "2026-11-09T21:00:00Z",
+  "generated_at": "2026-11-09T23:40:58Z",
+  "report_kind": "closing",
+  "outlook": "Bullish",
+  "analysis_quality": "degraded",
+  "headline": "收复MA200并创新近20日高点，超买与追价风险同步上升",
+  "summary": "收281.44美元，涨跌+1.78%；收复MA200并创新近20日高点，超买与追价风险同步上升。候选276.23–277.48、失效267.55、两档目标279.52/283.26；中档费用压力净RR0.25，筛选未通过，仅观察至11月10日纽约16:00。",
+  "market_snapshot": {
+    "close": 281.44,
+    "previous_close": 276.52,
+    "change_pct": 1.77925647,
+    "open": 276.98,
+    "high": 283.26,
+    "low": 276.853
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 275.852,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA10",
+      "value": 266.037,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA20",
+      "value": 255.366,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA60",
+      "value": 251.78255,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MA200",
+      "value": 279.520665,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD DIF",
+      "value": 8.99392457,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD DEA",
+      "value": 5.47074697,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "MACD histogram",
+      "value": 7.04635519,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Previous MACD histogram",
+      "value": 7.12088167,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Wilder RSI14",
+      "value": 76.12550712,
+      "unit": "0-100",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Wilder ATR14",
+      "value": 6.21753071,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Volume ratio",
+      "value": 0.8723335,
+      "unit": "倍",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "Raw regular volume",
+      "value": 4952599,
+      "unit": "供应商原始单位",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "20D high",
+      "value": 283.26,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "20D low",
+      "value": 234.23,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "60D low",
+      "value": 229.2,
+      "unit": "USD",
+      "note": "300根已完成Intraday日K独立计算"
+    },
+    {
+      "name": "候选首档毛风险收益比",
+      "value": 0.20543807,
+      "unit": "倍",
+      "note": "候选上限与公开参数计算；不代表已触发"
+    },
+    {
+      "name": "候选第二档毛风险收益比",
+      "value": 0.58207452,
+      "unit": "倍",
+      "note": "候选上限与公开参数计算；不代表已触发"
+    },
+    {
+      "name": "候选综合毛风险收益比",
+      "value": 0.39375629,
+      "unit": "倍",
+      "note": "候选上限与公开参数计算；不代表已触发"
+    },
+    {
+      "name": "候选综合净风险收益比_0.4%摩擦",
+      "value": 0.25363227,
+      "unit": "倍",
+      "note": "候选上限与公开参数计算；不代表已触发"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "价格结构与独立指标",
+      "direction": "mixed",
+      "evidence": "收281.44，涨1.78%，高283.26、低276.853；站回MA200=279.520665且高于MA5/10/20/60。RSI76.13处于高位；MACD正柱7.046355较前日7.120882小幅缩短。成交量4952599，仅前20日均量0.87倍，趋势仍偏强但不是量价齐升确认，回踩模型RR偏低。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "有限市场代理",
+      "direction": "mixed",
+      "evidence": "SPY收752.69、前收735.29，涨跌+2.37%；QQQ收678.68、前收656.1，涨跌+3.44%。仅代表两只ETF，不能推断全市场广度、资金流或上涨原因。",
+      "source_ids": [
+        "spy",
+        "qqq"
+      ]
+    },
+    {
+      "title": "已核验公开背景",
+      "direction": "mixed",
+      "evidence": "11月4日官方第三季业绩：全球可比销售增长1.5%，美国下降0.2%，收入增长1%，GAAP每股收益3.51美元、调整后3.57美元。11月9日Uber官方公告扩展覆盖14个市场的多年配送和会员合作，支持McDonald's应用配送与积分/优惠联动；收盘前公开新闻已出现该公告。合作未提供可核验的增量利润，不能把商业机会当作收益保证或全部涨幅的因果解释。",
+      "source_ids": [
+        "issuer",
+        "partnership"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": 276.23,
+    "entry_high": 277.48,
+    "target": 283.26,
+    "stop": 267.55,
+    "take_profit_1": 279.52,
+    "take_profit_2": 283.26,
+    "target_type": "technical",
+    "target_horizon": "11月10日起未来1–5个实际交易日技术观察，非到达承诺",
+    "entry_valid_until": "2026-11-10",
+    "status": "conditional",
+    "trigger": "仅观察11月10日常规盘回踩276.23–277.48，需未来两根完整30分钟K低点抬高、后一根收盘越前根高点且确认价仍在带内，并独立核验事件与流动性。本模型净RR不达标，即使形态出现也不自动激活，should_execute=false。",
+    "invalidation": "2026-11-10纽约时间16:00（EST，UTC−05:00）到期；此前跌破267.55、跳空越界、确认价不在带内、重要披露否定模型或行情无法核验，任一即失效。旧候选不续期，不追认成交，模型线不保证实际退出价格。",
+    "basis": "11月9日实际低点276.853为回踩中心，保留原始三位行情参与计算。中心276.853±0.10×ATR14(6.21753071)，按0.01美元研究展示粒度向外取整，候选276.23–277.48。失效线为近三日低269.11−0.25×ATR14，向下取整为267.55。首档279.52取MA200=279.520665向下取整；第二档283.26为本日高点及20日高点，不外推更远目标。展示粒度不是已核验的订单最小价差。 候选上限277.48，风险价差9.930000美元；首档毛RR=0.205438，第二档毛RR=0.582075，目标各50%时综合毛RR=0.393756。往返费用及滑点按上限的0.2%/0.4%/0.8%压力假设，综合净RR=(两档均值−上限−费用)/(上限−失效线+费用)分别为0.319986/0.253632/0.139110。中档净RR低于2.0筛选门槛；数值筛选不通过，should_execute=false。ATR缓冲、费用比例、各50%分配及2.0门槛均为未回测假设，不代表实际费率、胜率或收益保证。"
+  },
+  "scenarios": [
+    {
+      "name": "趋势延续",
+      "price": 283.26,
+      "condition": "站稳MA200并再次有效突破本日高283.26才支持延续，未估计突破概率",
+      "horizon": "11月10日起未来1–5个实际交易日条件观察，无校准概率"
+    },
+    {
+      "name": "长期均线回测",
+      "price": 279.520665,
+      "condition": "回测MA200是否守住决定新突破的有效性",
+      "horizon": "11月10日起未来1–5个实际交易日条件观察，无校准概率"
+    },
+    {
+      "name": "短线转弱",
+      "price": 275.852,
+      "condition": "若失守MA5约275.852，则近期上涨结构需重新评估；不自动认定模型触发",
+      "horizon": "11月10日起未来1–5个实际交易日条件观察，无校准概率"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "独立候选与结构依据",
+      "body": "11月9日实际低点276.853为回踩中心，保留原始三位行情参与计算。中心276.853±0.10×ATR14(6.21753071)，按0.01美元研究展示粒度向外取整，候选276.23–277.48。失效线为近三日低269.11−0.25×ATR14，向下取整为267.55。首档279.52取MA200=279.520665向下取整；第二档283.26为本日高点及20日高点，不外推更远目标。展示粒度不是已核验的订单最小价差。"
+    },
+    {
+      "heading": "费用压力与筛选",
+      "body": "候选上限277.48，风险价差9.930000美元；首档毛RR=0.205438，第二档毛RR=0.582075，目标各50%时综合毛RR=0.393756。往返费用及滑点按上限的0.2%/0.4%/0.8%压力假设，综合净RR=(两档均值−上限−费用)/(上限−失效线+费用)分别为0.319986/0.253632/0.139110。中档净RR低于2.0筛选门槛；数值筛选不通过，should_execute=false。ATR缓冲、费用比例、各50%分配及2.0门槛均为未回测假设，不代表实际费率、胜率或收益保证。"
+    },
+    {
+      "heading": "触发、到期与失效",
+      "body": "仅观察11月10日常规盘回踩276.23–277.48，需未来两根完整30分钟K低点抬高、后一根收盘越前根高点且确认价仍在带内，并独立核验事件与流动性。本模型净RR不达标，即使形态出现也不自动激活，should_execute=false。 2026-11-10纽约时间16:00（EST，UTC−05:00）到期；此前跌破267.55、跳空越界、确认价不在带内、重要披露否定模型或行情无法核验，任一即失效。旧候选不续期，不追认成交，模型线不保证实际退出价格。"
+    },
+    {
+      "heading": "常规盘截止与数据核验",
+      "body": "Longbridge确认11月9日为完整US交易日、非半日；常规盘09:30–16:00，IANA America/New_York本日UTC−05:00，截止2026-11-09T21:00:00Z。下一交易日11月10日亦为完整交易日；生成时已在盘后。Intraday日K为完成日线；LASE常规快照最后成交为15:59:59，与完成日K收盘一致；其余三只为16:00:00，不延长常规盘。排除盘前、盘后、夜盘及截止后资讯。本轮前复权、不复权和最终常规快照成交量均为4952599；量比0.87233350按此前20日均量计算，不含当日。OHLC和前收核对一致；单一供应商多接口一致仍不等于第二独立来源。"
+    },
+    {
+      "heading": "独立计算口径",
+      "body": "历史请求start=2025-07-01、end=2026-11-09、period=day、trade_sessions=intraday、forward_adjust=true，取末300根，自2025-09-02至11月9日；日期唯一递增，全部Intraday。MA简单平均；EMA12/26首收盘初始化，DIF=EMA12−EMA26、DEA=EMA9(DIF)、柱=2×(DIF−DEA)。RSI14首14次涨跌均值后Wilder递推；ATR14首14个TR均值后Wilder递推、首TR=高−低。末两日不复权OHLC及最终常规快照核对一致。末30个真实收盘入图，不改旧报告。"
+    },
+    {
+      "heading": "研究和执行边界",
+      "body": "outlook=Bullish；should_execute=false。方向、候选、数值筛选与实际触发分开判断；未完成回测或未来分钟触发核验。研究目标为1–5个实际交易日技术观察，不是基本面公允价值。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-11-06",
+    "narrative": "11月6日收276.52、Bullish，尚未收复MA200；今日收281.44站回MA200并创20日新高，趋势改善，维持Bullish。RSI升至76.13、MACD正柱略缩与量比不足1，提醒延伸风险；候选仍以真实低点及新ATR独立重算，未因看多放宽筛选。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge MCD.US固定截止Intraday日K与常规快照；网页非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/MCD.US",
+      "published_at": null
+    },
+    {
+      "id": "issuer",
+      "label": "McDonald's官方2026第三季度业绩公告",
+      "url": "https://mcdonalds.mediaroom.com/2026-11-04-McDONALDS-REPORTS-THIRD-QUARTER-2026-RESULTS",
+      "published_at": null
+    },
+    {
+      "id": "session",
+      "label": "NYSE官方常规交易时段与假日日历",
+      "url": "https://www.nyse.com/trade/hours-calendars",
+      "published_at": null
+    },
+    {
+      "id": "partnership",
+      "label": "Uber官方：与McDonald’s扩展14市场配送和会员合作",
+      "url": "https://investor.uber.com/news-events/news/press-release-details/2026/McDonalds-and-Uber-Expand-Global-Partnership-Across-Delivery-and-Loyalty-in-14-Markets/default.aspx",
+      "published_at": null
+    },
+    {
+      "id": "spy",
+      "label": "Longbridge SPY.US11月6–9日Intraday日K",
+      "url": "https://longbridge.com/zh-CN/quote/SPY.US",
+      "published_at": null
+    },
+    {
+      "id": "qqq",
+      "label": "Longbridge QQQ.US11月6–9日Intraday日K",
+      "url": "https://longbridge.com/zh-CN/quote/QQQ.US",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "本轮前复权、不复权和最终常规快照成交量均为4952599；量比0.87233350按此前20日均量计算，不含当日。OHLC和前收核对一致；单一供应商多接口一致仍不等于第二独立来源。",
+    "单一行情供应商，跨接口价格一致不等于第二独立行情源；复权历史可能修订。",
+    "新闻筛查不穷尽披露；截止后资讯及无原始证据的评级、资金流和因果解释未采用。",
+    "费用、ATR缓冲、分配比例和筛选门槛未回测；分钟触发及流动性尚未确认。",
+    "Uber原始公告只标11月9日日期，没有精确时分；以已核验收盘前新闻交叉确认可得性。尚未量化合作增量利润；盘后债券披露排除，研究目标不是估值目标。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-09-29",
+      "close": 233.98
+    },
+    {
+      "date": "2026-09-30",
+      "close": 230.94
+    },
+    {
+      "date": "2026-10-01",
+      "close": 231.83
+    },
+    {
+      "date": "2026-10-02",
+      "close": 231.89
+    },
+    {
+      "date": "2026-10-05",
+      "close": 233.04
+    },
+    {
+      "date": "2026-10-06",
+      "close": 232.45
+    },
+    {
+      "date": "2026-10-07",
+      "close": 230.88
+    },
+    {
+      "date": "2026-10-08",
+      "close": 236.9
+    },
+    {
+      "date": "2026-10-09",
+      "close": 235.23
+    },
+    {
+      "date": "2026-10-12",
+      "close": 235.65
+    },
+    {
+      "date": "2026-10-13",
+      "close": 235.81
+    },
+    {
+      "date": "2026-10-14",
+      "close": 238.31
+    },
+    {
+      "date": "2026-10-15",
+      "close": 242.5
+    },
+    {
+      "date": "2026-10-16",
+      "close": 242.97
+    },
+    {
+      "date": "2026-10-19",
+      "close": 242.67
+    },
+    {
+      "date": "2026-10-20",
+      "close": 246.52
+    },
+    {
+      "date": "2026-10-21",
+      "close": 246.25
+    },
+    {
+      "date": "2026-10-22",
+      "close": 252.63
+    },
+    {
+      "date": "2026-10-23",
+      "close": 248.46
+    },
+    {
+      "date": "2026-10-26",
+      "close": 250.83
+    },
+    {
+      "date": "2026-10-27",
+      "close": 249.47
+    },
+    {
+      "date": "2026-10-28",
+      "close": 250.5
+    },
+    {
+      "date": "2026-10-29",
+      "close": 257.38
+    },
+    {
+      "date": "2026-10-30",
+      "close": 258.12
+    },
+    {
+      "date": "2026-11-02",
+      "close": 265.64
+    },
+    {
+      "date": "2026-11-03",
+      "close": 263.04
+    },
+    {
+      "date": "2026-11-04",
+      "close": 280.22
+    },
+    {
+      "date": "2026-11-05",
+      "close": 278.04
+    },
+    {
+      "date": "2026-11-06",
+      "close": 276.52
+    },
+    {
+      "date": "2026-11-09",
+      "close": 281.44
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge completed Intraday public prices; independent indicators and conditional cost model; SEC and issuer disclosures",
+    "note": "实际生成2026-11-09T23:40:58Z；价格与资讯截止2026-11-09T21:00:00Z。仅新增当日初版，双端发布状态须实际回读确认。"
+  }
+}
