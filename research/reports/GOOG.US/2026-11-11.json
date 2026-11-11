@@ -1,0 +1,398 @@
+{
+  "schema_version": 1,
+  "symbol": "GOOG.US",
+  "trade_date": "2026-11-11",
+  "revision": 1,
+  "data_as_of": "2026-11-11T21:00:00Z",
+  "generated_at": "2026-11-11T23:32:17Z",
+  "report_kind": "closing",
+  "outlook": "Neutral",
+  "analysis_quality": "degraded",
+  "headline": "收复短期均线，中期下行压力仍在",
+  "summary": "收290.63美元，涨跌+2.00%；收复短期均线，中期下行压力仍在。候选285.88–287.92、失效280.83、两档目标290.63/292.97；0.4%压力净RR0.33不足2.0，仅观察至11月12日纽约16:00。",
+  "market_snapshot": {
+    "close": 290.63,
+    "previous_close": 284.92,
+    "change_pct": 2.00407132,
+    "open": 287.565,
+    "high": 292.97,
+    "low": 286.9
+  },
+  "indicators": [
+    {
+      "name": "MA5",
+      "value": 285.446,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "MA10",
+      "value": 283.138,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "MA20",
+      "value": 305.583,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "MA60",
+      "value": 328.91315,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "MA200",
+      "value": 336.56734,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "DIF",
+      "value": -14.27562176,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "DEA",
+      "value": -13.63997776,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "hist",
+      "value": -1.271288,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "previous_hist",
+      "value": -3.44199053,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "RSI",
+      "value": 36.94503801,
+      "unit": "0-100",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "ATR",
+      "value": 10.13883166,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "volume",
+      "value": null,
+      "unit": "供应商原始单位",
+      "note": "成交量及量比查询口径不一致、核验受阻"
+    },
+    {
+      "name": "volume_ratio",
+      "value": null,
+      "unit": "倍",
+      "note": "成交量及量比查询口径不一致、核验受阻"
+    },
+    {
+      "name": "high20",
+      "value": 348.398,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "low20",
+      "value": 272,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "low60",
+      "value": 272,
+      "unit": "USD",
+      "note": "300根完成Intraday日K独立计算，价格口径已交叉比对"
+    },
+    {
+      "name": "候选首档毛风险收益比",
+      "value": 0.38222849,
+      "unit": "倍",
+      "note": "候选数值未通过筛选、尚未触发"
+    },
+    {
+      "name": "候选第二档毛风险收益比",
+      "value": 0.7122708,
+      "unit": "倍",
+      "note": "候选数值未通过筛选、尚未触发"
+    },
+    {
+      "name": "候选综合毛风险收益比",
+      "value": 0.54724965,
+      "unit": "倍",
+      "note": "候选数值未通过筛选、尚未触发"
+    },
+    {
+      "name": "候选综合净风险收益比_0.4%摩擦",
+      "value": 0.3310393,
+      "unit": "倍",
+      "note": "候选数值未通过筛选、尚未触发"
+    }
+  ],
+  "drivers": [
+    {
+      "title": "价格结构",
+      "direction": "mixed",
+      "evidence": "收290.63涨2.00%，高于MA5 285.446和MA10 283.138，但低于MA20 305.583与MA60 328.9132。RSI36.95，MACD负柱由-3.4420缩至-1.2713，DIF仍明显为负，属于弱势中的修复。量能证据未核清。",
+      "source_ids": [
+        "price"
+      ]
+    },
+    {
+      "title": "有限市场代理",
+      "direction": "positive",
+      "evidence": "SPY由749.92升至759.81，涨1.3188%；QQQ由674.76升至690.38，涨2.3149%。两ETF仅为有限市场代理，不代表市场广度、资金流或个股因果；成交量不参与比较。",
+      "source_ids": [
+        "spy",
+        "qqq"
+      ]
+    },
+    {
+      "title": "截止前公开披露",
+      "direction": "mixed",
+      "evidence": "Google于11月10日宣布Gemini 4 Carbon向开发者、企业、科学家和消费者开放。产品发布是已知经营背景，缺少增量收入、成本和利润的本日可核验量化证据，不把模型表现或开放本身换算成估值上调，也不把本日反弹单因果归于昨日公告。",
+      "source_ids": [
+        "background"
+      ]
+    }
+  ],
+  "price_levels": {
+    "entry_low": 285.88,
+    "entry_high": 287.92,
+    "target": 292.97,
+    "stop": 280.83,
+    "take_profit_1": 290.63,
+    "take_profit_2": 292.97,
+    "target_type": "technical",
+    "target_horizon": "11月12日起未来1–5个实际交易日技术观察，非基本面估值或到达承诺",
+    "entry_valid_until": "2026-11-12",
+    "status": "conditional",
+    "trigger": "仅观察11月12日常规盘回踩285.88–287.92；须两根完整30分钟K低点抬高，后一根收盘超过前根高点且确认价仍在带内，并重新验证事件、报价和流动性。当前费用压力RR未通过，形态出现也不自动激活；should_execute=false。",
+    "invalidation": "2026-11-12纽约时间16:00到期；此前跌破280.83、跳空越界、确认价离开候选带、重要披露否定依据或行情不能核验，任一即失效。旧候选不续期，模型线不保证实际退出价格。",
+    "basis": "以本日低286.9作回踩锚，第一目标本日收盘290.63，第二目标本日高292.97；不直接抬升至较远MA20以改善赔率。中心286.9±0.10×ATR14(10.13883166)，按0.01美元研究粒度向外取整285.88–287.92；近三日低283.37−0.25×ATR14，按0.01向下取整失效线280.83。研究粒度不代表实际报价档位或交易可行性。 按上限287.92，风险价差7.090000美元；首档毛RR=0.382228，次档毛RR=0.712271，各50%分配综合毛RR=0.547250。往返费用及滑点假设为上限的0.2%/0.4%/0.8%；净RR=(两目标均值−上限−费用)/(上限−失效线+费用)，分别0.431024/0.331039/0.167846。0.4%净RR未达2.0，筛选否决，should_execute=false。费用、ATR缓冲、分配比例、研究粒度和2.0门槛均为未回测假设，不是实际费率、成功概率或收益保证。"
+  },
+  "scenarios": [
+    {
+      "name": "短线反弹",
+      "price": 292.97,
+      "condition": "站稳本日高后再观察MA20 305.583，不能把远端均线当必达目标",
+      "horizon": "11月12日起未来1–5个实际交易日条件观察，无校准概率"
+    },
+    {
+      "name": "短期失守",
+      "price": 283.138,
+      "condition": "回落失守MA10则短线修复转弱，留意20日低272",
+      "horizon": "11月12日起未来1–5个实际交易日条件观察，无校准概率"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "独立候选结构",
+      "body": "以本日低286.9作回踩锚，第一目标本日收盘290.63，第二目标本日高292.97；不直接抬升至较远MA20以改善赔率。中心286.9±0.10×ATR14(10.13883166)，按0.01美元研究粒度向外取整285.88–287.92；近三日低283.37−0.25×ATR14，按0.01向下取整失效线280.83。研究粒度不代表实际报价档位或交易可行性。"
+    },
+    {
+      "heading": "费用压力与筛选否决",
+      "body": "按上限287.92，风险价差7.090000美元；首档毛RR=0.382228，次档毛RR=0.712271，各50%分配综合毛RR=0.547250。往返费用及滑点假设为上限的0.2%/0.4%/0.8%；净RR=(两目标均值−上限−费用)/(上限−失效线+费用)，分别0.431024/0.331039/0.167846。0.4%净RR未达2.0，筛选否决，should_execute=false。费用、ATR缓冲、分配比例、研究粒度和2.0门槛均为未回测假设，不是实际费率、成功概率或收益保证。"
+    },
+    {
+      "heading": "触发与失效",
+      "body": "仅观察11月12日常规盘回踩285.88–287.92；须两根完整30分钟K低点抬高，后一根收盘超过前根高点且确认价仍在带内，并重新验证事件、报价和流动性。当前费用压力RR未通过，形态出现也不自动激活；should_execute=false。 2026-11-12纽约时间16:00到期；此前跌破280.83、跳空越界、确认价离开候选带、重要披露否定依据或行情不能核验，任一即失效。旧候选不续期，模型线不保证实际退出价格。"
+    },
+    {
+      "heading": "数据截止与完成状态",
+      "body": "Longbridge当前时间2026-11-11T23:29:42Z，US日历11月11日为完整交易日，非半日。NYSE常规时段09:30–16:00；America/New_York本日UTC-05，常规收盘为21:00Z，已结束。使用固定截止Intraday日K，00:00仅交易日标签。MCD常规快照时间16:00:02，仅辅助比对价格，未将其成交量或之后时段纳入报告；所有OHLC以明确Intraday日K为依据。"
+    },
+    {
+      "heading": "量能质量受阻",
+      "body": "复权长区间日K、同日复权重取、原始日K与常规快照的OHLC一致，但四标的成交量存在查询口径差异。无法确认是否含迟报成交或供应商修订；不自行选一组冒充最终量。volume及volume_ratio设null，不发布成交额或量能结论，流动性与量能触发确认受阻。价格指标可独立计算，整体质量降级。"
+    },
+    {
+      "heading": "独立计算口径",
+      "body": "start=2025-07-01、end=2026-11-11、period=day、trade_sessions=intraday、forward_adjust=true，取末300根，2025-09-04至本日，日期唯一递增且会话Intraday。末两日原始OHLC、当日复权重取及常规快照价格一致。MA简单平均，EMA12/26以首收盘初始化；DIF=EMA12−EMA26，DEA=EMA9(DIF)，柱=2×(DIF−DEA)。RSI14首14次涨跌均值后Wilder递推；ATR14首14个TR均值后Wilder递推，首TR=高−低。只保存末30个真实收盘。"
+    },
+    {
+      "heading": "状态与期限",
+      "body": "方向、候选、筛选和实际触发分别判断；should_execute=false。前一日候选已于本日纽约16:00到期，未核验分钟触发、不追认成交。新的观察有效期为下一完整交易日11月12日纽约16:00，不自动激活或续期。"
+    }
+  ],
+  "comparison": {
+    "previous_trade_date": "2026-11-10",
+    "narrative": "较11月10日284.92上涨2.00%，收复短期均线且MACD负柱收敛；从弱势观察转为Neutral，MA20仍远高于收盘。昨日候选已到期，本日低与新ATR形成独立候选，不追认旧方案触发。"
+  },
+  "sources": [
+    {
+      "id": "price",
+      "label": "Longbridge GOOG.US固定截止完成Intraday复权、原始日K与常规快照；网页非API存档",
+      "url": "https://longbridge.com/zh-CN/quote/GOOG.US",
+      "published_at": null
+    },
+    {
+      "id": "spy",
+      "label": "Longbridge SPY.US11月10–11日完成Intraday日K",
+      "url": "https://longbridge.com/zh-CN/quote/SPY.US",
+      "published_at": null
+    },
+    {
+      "id": "qqq",
+      "label": "Longbridge QQQ.US11月10–11日完成Intraday日K",
+      "url": "https://longbridge.com/zh-CN/quote/QQQ.US",
+      "published_at": null
+    },
+    {
+      "id": "hours",
+      "label": "NYSE官方常规时段与假日日历",
+      "url": "https://www.nyse.com/trade/hours-calendars",
+      "published_at": null
+    },
+    {
+      "id": "background",
+      "label": "Google官方11月10日Gemini 4 Carbon开放公告",
+      "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-carbon-now-available/",
+      "published_at": null
+    }
+  ],
+  "limitations": [
+    "单一行情供应商；跨接口一致不能替代第二独立来源，历史复权可能修订。",
+    "公开披露筛查并非穷尽，不将旧公告确定归因今日价格。",
+    "四标的成交量及量比口径无法核实，字段不可用；未来分钟触发、真实流动性及实际摩擦未核验，候选参数未回测。",
+    "缺少完整市场广度、实时估值及全量事件核验，判断限已列证据。"
+  ],
+  "price_history": [
+    {
+      "date": "2026-10-01",
+      "close": 334.93
+    },
+    {
+      "date": "2026-10-02",
+      "close": 340.35
+    },
+    {
+      "date": "2026-10-05",
+      "close": 343.83
+    },
+    {
+      "date": "2026-10-06",
+      "close": 344.59
+    },
+    {
+      "date": "2026-10-07",
+      "close": 347.37
+    },
+    {
+      "date": "2026-10-08",
+      "close": 344.86
+    },
+    {
+      "date": "2026-10-09",
+      "close": 347.86
+    },
+    {
+      "date": "2026-10-12",
+      "close": 348.97
+    },
+    {
+      "date": "2026-10-13",
+      "close": 349.52
+    },
+    {
+      "date": "2026-10-14",
+      "close": 343.65
+    },
+    {
+      "date": "2026-10-15",
+      "close": 344.91
+    },
+    {
+      "date": "2026-10-16",
+      "close": 336.91
+    },
+    {
+      "date": "2026-10-19",
+      "close": 340.16
+    },
+    {
+      "date": "2026-10-20",
+      "close": 336.4
+    },
+    {
+      "date": "2026-10-21",
+      "close": 330.95
+    },
+    {
+      "date": "2026-10-22",
+      "close": 320.76
+    },
+    {
+      "date": "2026-10-23",
+      "close": 317.28
+    },
+    {
+      "date": "2026-10-26",
+      "close": 314.19
+    },
+    {
+      "date": "2026-10-27",
+      "close": 316.83
+    },
+    {
+      "date": "2026-10-28",
+      "close": 321.89
+    },
+    {
+      "date": "2026-10-29",
+      "close": 282.32
+    },
+    {
+      "date": "2026-10-30",
+      "close": 278.22
+    },
+    {
+      "date": "2026-11-02",
+      "close": 278.04
+    },
+    {
+      "date": "2026-11-03",
+      "close": 278.27
+    },
+    {
+      "date": "2026-11-04",
+      "close": 287.3
+    },
+    {
+      "date": "2026-11-05",
+      "close": 281.74
+    },
+    {
+      "date": "2026-11-06",
+      "close": 283.93
+    },
+    {
+      "date": "2026-11-09",
+      "close": 286.01
+    },
+    {
+      "date": "2026-11-10",
+      "close": 284.92
+    },
+    {
+      "date": "2026-11-11",
+      "close": 290.63
+    }
+  ],
+  "provenance": {
+    "kind": "fresh_analysis",
+    "source": "Longbridge completed regular prices; independent indicators and conditional models; issuer and exchange disclosures",
+    "note": "实际生成2026-11-11T23:32:17Z；行情与资讯截止2026-11-11T21:00:00Z，仅新增本日初版；发布状态另行回读。"
+  }
+}
