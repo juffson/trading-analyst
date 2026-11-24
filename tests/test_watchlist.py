@@ -61,7 +61,7 @@ class WatchlistTests(unittest.TestCase):
         symbols, reports = load_dataset(ROOT)
         observed = load_watchlist(ROOT, symbols)
         self.assertEqual([s["symbol"] for s in observed if s["market"] == "CN"],
-                         ["002463.SZ", "002594.SZ", "601138.SH", "513130.SH", "000001.SH", "399006.SZ"])
+                         ["002594.SZ", "513130.SH", "000001.SH", "399006.SZ"])
         links = {s["symbol"]: "https://example.com/" + s["symbol"] for s in symbols}
         blocks = render_overview(symbols, reports, symbol_urls=links,
                                  report_urls={}, observed_symbols=observed)
@@ -72,8 +72,8 @@ class WatchlistTests(unittest.TestCase):
             self.assertNotIn(code, cn)
             self.assertIn(code, archive)
             self.assertTrue(any(r["symbol"] == code for r in reports))
-        self.assertEqual(len(symbols), 19)
-        self.assertEqual(len(observed), 10)
+        self.assertEqual(len(symbols), 16)
+        self.assertEqual(len(observed), 8)
 
     def test_site_keeps_removed_symbol_routes_and_original_report_json(self):
         symbols, reports = load_dataset(ROOT)
@@ -81,10 +81,15 @@ class WatchlistTests(unittest.TestCase):
             output = Path(directory) / "site"
             manifest = build(ROOT, output, "/trading-analyst")
             self.assertEqual(manifest["symbol_count"], len(symbols))
-            self.assertEqual(manifest["observed_symbol_count"], 10)
+            self.assertEqual(manifest["observed_symbol_count"], 8)
             self.assertEqual(manifest["report_count"], len(reports))
             index = (output / "index.html").read_text()
             coverage = index.split('<section id="coverage"', 1)[1].split("</section>", 1)[0]
+            # Explicit report deletion differs from stopping daily observation.
+            for code, slug in [("2476.HK", "2476-hk"), ("601138.SH", "601138-sh"), ("002463.SZ", "002463-sz")]:
+                self.assertNotIn(code, index)
+                self.assertFalse((output / "symbols" / slug).exists())
+                self.assertFalse((output / "data/reports" / code).exists())
             for code in ["688350.SH", "603588.SH", "688322.SH", "000636.SZ"]:
                 self.assertNotIn(code, coverage)
                 symbol = next(s for s in symbols if s["symbol"] == code)

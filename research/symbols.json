@@ -2,13 +2,6 @@
   "schema_version": 1,
   "symbols": [
     {
-      "symbol": "002463.SZ",
-      "name": "沪电股份",
-      "market": "CN",
-      "currency": "CNY",
-      "slug": "002463-sz"
-    },
-    {
       "symbol": "002594.SZ",
       "name": "比亚迪",
       "market": "CN",
@@ -72,13 +65,6 @@
       "slug": "lase-us"
     },
     {
-      "symbol": "601138.SH",
-      "name": "工业富联",
-      "market": "CN",
-      "currency": "CNY",
-      "slug": "601138-sh"
-    },
-    {
       "symbol": "MCD.US",
       "name": "麦当劳",
       "market": "US",
@@ -91,13 +77,6 @@
       "market": "CN",
       "currency": "CNY",
       "slug": "300476-sz"
-    },
-    {
-      "symbol": "2476.HK",
-      "name": "胜宏科技",
-      "market": "HK",
-      "currency": "HKD",
-      "slug": "2476-hk"
     },
     {
       "symbol": "603588.SH",
